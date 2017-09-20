@@ -2,6 +2,8 @@ import gym
 from gym import wrappers
 from abp.dqn.adaptive import Adaptive
 
+directory = "gym/dqn/cartpole"
+
 env_spec = gym.make("CartPole-v0")
 
 threshold_angle = 0.087266463
@@ -16,6 +18,7 @@ agent = Adaptive(env_spec.action_space.n, len(state), "Cart Pole", decay_steps =
 training_episode = 300
 
 test_episodes = 100
+
 
 #Episodes
 for epoch in range(training_episode):

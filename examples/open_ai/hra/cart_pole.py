@@ -2,7 +2,7 @@ import gym
 from gym import wrappers
 from abp.hra.adaptive import Adaptive
 
-
+directory = "gym/hra/cartpole"
 env_spec = gym.make("CartPole-v0")
 
 threshold_angle = 0.087266463
@@ -16,9 +16,12 @@ no_of_rewards = 4
 
 agent = Adaptive(env_spec.action_space.n, len(state), no_of_rewards, "Cart Pole", decay_steps = 250)
 
-training_episode = 300
+training_episode = 500
 
 test_episodes = 100
+
+env_spec = wrappers.Monitor(env_spec, directory, force = True)
+
 
 #Episodes
 for epoch in range(training_episode):
