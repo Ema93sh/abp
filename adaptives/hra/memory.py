@@ -17,4 +17,7 @@ class Memory(object):
         self.memory.append(item)
 
     def sample(self, batch_size):
+        if batch_size > len(self.memory):
+            return np.random.choice(self.memory, len(self.memory))
+        
         return np.random.choice(self.memory, batch_size)

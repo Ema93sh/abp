@@ -2,7 +2,7 @@ import gym
 import numpy as np
 import abp.envs
 
-from abp.hra.adaptive import Adaptive
+from abp.adaptives.hra import HRAAdaptive
 
 
 env_spec = gym.make("TicTacToe-v0")
@@ -15,7 +15,7 @@ state = env_spec.reset()
 
 no_of_rewards = 9
 
-agent = Adaptive(env_spec.action_space.n, len(state), no_of_rewards, "Tic Tac Toe", decay_steps = 500)
+agent = HRAAdaptive(env_spec.action_space.n, len(state), no_of_rewards, "Tic Tac Toe", decay_steps = 2000)
 
 #Episodes for training
 for epoch in range(training_episode):
@@ -61,7 +61,7 @@ for epoch in range(training_episode):
         if info['illegal_move']:
             agent.reward(8, -10)
         else:
-            agent.reward(8, 1)
+            agent.reward(8, 4)
 
         agent.actual_reward(reward)
 

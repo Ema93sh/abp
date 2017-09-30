@@ -15,8 +15,8 @@ class HRAModel(object):
         self.build_network()
 
     def build_network(self):
-        n_h1 = 25
-        n_h2 = 25
+        n_h1 = 1024
+        n_h2 = 1024
 
         self.state = tf.placeholder(tf.float32, [None, self.size_features], name="State")
         self.q_target = tf.placeholder(tf.float32, [None, self.size_rewards, self.size_actions])
@@ -36,43 +36,43 @@ class HRAModel(object):
                 self.summeries.append(tf.summary.histogram('B1', b1))
                 l1 = tf.nn.relu(tf.matmul(self.state, w1) + b1)
 
-            # with tf.variable_scope("CommonHiddenLayer2"):
-            #     w2 = tf.get_variable("W2", [n_h1, n_h2], initializer = w_initializer, collections = collections)
-            #     self.summeries.append(tf.summary.histogram('W2', w2))
-            #     b2 = tf.get_variable("B2", [1, n_h2], initializer = b_initializer, collections = collections)
-            #     self.summeries.append(tf.summary.histogram('B2', b2))
-            #     l2 = tf.nn.relu(tf.matmul(l1, w2) + b2)
+            with tf.variable_scope("CommonHiddenLayer2"):
+                w2 = tf.get_variable("W2", [n_h1, n_h2], initializer = w_initializer, collections = collections)
+                self.summeries.append(tf.summary.histogram('W2', w2))
+                b2 = tf.get_variable("B2", [1, n_h2], initializer = b_initializer, collections = collections)
+                self.summeries.append(tf.summary.histogram('B2', b2))
+                l2 = tf.nn.relu(tf.matmul(l1, w2) + b2)
 
             self.q_reward = []
 
             for reward in range(self.size_rewards):
                 with tf.variable_scope("OutputLayer_Reward_%d" % (reward + 1)):
-                    #TODO
-                    # w3 = tf.get_variable("W3", [n_h1, self.size_actions], initializer = w_initializer, collections = collections)
-                    # self.summeries.append(tf.summary.histogram("W3_R%d" % reward, w3))
-                    # b3 = tf.get_variable("B3", [1, self.size_actions], initializer = b_initializer, collections = collections)
-                    # self.summeries.append(tf.summary.histogram("B3_R%d" %reward, b3))
-                    # l3 = tf.matmul(l1, w3) + b3 #TODO
-                    # name = 'Q_R_%d' % reward
-                    # self.summeries.append(tf.summary.histogram(name, l3))
-                    # self.q_reward.append(l3)
-                     w2 = tf.get_variable("W2", [n_h1, self.size_actions], initializer = w_initializer, collections = collections)
-                     self.summeries.append(tf.summary.histogram('W2', w2))
-                     b2 = tf.get_variable("B2", [1, self.size_actions], initializer = b_initializer, collections = collections)
-                     self.summeries.append(tf.summary.histogram('B2', b2))
-                     l2 = tf.matmul(l1, w2) + b2
-                     name = 'Q_R_%d' % reward
-                     self.summeries.append(tf.summary.histogram(name, l2))
-                     self.q_reward.append(l2)
+                    # Two hidden layers
+                    name_w3 = "Q%d_W3" % reward
+                    w3 = tf.get_variable(name_w3, [n_h2, self.size_actions], initializer = w_initializer, collections = collections)
+                    self.summeries.append(tf.summary.histogram(name_w3, w3))
+                    name_b3 = "Q%d_B3" % reward
+                    b3 = tf.get_variable(name_b3, [1, self.size_actions], initializer = b_initializer, collections = collections)
+                    self.summeries.append(tf.summary.histogram(name_b3, b3))
+                    l3 = tf.matmul(l2, w3) + b3 #TODO
+                    name = 'Q_R_%d' % reward
+                    self.summeries.append(tf.summary.histogram(name, l3))
+                    self.q_reward.append(l3)
+                    # *************** Single hidden layer
+                    #  name_w2 = "Q%d_W2" % reward
+                    #  w2 = tf.get_variable(name_w2, [n_h1, self.size_actions], initializer = w_initializer, collections = collections)
+                    #  self.summeries.append(tf.summary.histogram(name_w2, w2))
+                    #  name_b2 = "Q%d_B2" % reward
+                    #  b2 = tf.get_variable(name_b2, [1, self.size_actions], initializer = b_initializer, collections = collections)
+                    #  self.summeries.append(tf.summary.histogram(name_b2, b2))
+                    #  l2 = tf.matmul(l1, w2) + b2
+                    #  name = 'Q_R_%d' % reward
+                    #  self.summeries.append(tf.summary.histogram(name, l2))
+                    #  self.q_reward.append(l2)
 
             self.q_current = tf.stack(self.q_reward, axis = 1)
 
             self.q_values = tf.reduce_mean(self.q_current, axis = 1)
-
-            # for reward in range(self.size_rewards):
-            #     for action in range(self.size_actions):
-            #         self.summeries.append(tf.summary.histogram('R_%d_Q%d' % (reward, action), self.q_reward[reward][action]))
-
 
             for action in range(self.size_actions):
                 name =  'Mean_Q%d' % action

@@ -1,13 +1,15 @@
 import gym
-from abp.dqn.adaptive import Adaptive
+from abp.hra.adaptive import Adaptive
 from math import sqrt
 
 env = gym.make("MountainCar-v0")
 
 state = env.reset()
 
-agent = Adaptive(env.action_space.n, len(state), "Mountain Car", decay_steps = 1000)
+#TODO  Incomplete implementation
 
+
+agent = Adaptive(env.action_space.n, len(state), "Mountain Car", decay_steps = 1000)
 
 #Training Episodes
 for epoch in range(300):
@@ -24,8 +26,6 @@ for epoch in range(300):
         if prev_velocity and prev_position:
             change_velocity = sqrt( (velocity ** 2) - (prev_velocity ** 2))
             change_position = position - prev_position
-
-            if change_velocity > 0 and
 
 
         agent.reward(position)

@@ -2,7 +2,7 @@ import gym
 import numpy as np
 import abp.envs
 
-from abp.dqn.adaptive import Adaptive
+from abp.adaptives.dqn import DQNAdaptive
 
 
 env_spec = gym.make("TicTacToe-v0")
@@ -13,7 +13,7 @@ test_episodes = 100
 
 state = env_spec.reset()
 
-agent = Adaptive(env_spec.action_space.n, len(state), "Tic Tac Toe", decay_steps = 500)
+agent = DQNAdaptive(env_spec.action_space.n, len(state), "Tic Tac Toe", decay_steps = 2000)
 
 for epoch in range(training_episode):
     state = env_spec.reset()

@@ -1,19 +1,20 @@
 from memory import Memory
-from model import DQNModel
+from model import HRAModel
 from experience import Experience
 
 import tensorflow as tf
 import numpy as np
 import os
 
-class Adaptive(object):
-    """Adaptive using DQN algorithm"""
-    def __init__(self, action_size, size_features, name = "Default", path = None, decay_steps = 300, replace_target_steps = 300, gamma = 0.99, memory_size = 10000):
-        super(Adaptive, self).__init__()
+class HRAAdaptive(object):
+    """HRAAdaptive using HRA adaptive"""
+    def __init__(self, action_size, size_features, size_rewards, name = "Default", path = None, decay_steps = 300, replace_target_steps = 300, gamma = 0.99, memory_size = 10000):
+        super(HRAAdaptive, self).__init__()
         self.action_size = action_size
+        self.size_rewards = size_rewards
         self.replay_memory = Memory(memory_size)
         # self.target_model = DQNModel(size_features, self.action_size, "target_model", trainable = False)
-        self.eval_model = DQNModel(size_features, self.action_size, "eval_model")
+        self.eval_model = HRAModel(size_features, self.action_size, self.size_rewards, "eval_model")
 
         self.learning = True
         self.steps = 0
@@ -22,35 +23,35 @@ class Adaptive(object):
         self.epsilon_decay_rate = 0.96
         self.previous_state = None
         self.previous_action = None
-        self.current_reward = 0
+        self.current_reward = [0] * self.size_rewards #TODO: change reward into dictionary
         self.gamma = gamma
         self.session = tf.Session()
         self.total_psuedo_reward = 0
-        self.total_actual_reward = 0
         self.current_test_reward = 0 # Used once learning is disabled
+        self.total_actual_reward = 0
         self.replace_target_steps = replace_target_steps
-        dirname = "tensorflow_summaries/%s/%s" %("dqn_summary", name)
+        dirname = "tensorflow_summaries/%s/%s" %(name, "hra_summary")
         run_number = 0 if not os.path.isdir(dirname) else len(os.listdir(dirname))
 
-        t_params = tf.get_collection('target_params')
-        e_params = tf.get_collection('eval_params')
+        # t_params = tf.get_collection('target_params')
+        # e_params = tf.get_collection('eval_params')
 
         # self.replace_target_op = [tf.assign(t, e) for t, e in zip(t_params, e_params)]
 
         self.writer = tf.summary.FileWriter("%s/%s" %(dirname, "run" + str(run_number)), self.session.graph)
         self.session.run(tf.global_variables_initializer())
         self.path = path
-        self.saver = tf.train.Saver()
-        if self.path is not None and os.path.isfile(path):
-            self.saver.restore(self.session, path)
+        #TODO
+        #self.saver = tf.train.Saver()
+        # if self.path is not None and os.path.isfile(path):
+        #     self.saver.restore(self.session, path)
         self.episode = 0
 
     def __del__(self):
-        if self.path is not None:
-            self.saver.save(self.session, self.path)
+        # if self.path is not None:
+        #     self.saver.save(self.session, self.path)
         self.session.close()
         self.writer.close()
-
 
     def should_explore(self):
         epsilon = self.starting_epsilon * (self.epsilon_decay_rate ** (self.steps / self.decay_steps))
@@ -66,7 +67,7 @@ class Adaptive(object):
         self.steps += 1
 
         # add to experience
-        if self.previous_state is not None:
+        if self.previous_state is not None and self.previous_action is not None:
             experience = Experience(self.previous_state, self.previous_action, self.current_reward, state)
             self.replay_memory.add(experience)
 
@@ -76,7 +77,7 @@ class Adaptive(object):
             action = self.eval_model.predict(state, self.session)
 
 
-        if self.learning and self.replay_memory.current_size > 30:
+        if self.learning and self.replay_memory.current_size > 32:
             self.update()
 
             # if self.steps % self.replace_target_steps == 0:
@@ -85,7 +86,7 @@ class Adaptive(object):
             # if self.steps % 1000 == 0:
             #     self.target_model.generate_summaries(self.session, [state], self.writer, self.steps)
 
-        self.current_reward = 0
+        self.current_reward = [0] * self.size_rewards
 
         self.previous_state = state
         self.previous_action = action
@@ -109,11 +110,10 @@ class Adaptive(object):
             actual_reward_summary.value.add(tag='Total Actual rewards', simple_value = self.total_actual_reward)
             self.writer.add_summary(actual_reward_summary, self.episode)
 
-
-            experience = Experience(self.previous_state, self.previous_action, self.current_reward, state, True)
+            experience = Experience(self.previous_state, self.previous_action, self.current_reward, state, is_terminal = True)
             self.replay_memory.add(experience)
 
-            self.current_reward = 0
+            self.current_reward = [0] * self.size_rewards
             self.total_psuedo_reward = 0
             self.total_actual_reward = 0
 
@@ -121,6 +121,7 @@ class Adaptive(object):
             self.previous_action = None
 
             self.update()
+
         else:
             reward_summary = tf.Summary()
             reward_summary.value.add(tag='Test reward', simple_value = self.current_test_reward)
@@ -128,9 +129,10 @@ class Adaptive(object):
 
             self.current_test_reward = 0
 
-    def reward(self, r):
-        self.total_psuedo_reward += r
-        self.current_reward += r
+
+    def reward(self, r_type, r_value):
+        self.total_psuedo_reward += r_value
+        self.current_reward[r_type] += r_value
 
     def actual_reward(self, r): # Used to see the actual rewards while learning
         self.total_actual_reward += r
@@ -139,6 +141,9 @@ class Adaptive(object):
         self.current_test_reward += r
 
     def update(self):
+        if self.replay_memory.current_size < 32:
+            return
+
         batch_size = 32
         batch = self.replay_memory.sample(batch_size)
 
@@ -152,20 +157,20 @@ class Adaptive(object):
 
         actions = [experience.action for experience in batch]
 
-        reward = [experience.reward for experience in batch]
+        reward = np.array([experience.reward for experience in batch])
 
-        q_next = self.eval_model.predict_batch(next_states, self.session)
+        q_next, _ = self.eval_model.predict_batch(next_states, self.session)
 
-        q_max = np.max(q_next, axis = 1)
+        q_max = np.max(q_next, axis = 2)
 
         q_max = np.array([ a * b if a == 0 else b for a,b in zip(is_terminal, q_max)])
 
-        q_values = self.eval_model.predict_batch(states, self.session)
+        q_values, _ = self.eval_model.predict_batch(states, self.session)
 
         q_target = q_values.copy()
 
         batch_index = np.arange(batch_size, dtype=np.int32)
 
-        q_target[batch_index, actions] = reward + self.gamma * q_max
+        q_target[batch_index, :, actions] = reward + self.gamma * q_max
 
         self.eval_model.fit(states, q_target, self.session, self.writer, self.steps)

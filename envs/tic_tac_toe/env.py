@@ -10,11 +10,12 @@ class TicTacToeEnv(gym.Env):
 
     # difficulty
     # 0 - random
-    # 1 - medium
-    # 2 - impossible
+    # 1 - medium TODO
+    # 2 - impossible TODO
 
-    def __init__(self, difficulty = 1):
+    def __init__(self, difficulty = 0):
         self.action_space = spaces.Discrete(9)
+        self.difficulty = difficulty
 
         values = np.array([1] * 9)
         self.observation_space = spaces.Box(-values, values)
@@ -39,7 +40,7 @@ class TicTacToeEnv(gym.Env):
             possible_moves = self.get_all_possible_moves()
 
             if len(possible_moves) == 0:
-                reward, done = 20,  True
+                reward, done = 5,  True
 
             if not done:
                 reward = 1
@@ -62,11 +63,11 @@ class TicTacToeEnv(gym.Env):
         sums = np.hstack([sum_rows, sum_cols, sum_diagonal, sum_rev_diagonal])
 
         if 3 in sums:
-            reward, done = 100, True
+            reward, done = 10, True
             info['x_won'] = True
             info['o_won'] = False
         elif -3 in sums:
-            reward, done = -1, True
+            reward, done = -10, True
             info['x_won'] = False
             info['o_won'] = True
         else:
