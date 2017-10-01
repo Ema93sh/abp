@@ -5,10 +5,11 @@ from experience import Experience
 import tensorflow as tf
 import numpy as np
 import os
+import logging
 
 class HRAAdaptive(object):
     """HRAAdaptive using HRA adaptive"""
-    def __init__(self, action_size, size_features, size_rewards, name = "Default", path = None, decay_steps = 300, replace_target_steps = 300, gamma = 0.99, memory_size = 10000):
+    def __init__(self, action_size, size_features, size_rewards, name = "Default", job_dir = ".", model_path = None, restore_model = False, decay_steps = 300, replace_target_steps = 300, gamma = 0.99, memory_size = 10000):
         super(HRAAdaptive, self).__init__()
         self.action_size = action_size
         self.size_rewards = size_rewards
@@ -29,8 +30,10 @@ class HRAAdaptive(object):
         self.total_psuedo_reward = 0
         self.current_test_reward = 0 # Used once learning is disabled
         self.total_actual_reward = 0
-        self.replace_target_steps = replace_target_steps
-        dirname = "tensorflow_summaries/%s/%s" %(name, "hra_summary")
+        # self.replace_target_steps = replace_target_steps
+
+        self.job_dir = job_dir
+        dirname = os.path.join(job_dir, "tensorflow_summaries/%s/%s" %(name, "hra_summary"))
         run_number = 0 if not os.path.isdir(dirname) else len(os.listdir(dirname))
 
         # t_params = tf.get_collection('target_params')
@@ -40,11 +43,17 @@ class HRAAdaptive(object):
 
         self.writer = tf.summary.FileWriter("%s/%s" %(dirname, "run" + str(run_number)), self.session.graph)
         self.session.run(tf.global_variables_initializer())
-        self.path = path
-        #TODO
-        #self.saver = tf.train.Saver()
-        # if self.path is not None and os.path.isfile(path):
-        #     self.saver.restore(self.session, path)
+
+        self.model_path = model_path
+        self.saver = tf.train.Saver()
+        if restore_model and self.model_path is not None:
+            if os.path.exists(self.model_path):
+                logging.info("Restoring model from %s" % self.model_path)
+                self.saver.restore(self.session, self.model_path)
+            else:
+                logging.error("Cant Restore model from %s the path does not exists" % self.model_path)
+
+
         self.episode = 0
 
     def __del__(self):
@@ -52,6 +61,16 @@ class HRAAdaptive(object):
         #     self.saver.save(self.session, self.path)
         self.session.close()
         self.writer.close()
+
+    def save_model(self):
+        if self.model_path is not None:
+            if not os.path.exists(os.path.dirname(self.model_path)):
+                logging.info("Creating model path directories...")
+                os.makedirs(os.path.dirname(self.model_path))
+            logging.info("Saving the model...")
+            self.saver.save(self.session, self.model_path)
+        pass
+
 
     def should_explore(self):
         epsilon = self.starting_epsilon * (self.epsilon_decay_rate ** (self.steps / self.decay_steps))
@@ -94,11 +113,14 @@ class HRAAdaptive(object):
         return action
 
     def disable_learning(self):
+        logging.info("Disabled Learning")
         self.learning = False
         self.episode = 0
         self.current_test_reward = 0
+        self.save_model()
 
     def end_episode(self, state):
+        logging.info("End of Episode %d with total actual reward %d and total psuedo reward %d" % (self.episode, self.total_actual_reward, self.total_psuedo_reward))
         self.episode += 1
 
         if self.learning:

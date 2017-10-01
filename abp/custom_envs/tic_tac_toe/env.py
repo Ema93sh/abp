@@ -61,6 +61,7 @@ class TicTacToeEnv(gym.Env):
                 reward = 1
                 action = self.make_move(possible_moves)
                 self.board[action] = self.player_2
+                reward, done = self.check_if_done(info)
 
         info['board'] = self.board
 

@@ -1,11 +1,11 @@
 import gym
 import numpy as np
-import abp.envs
+import abp.custom_envs
 
 from abp.adaptives.hra import HRAAdaptive
 
 
-def run_task(render = True, training_episode = 80000, test_episodes = 100, decay_steps = 2000):
+def run_task(job_dir, render = True, training_episode = 80000, test_episodes = 100, decay_steps = 2000, model_path = None, restore_model = False):
     env_spec = gym.make("TicTacToe-v0")
     max_episode_steps = env_spec._max_episode_steps
 
@@ -13,7 +13,14 @@ def run_task(render = True, training_episode = 80000, test_episodes = 100, decay
 
     no_of_rewards = 9
 
-    agent = HRAAdaptive(env_spec.action_space.n, len(state), no_of_rewards, "Tic Tac Toe", decay_steps = decay_steps)
+    agent = HRAAdaptive(env_spec.action_space.n,
+                        len(state),
+                        no_of_rewards,
+                        "Tic Tac Toe",
+                        job_dir = job_dir,
+                        decay_steps = decay_steps,
+                        model_path = model_path,
+                        restore_model = restore_model)
 
     #Episodes for training
     for epoch in range(training_episode):
@@ -84,7 +91,7 @@ def run_task(render = True, training_episode = 80000, test_episodes = 100, decay
                 env_spec.render()
                 if info['illegal_move']:
                     print "Ended cause of illegal move", action
-                if info['x_won']:
+                elif info['x_won']:
                     print "You WIN"
                 elif info['o_won']:
                     print "You LOST"

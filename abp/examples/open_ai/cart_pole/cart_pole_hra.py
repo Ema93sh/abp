@@ -3,7 +3,7 @@ from gym import wrappers
 from abp.adaptives.hra import HRAAdaptive
 
 
-def run_task(render = True, training_episode = 500, test_episodes = 100, decay_steps = 250):
+def run_task(job_dir, render = True, training_episode = 500, test_episodes = 100, decay_steps = 250, model_path = None, restore_model = False):
     directory = "gym/hra/cartpole"
     env_spec = gym.make("CartPole-v0")
 
@@ -16,7 +16,14 @@ def run_task(render = True, training_episode = 500, test_episodes = 100, decay_s
 
     no_of_rewards = 4
 
-    agent = HRAAdaptive(env_spec.action_space.n, len(state), no_of_rewards, "Cart Pole", decay_steps = decay_steps)
+    agent = HRAAdaptive(env_spec.action_space.n,
+                        len(state),
+                        no_of_rewards,
+                        "Cart Pole", 
+                        job_dir = job_dir,
+                        decay_steps = decay_steps,
+                        model_path = model_path,
+                        restore_model = restore_model)
 
     #Episodes
     for epoch in range(training_episode):

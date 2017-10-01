@@ -1,3 +1,7 @@
 .DS_Store
 *.pyc
 demos
+tensorflow_summaries
+abp.egg-info
+dist
+saved_models

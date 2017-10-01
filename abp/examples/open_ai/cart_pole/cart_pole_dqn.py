@@ -2,7 +2,7 @@ import gym
 from abp.adaptives.dqn import DQNAdaptive
 
 
-def run_task(render = True, training_episode = 500, test_episodes = 100, decay_steps = 250):
+def run_task(job_dir, render = True, training_episode = 500, test_episodes = 100, decay_steps = 250, model_path = None, restore_model = False):
     env_spec = gym.make("CartPole-v0")
 
     threshold_angle = 0.087266463
@@ -12,7 +12,11 @@ def run_task(render = True, training_episode = 500, test_episodes = 100, decay_s
 
     state = env_spec.reset()
 
-    agent = DQNAdaptive(env_spec.action_space.n, len(state), "Cart Pole", decay_steps = decay_steps)
+    agent = DQNAdaptive(env_spec.action_space.n, len(state), "Cart Pole",
+                        job_dir = job_dir,
+                        decay_steps = decay_steps,
+                        model_path = model_path,
+                        restore_model = restore_model)
 
     #Episodes
     for epoch in range(training_episode):
