@@ -25,7 +25,7 @@ class DQNAdaptive(object):
         self.previous_action = None
         self.current_reward = 0
         self.gamma = gamma
-        self.session = tf.Session()
+        self.session = tf.Session(config=tf.ConfigProto(log_device_placement=True))
         self.total_psuedo_reward = 0
         self.total_actual_reward = 0
         self.current_test_reward = 0 # Used once learning is disabled
@@ -114,7 +114,9 @@ class DQNAdaptive(object):
         self.save_model()
 
     def end_episode(self, state):
-        logging.info("End of Episode %d with total actual reward %d and total psuedo reward %d" % (self.episode, self.total_actual_reward, self.total_psuedo_reward))
+        if self.episode % 100 == 0:
+            logging.info("End of Episode %d" % (self.episode + 1))
+
         self.episode += 1
 
         if self.learning:

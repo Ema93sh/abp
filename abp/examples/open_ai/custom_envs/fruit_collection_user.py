@@ -6,7 +6,7 @@ import time
 
 from abp.adaptives.hra import HRAAdaptive
 
-def run_task(job_dir, render = True, training_episode = 100, test_episodes = 100, decay_steps = 250):
+def run_task(job_dir, render = True, training_episode = 100, test_episodes = 100, decay_steps = 250,  model_path = None, restore_model = False):
     env_spec = gym.make("FruitCollection-v0")
     max_episode_steps = env_spec._max_episode_steps
 
@@ -29,6 +29,7 @@ def run_task(job_dir, render = True, training_episode = 100, test_episodes = 100
         for steps in range(max_episode_steps):
             screen.clear()
             screen.addstr("Reward: " + str(reward) + "\n")
+            screen.addstr("State:\n" + str(state) + "\n\n")
             screen.refresh()
             s = env_spec.render(mode = "ansi")
             screen.addstr(s.getvalue())

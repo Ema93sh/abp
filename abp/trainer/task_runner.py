@@ -56,7 +56,8 @@ def main():
     parser.add_argument(
         '-r', '--render',
         help = 'Set if it should render the test episodes',
-        action = 'store_true'
+        action = 'store_true',
+        default = False
     )
 
     parser.add_argument(
