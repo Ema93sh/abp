@@ -40,10 +40,10 @@ def run_task(job_dir, render = True, training_episode = 2000, test_episodes = 10
             if collected_fruit is not None:
                 r = possible_fruit_locations.index(collected_fruit)
                 agent.reward(r, 1)
-
-            for i in range(9):
-                if r is None or r != i:
-                    agent.reward(i, -1)
+            
+            # for i in range(9):
+            #     if r is None or r != i:
+            #         agent.reward(i, -1)
 
 
             agent.actual_reward(-1)

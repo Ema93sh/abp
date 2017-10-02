@@ -32,7 +32,7 @@ class DQNAdaptive(object):
         self.replace_target_steps = replace_target_steps
         self.job_dir = job_dir
         dirname = os.path.join(job_dir, "tensorflow_summaries/%s/%s" %(name, "dqn_summary"))
-        run_number = 0 if not os.path.isdir(dirname) else len(os.listdir(dirname))
+        run_number = 0 if not tf.gfile.IsDirectory(dirname) else len(tf.gfile.ListDirectory(dirname))
 
         # t_params = tf.get_collection('target_params')
         # e_params = tf.get_collection('eval_params')
@@ -44,7 +44,7 @@ class DQNAdaptive(object):
         self.model_path = model_path
         self.saver = tf.train.Saver()
         if restore_model and self.model_path is not None:
-            if os.path.exists(self.model_path):
+            if tf.gfile.Exists(self.model_path):
                 logging.info("Restoring model from %s" % self.model_path)
                 self.saver.restore(self.session, self.model_path)
             else:
@@ -58,13 +58,13 @@ class DQNAdaptive(object):
 
     def save_model(self):
         if self.model_path is not None:
-            if not os.path.exists(os.path.dirname(self.model_path)):
+            dirname = os.path.dirname(self.model_path)
+            if not tf.gfile.Exists(dirname):
                 logging.info("Creating model path directories...")
-                os.makedirs(os.path.dirname(self.model_path))
+                tf.gfile.MakeDirs(dirname)
             logging.info("Saving the model...")
             self.saver.save(self.session, self.model_path)
-        pass
-
+        
 
     def should_explore(self):
         epsilon = self.starting_epsilon * (self.epsilon_decay_rate ** (self.steps / self.decay_steps))
