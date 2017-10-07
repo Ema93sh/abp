@@ -18,10 +18,10 @@ class DQNModel(object):
         self.state = tf.placeholder(tf.float32, [None, self.size_features], name= self.name + "_state")
         self.q_target = tf.placeholder(tf.float32, [None, self.size_actions], name= self.name + "_qvalues")
 
-        n_h1 = 1024
-        n_h2 = 1024
+        n_h1 = 250
+        n_h2 = 250
         # TODO Random initialization
-        w_initializer = tf.random_normal_initializer(0., 0.3)
+        w_initializer = tf.random_normal_initializer(0., 0.1)
         b_initializer = tf.constant_initializer(0.1)
 
         collections = [tf.GraphKeys.GLOBAL_VARIABLES, self.name + "_Collection"]

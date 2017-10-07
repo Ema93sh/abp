@@ -31,7 +31,6 @@ class FruitCollectionEnv(gym.Env):
 
         self.shape = (10, 10)
         self.current_step = 0
-        # self.observation_space = spaces.Box(np.zeros(shape), np.ones(shape) + 1)
         self._reset()
 
 

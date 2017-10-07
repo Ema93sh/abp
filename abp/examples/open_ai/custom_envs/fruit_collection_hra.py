@@ -6,27 +6,21 @@ import time
 
 from abp.adaptives.hra import HRAAdaptive
 
-def run_task(job_dir, render = True, training_episode = 2000, test_episodes = 100, decay_steps = 250,  model_path = None, restore_model = False):
-    env_spec = gym.make("FruitCollection-v0")
+def run_task(config):
+    config.name = "FruitCollection-v0"
+
+    env_spec = gym.make(config.name)
+    state = env_spec.reset()
     max_episode_steps = env_spec._max_episode_steps
 
+    config.size_rewards = 10
+    config.size_features = len(state)
+    config.action_size = env_spec.action_space.n
 
-    no_of_rewards = 10
-
-    state = env_spec.reset()
-    agent = HRAAdaptive(env_spec.action_space.n,
-                        len(state),
-                        no_of_rewards,
-                        "Fruit Collection",
-                        job_dir = job_dir,
-                        decay_steps = decay_steps,
-                        gamma = 0.95,
-                        model_path = model_path,
-                        restore_model = restore_model)
-
+    agent = HRAAdaptive(config)
 
     #Training Episodes
-    for epoch in range(training_episode):
+    for epoch in range(config.training_episode):
         state = env_spec.reset()
         for steps in range(max_episode_steps):
 
@@ -35,16 +29,16 @@ def run_task(job_dir, render = True, training_episode = 2000, test_episodes = 10
 
             possible_fruit_locations = info["possible_fruit_locations"]
             collected_fruit = info["collected_fruit"]
+            current_fruit_locations = info["current_fruit_locations"]
 
             r = None
             if collected_fruit is not None:
                 r = possible_fruit_locations.index(collected_fruit)
                 agent.reward(r, 1)
-            
-            # for i in range(9):
-            #     if r is None or r != i:
-            #         agent.reward(i, -1)
 
+            for i in range(9):
+                if (r is None or r != i) and  possible_fruit_locations[i] in current_fruit_locations:
+                    agent.reward(i, -1)
 
             agent.actual_reward(-1)
 
@@ -55,18 +49,50 @@ def run_task(job_dir, render = True, training_episode = 2000, test_episodes = 10
 
     agent.disable_learning()
 
-    #Test Episodes
-    for epoch in range(test_episodes):
-        state = env_spec.reset()
-        for steps in range(max_episode_steps):
-            env_spec.render()
-            action = agent.predict(state)
-            state, reward, done, info = env_spec.step(action)
-            agent.test_reward(-1)
+    if config.render: #TODO Move inside ENV
+        import curses
+        screen = curses.initscr()
+        curses.savetty()
+        curses.noecho()
+        curses.cbreak()
+        curses.curs_set(0)
+        #Test Episodes
+        for epoch in range(config.test_episodes):
+            state = env_spec.reset()
+            for steps in range(max_episode_steps):
+                screen.clear()
+                screen.addstr("Episode: " + str(agent.episode) + "\n")
+                screen.addstr("Reward: " + str(agent.total_psuedo_reward) + "\n")
+                screen.addstr("Step: " + str(steps) + "\n")
+                s = env_spec.render(mode = "ansi")
+                screen.addstr(s.getvalue())
 
-            if done:
-                agent.end_episode(state)
-                break
+                action = agent.predict(state)
+                screen.addstr("Action: " +str(action) + "\n")
+
+                screen.refresh()
+                time.sleep(1)
+
+                state, reward, done, info = env_spec.step(action)
+                agent.test_reward(-1)
+
+                if done:
+                    agent.end_episode(state)
+                    break
+    else:
+        #Test Episodes
+        for epoch in range(test_episodes):
+            state = env_spec.reset()
+            for steps in range(max_episode_steps):
+                if render:
+                    env_spec.render()
+                action = agent.predict(state)
+                state, reward, done, info = env_spec.step(action)
+                agent.test_reward(-1)
+
+                if done:
+                    agent.end_episode(state)
+                    break
 
 
     env_spec.close()

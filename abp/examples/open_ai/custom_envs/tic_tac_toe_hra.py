@@ -5,25 +5,21 @@ import abp.custom_envs
 from abp.adaptives.hra import HRAAdaptive
 
 
-def run_task(job_dir, render = True, training_episode = 80000, test_episodes = 100, decay_steps = 2000, model_path = None, restore_model = False):
-    env_spec = gym.make("TicTacToe-v0")
+def run_task(config):
+    config.name = "TicTacToe-v0"
+
+    env_spec = gym.make(config.name)
+    state = env_spec.reset()
     max_episode_steps = env_spec._max_episode_steps
 
-    state = env_spec.reset()
+    config.size_rewards = 9
+    config.size_features = len(state)
+    config.action_size = env_spec.action_space.n
 
-    no_of_rewards = 9
-
-    agent = HRAAdaptive(env_spec.action_space.n,
-                        len(state),
-                        no_of_rewards,
-                        "Tic Tac Toe",
-                        job_dir = job_dir,
-                        decay_steps = decay_steps,
-                        model_path = model_path,
-                        restore_model = restore_model)
+    agent = HRAAdaptive(config)
 
     #Episodes for training
-    for epoch in range(training_episode):
+    for epoch in range(config.training_episode):
         state = env_spec.reset()
         for steps in range(max_episode_steps):
 
@@ -77,29 +73,70 @@ def run_task(job_dir, render = True, training_episode = 80000, test_episodes = 1
 
     agent.disable_learning()
 
-    # After learning Episodes
-    for epoch in range(test_episodes):
-        state = env_spec.reset()
-        for steps in range(max_episode_steps):
-            if render:
-                env_spec.render()
-            action = agent.predict(state)
-            state, reward, done, info = env_spec.step(action)
-            agent.test_reward(reward)
+    if config.render: #TODO Move to environment
+        import time
+        import curses
 
-            if done:
-                env_spec.render()
-                if info['illegal_move']:
-                    print "Ended cause of illegal move", action
-                elif info['x_won']:
-                    print "You WIN"
-                elif info['o_won']:
-                    print "You LOST"
-                else:
-                    print "DRAW"
+        screen = curses.initscr()
+        curses.savetty()
+        curses.noecho()
+        curses.cbreak()
+        curses.curs_set(0)
+        # screen.nodelay(0)
+        screen.keypad(1)
+        for epoch in range(config.test_episodes):
+            state = env_spec.reset()
+            reward = 0
+            for steps in range(max_episode_steps):
+                screen.clear()
+                screen.addstr("Episode:" + str(epoch) + "\n")
+                s = env_spec.render(mode='ansi')
+                screen.addstr(s.getvalue())
+                screen.refresh()
+                time.sleep(1)
+                action = agent.predict(state)
 
-                print "END OF EPISODE"
-                agent.end_episode(state)
-                break
+                state, reward, done, info = env_spec.step(action)
+
+                if done:
+                    screen.clear()
+                    s = env_spec.render(mode='ansi')
+                    screen.addstr(s.getvalue())
+                    if info['illegal_move']:
+                        screen.addstr("Lost Cause of illegal move\n")
+                    elif info['x_won'] == True:
+                        screen.addstr("You Won\n")
+                    elif info['o_won'] == True:
+                        screen.addstr("Opponent Won\n")
+                    else:
+                        screen.addstr("Draw\n")
+                    screen.refresh()
+                    time.sleep(1)
+                    break
+    else:
+        # After learning Episodes
+        for epoch in range(config.test_episodes):
+            state = env_spec.reset()
+            for steps in range(max_episode_steps):
+                if render:
+                    env_spec.render()
+                action = agent.predict(state)
+                state, reward, done, info = env_spec.step(action)
+                agent.test_reward(reward)
+
+                if done:
+                    env_spec.render()
+                    if info['illegal_move']:
+                        print "Ended cause of illegal move", action
+                    elif info['x_won']:
+                        print "You WIN"
+                    elif info['o_won']:
+                        print "You LOST"
+                    else:
+                        print "DRAW"
+
+                    print "END OF EPISODE"
+                    agent.end_episode(state)
+                    break
 
     env_spec.close()

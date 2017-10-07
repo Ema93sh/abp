@@ -9,46 +9,43 @@ import logging
 
 class DQNAdaptive(object):
     """DQNAdaptive using DQN algorithm"""
-    def __init__(self, action_size, size_features, name = "Default", job_dir = ".", model_path = None, restore_model = False, decay_steps = 300, replace_target_steps = 300, gamma = 0.99, memory_size = 10000):
-        super(DQNAdaptive, self).__init__()
-        self.action_size = action_size
-        self.replay_memory = Memory(memory_size)
-        # self.target_model = DQNModel(size_features, self.action_size, "target_model", trainable = False)
-        self.eval_model = DQNModel(size_features, self.action_size, "eval_model")
 
-        self.learning = True
+    def __init__(self, config):
+        super(DQNAdaptive, self).__init__()
+        self.config = config
+        self.replay_memory = Memory(config.memory_size)
+        self.learning = config.learning #config.True
+
         self.steps = 0
-        self.decay_steps = decay_steps
-        self.starting_epsilon = 1.0
-        self.epsilon_decay_rate = 0.96
         self.previous_state = None
         self.previous_action = None
         self.current_reward = 0
-        self.gamma = gamma
-        self.session = tf.Session(config=tf.ConfigProto(log_device_placement=True))
         self.total_psuedo_reward = 0
         self.total_actual_reward = 0
         self.current_test_reward = 0 # Used once learning is disabled
-        self.replace_target_steps = replace_target_steps
-        self.job_dir = job_dir
-        dirname = os.path.join(job_dir, "tensorflow_summaries/%s/%s" %(name, "dqn_summary"))
+
+        # self.target_model = DQNModel(size_features, self.config.action_size, "target_model", trainable = False)
+        self.eval_model = DQNModel(config.size_features, self.config.action_size, "eval_model")
+
+        self.session = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+
+        dirname = os.path.join(config.job_dir, "tensorflow_summaries/%s/%s" %(config.name, "dqn_summary"))
         run_number = 0 if not tf.gfile.IsDirectory(dirname) else len(tf.gfile.ListDirectory(dirname))
+        self.writer = tf.summary.FileWriter("%s/%s" %(dirname, "run" + str(run_number)), self.session.graph)
 
         # t_params = tf.get_collection('target_params')
         # e_params = tf.get_collection('eval_params')
 
         # self.replace_target_op = [tf.assign(t, e) for t, e in zip(t_params, e_params)]
-
-        self.writer = tf.summary.FileWriter("%s/%s" %(dirname, "run" + str(run_number)), self.session.graph)
         self.session.run(tf.global_variables_initializer())
-        self.model_path = model_path
         self.saver = tf.train.Saver()
-        if restore_model and self.model_path is not None:
-            if tf.gfile.Exists(self.model_path):
-                logging.info("Restoring model from %s" % self.model_path)
-                self.saver.restore(self.session, self.model_path)
+
+        if config.restore_model and self.config.model_path is not None:
+            if tf.gfile.Exists(self.config.model_path):
+                logging.info("Restoring model from %s" % self.config.model_path)
+                self.saver.restore(self.session, self.config.model_path)
             else:
-                logging.error("Cant Restore model from %s the path does not exists" % self.model_path)
+                logging.error("Cant Restore model from %s the path does not exists" % self.config.model_path)
 
         self.episode = 0
 
@@ -57,17 +54,16 @@ class DQNAdaptive(object):
         self.writer.close()
 
     def save_model(self):
-        if self.model_path is not None:
-            dirname = os.path.dirname(self.model_path)
+        if self.config.model_path is not None:
+            dirname = os.path.dirname(self.config.model_path)
             if not tf.gfile.Exists(dirname):
                 logging.info("Creating model path directories...")
                 tf.gfile.MakeDirs(dirname)
             logging.info("Saving the model...")
-            self.saver.save(self.session, self.model_path)
-        
+            self.saver.save(self.session, self.config.model_path)
 
     def should_explore(self):
-        epsilon = self.starting_epsilon * (self.epsilon_decay_rate ** (self.steps / self.decay_steps))
+        epsilon = np.max([0.1, self.config.starting_epsilon * (self.config.epsilon_decay_rate ** (self.steps / self.config.decay_steps))])
 
         epsilon_summary = tf.Summary()
         epsilon_summary.value.add(tag='epsilon', simple_value = epsilon)
@@ -85,7 +81,7 @@ class DQNAdaptive(object):
             self.replay_memory.add(experience)
 
         if self.learning and self.should_explore():
-            action = np.random.choice(self.action_size)
+            action = np.random.choice(self.config.action_size)
         else:
             action = self.eval_model.predict(state, self.session)
 
@@ -93,7 +89,7 @@ class DQNAdaptive(object):
         if self.learning and self.replay_memory.current_size > 30:
             self.update()
 
-            # if self.steps % self.replace_target_steps == 0:
+            # if self.steps % self.config.replace_target_steps == 0:
             #     self.session.run(self.replace_target_op)
 
             # if self.steps % 1000 == 0:
@@ -187,6 +183,6 @@ class DQNAdaptive(object):
 
         batch_index = np.arange(batch_size, dtype=np.int32)
 
-        q_target[batch_index, actions] = reward + self.gamma * q_max
+        q_target[batch_index, actions] = reward + self.config.gamma * q_max
 
         self.eval_model.fit(states, q_target, self.session, self.writer, self.steps)

@@ -11,6 +11,6 @@ register(
 register(
     id='FruitCollection-v0',
     entry_point='abp.custom_envs.fruit_collection:FruitCollectionEnv',
-    max_episode_steps=301, #TODO
+    max_episode_steps=300, #TODO
     reward_threshold=5 #TODO
 )

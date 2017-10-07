@@ -5,20 +5,20 @@ import abp.custom_envs
 from abp.adaptives.dqn import DQNAdaptive
 
 
-def run_task(job_dir, render = True, training_episode = 2000, test_episodes = 100, decay_steps = 500, model_path = None, restore_model = False):
-    env_spec = gym.make("FruitCollection-v0")
-    max_episode_steps = env_spec._max_episode_steps
+def run_task(config):
+    config.name = "FruitCollection-v0"
 
+    env_spec = gym.make(config.name)
+    max_episode_steps = env_spec._max_episode_steps
     state = env_spec.reset()
-    agent = DQNAdaptive(env_spec.action_space.n,
-                        len(state), "Fruit Collection",
-                        job_dir = job_dir,
-                        decay_steps = decay_steps,
-                        model_path = model_path,
-                        restore_model = restore_model)
+
+    config.size_features = len(state)
+    config.action_size = env_spec.action_space.n
+
+    agent = DQNAdaptive(config)
 
     #Training Episodes
-    for epoch in range(training_episode):
+    for epoch in range(config.training_episode):
         state = env_spec.reset()
         for steps in range(max_episode_steps):
             action = agent.predict(state)
@@ -28,6 +28,20 @@ def run_task(job_dir, render = True, training_episode = 2000, test_episodes = 10
 
             agent.actual_reward(-1)
 
+            possible_fruit_locations = info["possible_fruit_locations"]
+            collected_fruit = info["collected_fruit"]
+            current_fruit_locations = info["current_fruit_locations"]
+
+
+            r = None
+            if collected_fruit is not None:
+                r = possible_fruit_locations.index(collected_fruit)
+                agent.reward(1)
+
+            for i in range(9):
+                if (r is None or r != i) and  possible_fruit_locations[i] in current_fruit_locations:
+                    agent.reward(-1)
+
             if done or steps == (max_episode_steps - 1):
                 agent.end_episode(state)
                 break
@@ -35,14 +49,14 @@ def run_task(job_dir, render = True, training_episode = 2000, test_episodes = 10
     agent.disable_learning()
 
     #Test Episodes
-    for epoch in range(test_episodes):
+    for epoch in range(config.test_episodes):
         state = env_spec.reset()
         for steps in range(max_episode_steps):
-            if render:
+            if config.render:
                 env_spec.render()
             action = agent.predict(state)
             state, reward, done, info = env_spec.step(action)
-            agent.test_reward(reward)
+            agent.test_reward(-1)
 
             if done:
                 agent.end_episode(state)

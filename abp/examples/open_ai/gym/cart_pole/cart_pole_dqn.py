@@ -2,24 +2,23 @@ import gym
 from abp.adaptives.dqn import DQNAdaptive
 
 
-def run_task(job_dir, render = True, training_episode = 500, test_episodes = 100, decay_steps = 250, model_path = None, restore_model = False):
-    env_spec = gym.make("CartPole-v0")
+def run_task(config):
+    config.name = "CartPole-v0"
+    env_spec = gym.make(config.name)
+    max_episode_steps = env_spec._max_episode_steps
+    state = env_spec.reset()
+
+
+    config.size_features = len(state)
+    config.action_size = env_spec.action_space.n
 
     threshold_angle = 0.087266463
     threshold_x = 1.5
 
-    max_episode_steps = env_spec._max_episode_steps
-
-    state = env_spec.reset()
-
-    agent = DQNAdaptive(env_spec.action_space.n, len(state), "Cart Pole",
-                        job_dir = job_dir,
-                        decay_steps = decay_steps,
-                        model_path = model_path,
-                        restore_model = restore_model)
+    agent = DQNAdaptive(config)
 
     #Episodes
-    for epoch in range(training_episode):
+    for epoch in range(config.training_episode):
         state = env_spec.reset()
         for steps in range(max_episode_steps):
             action = agent.predict(state)
@@ -50,10 +49,10 @@ def run_task(job_dir, render = True, training_episode = 500, test_episodes = 100
 
     agent.disable_learning()
 
-    for epoch in range(test_episodes):
+    for epoch in range(config.test_episodes):
         state = env_spec.reset()
         for t in range(max_episode_steps):
-            if render:
+            if config.render:
                 env_spec.render()
             action = agent.predict(state)
             state, reward, done, info = env_spec.step(action)

@@ -1,13 +1,17 @@
 import argparse
-from importlib import import_module
-import abp
 import logging
+
+from importlib import import_module
+
+
+import abp
+from abp.utils import AdaptiveConfig
 
 
 task_map = {
     "cartpole": {
-        "dqn": "abp.examples.open_ai.cart_pole.cart_pole_dqn",
-        "hra": "abp.examples.open_ai.cart_pole.cart_pole_hra"
+        "dqn": "abp.examples.open_ai.gym.cart_pole.cart_pole_dqn",
+        "hra": "abp.examples.open_ai.gym.cart_pole.cart_pole_hra"
     },
     "fruitcollection": {
         "dqn": "abp.examples.open_ai.custom_envs.fruit_collection_dqn",
@@ -81,9 +85,29 @@ def main():
         default = 250
     )
 
+    parser.add_argument(
+        '--gamma',
+        help = "Set the discount factor",
+        type = float,
+        default = 0.99
+    )
+
+    parser.add_argument(
+        '--memory-size',
+        help = "Set the memory size for DQN",
+        type = int,
+        default = 10000
+    )
+
+    parser.add_argument(
+        '--disable-learning',
+        help = "Disable learning for the adaptive",
+        default = False,
+        action = 'store_true'
+    )
+
 
     args = parser.parse_args()
-
 
     logging.info("Running: " + args.example + " with adaptive: " + args.adaptive)
 
@@ -91,17 +115,9 @@ def main():
 
     task_module = import_module(task)
 
+    default_adaptive_config  = AdaptiveConfig(args)
 
-
-    task_module.run_task(
-        args.job_dir,
-        render = args.render,
-        model_path = args.model_path,
-        restore_model = args.restore_model,
-        training_episode = args.training_episodes,
-        test_episodes = args.test_episodes,
-        decay_steps = args.decay_steps
-    )
+    task_module.run_task(default_adaptive_config)
 
 
 if __name__ == '__main__':

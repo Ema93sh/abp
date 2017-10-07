@@ -13,13 +13,13 @@ curses.curs_set(0)
 # screen.nodelay(0)
 screen.keypad(1)
 
-def run_task(job_dir, render = True, training_episode = 100, test_episodes = 100, decay_steps = 2000,  model_path = None, restore_model = False):
+def run_task(config):
     env_spec = gym.make("TicTacToe-v0")
     max_episode_steps = env_spec._max_episode_steps
 
     state = env_spec.reset()
 
-    for epoch in range(training_episode):
+    for epoch in range(config.test_episodes):
         state = env_spec.reset()
         reward = 0
         for steps in range(max_episode_steps):

@@ -9,72 +9,61 @@ import logging
 
 class HRAAdaptive(object):
     """HRAAdaptive using HRA adaptive"""
-    def __init__(self, action_size, size_features, size_rewards, name = "Default", job_dir = ".", model_path = None, restore_model = False, decay_steps = 300, replace_target_steps = 300, gamma = 0.99, memory_size = 10000):
+    def __init__(self, config):
         super(HRAAdaptive, self).__init__()
-        self.action_size = action_size
-        self.size_rewards = size_rewards
-        self.replay_memory = Memory(memory_size)
-        # self.target_model = DQNModel(size_features, self.action_size, "target_model", trainable = False)
-        self.eval_model = HRAModel(size_features, self.action_size, self.size_rewards, "eval_model")
+        self.config = config
+        self.replay_memory = Memory(config.memory_size)
+        self.learning = config.learning #config.True
 
-        self.learning = True
         self.steps = 0
-        self.decay_steps = decay_steps
-        self.starting_epsilon = 1.0
-        self.epsilon_decay_rate = 0.96
         self.previous_state = None
         self.previous_action = None
-        self.current_reward = [0] * self.size_rewards #TODO: change reward into dictionary
-        self.gamma = gamma
-        self.session = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+        self.current_reward = [0] * self.config.size_rewards #TODO: change reward into dictionary
         self.total_psuedo_reward = 0
-        self.current_test_reward = 0 # Used once learning is disabled
         self.total_actual_reward = 0
-        # self.replace_target_steps = replace_target_steps
+        self.current_test_reward = 0 # Used once learning is disabled
 
-        self.job_dir = job_dir
-        dirname = os.path.join(job_dir, "tensorflow_summaries/%s/%s" %(name, "hra_summary"))
+        self.eval_model = HRAModel(self.config.size_features, self.config.action_size, self.config.size_rewards, "eval_model")
+
+        self.session = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+
+        dirname = os.path.join(config.job_dir, "tensorflow_summaries/%s/%s" %(config.name, "hra_summary"))
         run_number = 0 if not tf.gfile.IsDirectory(dirname) else len(tf.gfile.ListDirectory(dirname))
+        self.writer = tf.summary.FileWriter("%s/%s" %(dirname, "run" + str(run_number)), self.session.graph)
 
         # t_params = tf.get_collection('target_params')
         # e_params = tf.get_collection('eval_params')
 
         # self.replace_target_op = [tf.assign(t, e) for t, e in zip(t_params, e_params)]
-
-        self.writer = tf.summary.FileWriter("%s/%s" %(dirname, "run" + str(run_number)), self.session.graph)
         self.session.run(tf.global_variables_initializer())
-
-        self.model_path = model_path
         self.saver = tf.train.Saver()
-        if restore_model and self.model_path is not None:
-            if tf.gfile.Exists(self.model_path):
-                logging.info("Restoring model from %s" % self.model_path)
-                self.saver.restore(self.session, self.model_path)
+
+        if config.restore_model and self.config.model_path is not None:
+            if tf.gfile.Exists(self.config.model_path):
+                logging.info("Restoring model from %s" % self.config.model_path)
+                self.saver.restore(self.session, self.config.model_path)
             else:
-                logging.error("Can't Restore model from %s the path does not exists" % self.model_path)
+                logging.error("Cant Restore model from %s the path does not exists" % self.config.model_path)
 
 
         self.episode = 0
 
     def __del__(self):
-        # if self.path is not None:
-        #     self.saver.save(self.session, self.path)
         self.session.close()
         self.writer.close()
 
     def save_model(self):
-        if self.model_path is not None:
-            dirname = os.path.dirname(self.model_path)
+        if self.config.model_path is not None:
+            dirname = os.path.dirname(self.config.model_path)
             if not tf.gfile.Exists(dirname):
                 logging.info("Creating model path directories...")
                 tf.gfile.MakeDirs(dirname)
             logging.info("Saving the model...")
-            self.saver.save(self.session, self.model_path)
-
+            self.saver.save(self.session, self.config.model_path)
 
 
     def should_explore(self):
-        epsilon = self.starting_epsilon * (self.epsilon_decay_rate ** (self.steps / self.decay_steps))
+        epsilon = np.max([0.1, self.config.starting_epsilon * (self.config.epsilon_decay_rate ** (self.steps / self.config.decay_steps))])
 
         epsilon_summary = tf.Summary()
         epsilon_summary.value.add(tag='epsilon', simple_value = epsilon)
@@ -92,7 +81,7 @@ class HRAAdaptive(object):
             self.replay_memory.add(experience)
 
         if self.learning and self.should_explore():
-            action = np.random.choice(self.action_size)
+            action = np.random.choice(self.config.action_size)
         else:
             action = self.eval_model.predict(state, self.session)
 
@@ -106,7 +95,7 @@ class HRAAdaptive(object):
             # if self.steps % 1000 == 0:
             #     self.target_model.generate_summaries(self.session, [state], self.writer, self.steps)
 
-        self.current_reward = [0] * self.size_rewards
+        self.current_reward = [0] * self.config.size_rewards
 
         self.previous_state = state
         self.previous_action = action
@@ -122,7 +111,7 @@ class HRAAdaptive(object):
 
     def end_episode(self, state):
         if self.episode % 100 == 0:
-            logging.info("End of Episode %d" % (self.episode + 1))
+            logging.info("End of Episode %d with total reward %d" % (self.episode + 1, self.total_actual_reward))
 
         self.episode += 1
 
@@ -138,7 +127,7 @@ class HRAAdaptive(object):
             experience = Experience(self.previous_state, self.previous_action, self.current_reward, state, is_terminal = True)
             self.replay_memory.add(experience)
 
-            self.current_reward = [0] * self.size_rewards
+            self.current_reward = [0] * self.config.size_rewards
             self.total_psuedo_reward = 0
             self.total_actual_reward = 0
 
@@ -184,18 +173,19 @@ class HRAAdaptive(object):
 
         reward = np.array([experience.reward for experience in batch])
 
-        q_next, _ = self.eval_model.predict_batch(next_states, self.session)
+        q_next = self.eval_model.predict_batch(next_states, self.session)
 
-        q_max = np.max(q_next, axis = 2)
+        # q_max = np.max(q_next, axis = 2)
+        q_sarsa = np.mean(q_next, axis = 2)
 
-        q_max = np.array([ a * b if a == 0 else b for a,b in zip(is_terminal, q_max)])
+        q_sarsa = np.array([ a * b if a == 0 else b for a,b in zip(is_terminal, q_sarsa)])
 
-        q_values, _ = self.eval_model.predict_batch(states, self.session)
+        q_values = self.eval_model.predict_batch(states, self.session)
 
         q_target = q_values.copy()
 
         batch_index = np.arange(batch_size, dtype=np.int32)
 
-        q_target[batch_index, :, actions] = reward + self.gamma * q_max
+        q_target[batch_index, :, actions] = reward + self.config.gamma * q_sarsa
 
         self.eval_model.fit(states, q_target, self.session, self.writer, self.steps)
