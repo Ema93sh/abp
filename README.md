@@ -1,5 +1,5 @@
-Adaptation Based Programming Library
-=====================================
+Adaptation Based Programming
+=============================
 
 
 
@@ -31,11 +31,12 @@ It takes the following arguments:
 
 
 ## Using CloudML
-To run the job using cloud ML using the following command
+To run the job using cloud ML use the following commands
 
+#### Setup Job Parameters
 ```
 now=$(date +"%Y%m%d_%H%M%S")
-JOB_NAME="abp_$now"
+JOB_NAME="abp_tictactoe_$now"
 TRAINER_PACKAGE_PATH="/path-to-abp/abp"
 TRAINER_CONFIG_PATH="/path-to-abp/abp/trainer/cloudml-gpu.yml"
 MAIN_TRAINER_MODULE="abp.trainer.task_runner"
@@ -43,11 +44,12 @@ JOB_DIR="gs://path-to-job-dir"
 MODEL_PATH="gs://path-to-model"
 EXAMPLE="tictactoe"
 ADAPTIVE="hra"
-TRAINING_EPISODES=50000
-DECAY_STEPS=2000
+TRAINING_EPISODES=1000
+DECAY_STEPS=250
 
 ```
 
+#### Submit the job
 ```
 gcloud ml-engine jobs submit training $JOB_NAME \
     --package-path $TRAINER_PACKAGE_PATH \
