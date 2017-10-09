@@ -2,7 +2,7 @@ import gym
 import numpy as np
 import abp.custom_envs
 
-from abp.adaptives.hra import HRAAdaptive
+from abp.adaptives.dq_table import DQAdaptive
 
 
 def run_task(config):
@@ -16,7 +16,7 @@ def run_task(config):
     config.size_features = len(state)
     config.action_size = env_spec.action_space.n
 
-    agent = HRAAdaptive(config)
+    agent = DQAdaptive(config)
 
     #Episodes for training
     for epoch in range(config.training_episode):
@@ -73,53 +73,11 @@ def run_task(config):
 
     agent.disable_learning()
 
-    # if config.render: #TODO Move to environment
-    #     import time
-    #     import curses
-    #
-    #     screen = curses.initscr()
-    #     curses.savetty()
-    #     curses.noecho()
-    #     curses.cbreak()
-    #     curses.curs_set(0)
-    #     # screen.nodelay(0)
-    #     screen.keypad(1)
-    #     for epoch in range(config.test_episodes):
-    #         state = env_spec.reset()
-    #         reward = 0
-    #         for steps in range(max_episode_steps):
-    #             screen.clear()
-    #             screen.addstr("Episode:" + str(epoch) + "\n")
-    #             s = env_spec.render(mode='ansi')
-    #             screen.addstr(s.getvalue())
-    #             screen.refresh()
-    #             time.sleep(1)
-    #             action = agent.predict(state)
-    #
-    #             state, reward, done, info = env_spec.step(action)
-    #
-    #             if done:
-    #                 screen.clear()
-    #                 s = env_spec.render(mode='ansi')
-    #                 screen.addstr(s.getvalue())
-    #                 if info['illegal_move']:
-    #                     screen.addstr("Lost Cause of illegal move\n")
-    #                 elif info['x_won'] == True:
-    #                     screen.addstr("You Won\n")
-    #                 elif info['o_won'] == True:
-    #                     screen.addstr("Opponent Won\n")
-    #                 else:
-    #                     screen.addstr("Draw\n")
-    #                 screen.refresh()
-    #                 time.sleep(1)
-    #                 break
-    # else:
-    
     # After learning Episodes
     for epoch in range(config.test_episodes):
         state = env_spec.reset()
         for steps in range(max_episode_steps):
-            if render:
+            if config.render:
                 env_spec.render()
             action = agent.predict(state)
             state, reward, done, info = env_spec.step(action)
@@ -128,8 +86,8 @@ def run_task(config):
             if done:
                 env_spec.render()
                 if info['illegal_move']:
-                    print "Ended cause of illegal move", action
-                elif info['x_won']:
+                    print "Ended cause of illegal move"
+                if info['x_won']:
                     print "You WIN"
                 elif info['o_won']:
                     print "You LOST"

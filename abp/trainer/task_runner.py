@@ -16,11 +16,15 @@ task_map = {
     "fruitcollection": {
         "dqn": "abp.examples.open_ai.custom_envs.fruit_collection_dqn",
         "hra": "abp.examples.open_ai.custom_envs.fruit_collection_hra",
+        "qtable": "abp.examples.open_ai.custom_envs.fruit_collection_qtable",
+        "dqtable": "abp.examples.open_ai.custom_envs.fruit_collection_dqtable",
         "user": "abp.examples.open_ai.custom_envs.fruit_collection_user"
     },
     "tictactoe": {
         "dqn": "abp.examples.open_ai.custom_envs.tic_tac_toe_dqn",
         "hra": "abp.examples.open_ai.custom_envs.tic_tac_toe_hra",
+        "qtable": "abp.examples.open_ai.custom_envs.tic_tac_toe_qtable",
+        "dqtable": "abp.examples.open_ai.custom_envs.tic_tac_toe_dqtable",
         "user": "abp.examples.open_ai.custom_envs.tic_tac_toe_user"
     }
 }
