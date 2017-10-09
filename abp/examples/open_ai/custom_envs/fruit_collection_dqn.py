@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 import abp.custom_envs
+import time
 
 from abp.adaptives.dqn import DQNAdaptive
 
@@ -54,6 +55,7 @@ def run_task(config):
         for steps in range(max_episode_steps):
             if config.render:
                 env_spec.render()
+                time.sleep(0.5)
             action = agent.predict(state)
             state, reward, done, info = env_spec.step(action)
             agent.test_reward(-1)

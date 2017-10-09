@@ -49,50 +49,19 @@ def run_task(config):
 
     agent.disable_learning()
 
-    if config.render: #TODO Move inside ENV
-        import curses
-        screen = curses.initscr()
-        curses.savetty()
-        curses.noecho()
-        curses.cbreak()
-        curses.curs_set(0)
-        #Test Episodes
-        for epoch in range(config.test_episodes):
-            state = env_spec.reset()
-            for steps in range(max_episode_steps):
-                screen.clear()
-                screen.addstr("Episode: " + str(agent.episode) + "\n")
-                screen.addstr("Reward: " + str(agent.total_psuedo_reward) + "\n")
-                screen.addstr("Step: " + str(steps) + "\n")
-                s = env_spec.render(mode = "ansi")
-                screen.addstr(s.getvalue())
+    #Test Episodes
+    for epoch in range(config.test_episodes):
+        state = env_spec.reset()
+        for steps in range(max_episode_steps):
+            if config.render:
+                env_spec.render()
+                time.sleep(0.5)
+            action = agent.predict(state)
+            state, reward, done, info = env_spec.step(action)
+            agent.test_reward(-1)
 
-                action = agent.predict(state)
-                screen.addstr("Action: " +str(action) + "\n")
-
-                screen.refresh()
-                time.sleep(1)
-
-                state, reward, done, info = env_spec.step(action)
-                agent.test_reward(-1)
-
-                if done:
-                    agent.end_episode(state)
-                    break
-    else:
-        #Test Episodes
-        for epoch in range(test_episodes):
-            state = env_spec.reset()
-            for steps in range(max_episode_steps):
-                if render:
-                    env_spec.render()
-                action = agent.predict(state)
-                state, reward, done, info = env_spec.step(action)
-                agent.test_reward(-1)
-
-                if done:
-                    agent.end_episode(state)
-                    break
-
+            if done:
+                agent.end_episode(state)
+                break
 
     env_spec.close()

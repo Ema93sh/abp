@@ -31,6 +31,7 @@ class FruitCollectionEnv(gym.Env):
 
         self.shape = (10, 10)
         self.current_step = 0
+        self.viewer  = None
         self._reset()
 
 
@@ -111,10 +112,70 @@ class FruitCollectionEnv(gym.Env):
 
         return self.generate_state(), reward, done, info
 
-    def _render(self, mode = 'human', close = False):
-        if close:
-            return None
+    def render_human(self):
+        from gym.envs.classic_control import rendering
+        screen_width = 600
+        screen_height = 600
+        world_width = 200
+        scale = screen_width/world_width
+        grid_size = 300
+        cell_size = 30
+        origin_x = screen_width / 2
+        origin_y = screen_height /2
 
+
+        if self.viewer is None:
+            self.viewer = rendering.Viewer(screen_width, screen_height)
+
+            # Draw grid
+            l = origin_x  - grid_size / 2
+            r = l + grid_size
+            t = origin_y + grid_size / 2
+            b = t - grid_size
+            grid_background = rendering.FilledPolygon([(l,b), (l,t), (r,t), (r,b)])
+            grid_background.set_color(239/255.0,239/255.0,239/255.0)
+
+            self.viewer.add_geom(grid_background)
+
+
+            for x in range(10):
+                for y in range(1, 11):
+                    l = origin_x  - (cell_size * 5) + (x * cell_size)
+                    r = l + cell_size
+                    t = origin_y - (cell_size * 5) + (y * cell_size)
+                    b = t - cell_size
+                    cell = rendering.PolyLine([(l,b), (l,t), (r,t), (r,b)], True)
+                    self.viewer.add_geom(cell)
+
+        # Draw Fruits
+        self.rendered_fruits = []
+        for loc in self.current_fruit_locations:
+            fruit = self.viewer.draw_circle((cell_size/2) -  4)
+            x = loc / 10
+            y = loc % 10
+            x = origin_x - (cell_size * 5) + (x * cell_size) + cell_size / 2
+            y = origin_y - (cell_size * 5) + (y * cell_size) + cell_size / 2
+            fruit_trans = rendering.Transform(translation=(x, y))
+            fruit.add_attr(fruit_trans)
+            fruit.set_color(21/255.0, 212/255.0, 78/255.0)
+            self.viewer.add_onetime(fruit)
+            self.rendered_fruits.append(fruit)
+
+        # Draw Agent
+        x, y = self.agent_location / 10, (self.agent_location % 10 + 1)
+        l = origin_x  - (cell_size * 5) + (x * cell_size)
+        r = l + cell_size
+        t = origin_y - (cell_size * 5) + (y * cell_size)
+        b = t - cell_size
+        x = origin_x - (cell_size * 5) + (x * cell_size) + cell_size / 2
+        y = origin_y - (cell_size * 5) + (y * cell_size) + cell_size / 2
+        self.rendered_agent = rendering.FilledPolygon([(l,b), (l,t), (r,t), (r,b)])
+        self.rendered_agent.set_color(1, 0, 0)
+        self.viewer.add_onetime(self.rendered_agent)
+
+        return self.viewer.render(return_rgb_array = False)
+
+    def render_ansi(self):
         reshaped_board = np.reshape(self.grid, self.shape)
 
         outfile = StringIO() if mode == 'ansi' else sys.stdout
@@ -133,3 +194,13 @@ class FruitCollectionEnv(gym.Env):
         outfile.write('\n')
 
         return outfile
+
+
+    def _render(self, mode = 'human', close = False):
+        if close:
+            return None
+
+        if mode == 'human':
+            return self.render_human()
+        else:
+            return self.render_ansi()

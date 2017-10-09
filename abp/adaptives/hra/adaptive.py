@@ -6,6 +6,7 @@ import tensorflow as tf
 import numpy as np
 import os
 import logging
+import sys
 
 class HRAAdaptive(object):
     """HRAAdaptive using HRA adaptive"""
@@ -39,11 +40,13 @@ class HRAAdaptive(object):
         self.saver = tf.train.Saver()
 
         if config.restore_model and self.config.model_path is not None:
-            if tf.gfile.Exists(self.config.model_path):
+            dirname = os.path.dirname(self.config.model_path)
+            if tf.gfile.Exists(dirname) and len(tf.gfile.ListDirectory(dirname)) > 0:
                 logging.info("Restoring model from %s" % self.config.model_path)
                 self.saver.restore(self.session, self.config.model_path)
             else:
-                logging.error("Cant Restore model from %s the path does not exists" % self.config.model_path)
+                logging.error("Can't Restore model from %s the path does not exists" % self.config.model_path)
+                sys.exit(-1)
 
 
         self.episode = 0

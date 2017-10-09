@@ -41,7 +41,8 @@ class DQNAdaptive(object):
         self.saver = tf.train.Saver()
 
         if config.restore_model and self.config.model_path is not None:
-            if tf.gfile.Exists(self.config.model_path):
+            dirname = os.path.dirname(self.config.model_path)
+            if tf.gfile.Exists(dirname) and len(tf.gfile.ListDirectory(dirname)) > 0:
                 logging.info("Restoring model from %s" % self.config.model_path)
                 self.saver.restore(self.session, self.config.model_path)
             else:
