@@ -32,12 +32,11 @@ class DQAdaptive(object):
         run_number = 0 if not tf.gfile.IsDirectory(dirname) else len(tf.gfile.ListDirectory(dirname))
         self.writer = tf.summary.FileWriter("%s/%s" %(dirname, "run" + str(run_number)))
 
-        # self.saver = tf.train.Saver()
-
         if config.restore_model and self.config.model_path is not None:
-            if tf.gfile.Exists(self.config.model_path):
+            dirname = os.path.dirname(self.config.model_path)
+            if tf.gfile.Exists(dirname):
                 logging.info("Restoring model from %s" % self.config.model_path)
-                self.saver.restore(self.session, self.config.model_path)
+                self.aggregate_qtable.load(self.config.model_path)
             else:
                 logging.error("Can't Restore model from %s the path does not exists" % self.config.model_path)
 
@@ -49,8 +48,13 @@ class DQAdaptive(object):
 
     def save_model(self):
         if self.config.model_path is not None:
-            # TODO
-            pass
+            dirname = os.path.dirname(self.config.model_path)
+            if not tf.gfile.Exists(dirname):
+                logging.info("Creating model path directories...")
+                tf.gfile.MakeDirs(dirname)
+            logging.info("Saving the model...")
+            self.aggregate_qtable.save(self.config.model_path)
+
 
     def should_explore(self):
         epsilon = np.max([0.1, self.config.starting_epsilon * (self.config.epsilon_decay_rate ** (self.steps / self.config.decay_steps))])
@@ -68,7 +72,7 @@ class DQAdaptive(object):
             self.update(state)
 
         if self.learning and self.should_explore():
-            action = np.random.choice(self.config.action_size)
+            action, q_value = np.random.choice(self.config.action_size), None
         else:
             action, q_value = self.aggregate_qtable.qmax_merged(state)
 
@@ -77,7 +81,7 @@ class DQAdaptive(object):
         self.previous_state = state
         self.previous_action = action
 
-        return action
+        return action, q_value
 
     def disable_learning(self):
         logging.info("Disabled Learning")

@@ -69,7 +69,7 @@ class DQNModel(object):
     def predict(self, state, session):
         q_values = self.predict_batch([state], session)
         action = np.argmax(q_values[0])
-        return action
+        return action, q_values[0]
 
     def predict_batch(self, batch, session):
         q_values, = session.run([self.q_current], feed_dict = {self.state : batch})

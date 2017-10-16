@@ -14,3 +14,10 @@ register(
     max_episode_steps=300, #TODO
     reward_threshold=5 #TODO
 )
+
+register(
+    id='Traveller-v0',
+    entry_point='abp.custom_envs.traveller:TravellerEnv',
+    max_episode_steps=8, #TODO
+    reward_threshold=5 #TODO
+)

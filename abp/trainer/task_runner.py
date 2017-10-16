@@ -14,18 +14,25 @@ task_map = {
         "hra": "abp.examples.open_ai.gym.cart_pole.cart_pole_hra"
     },
     "fruitcollection": {
-        "dqn": "abp.examples.open_ai.custom_envs.fruit_collection_dqn",
-        "hra": "abp.examples.open_ai.custom_envs.fruit_collection_hra",
-        "qtable": "abp.examples.open_ai.custom_envs.fruit_collection_qtable",
-        "dqtable": "abp.examples.open_ai.custom_envs.fruit_collection_dqtable",
-        "user": "abp.examples.open_ai.custom_envs.fruit_collection_user"
+        "dqn": "abp.examples.open_ai.custom_envs.fruit_collection.fruit_collection_dqn",
+        "hra": "abp.examples.open_ai.custom_envs.fruit_collection.fruit_collection_hra",
+        "qtable": "abp.examples.open_ai.custom_envs.fruit_collection.fruit_collection_qtable",
+        "dqtable": "abp.examples.open_ai.custom_envs.fruit_collection.fruit_collection_dqtable",
+        "user": "abp.examples.open_ai.custom_envs.fruit_collection.fruit_collection_user"
     },
     "tictactoe": {
-        "dqn": "abp.examples.open_ai.custom_envs.tic_tac_toe_dqn",
-        "hra": "abp.examples.open_ai.custom_envs.tic_tac_toe_hra",
-        "qtable": "abp.examples.open_ai.custom_envs.tic_tac_toe_qtable",
-        "dqtable": "abp.examples.open_ai.custom_envs.tic_tac_toe_dqtable",
-        "user": "abp.examples.open_ai.custom_envs.tic_tac_toe_user"
+        "dqn": "abp.examples.open_ai.custom_envs.tic_tac_toe.tic_tac_toe_dqn",
+        "hra": "abp.examples.open_ai.custom_envs.tic_tac_toe.tic_tac_toe_hra",
+        "qtable": "abp.examples.open_ai.custom_envs.tic_tac_toe.tic_tac_toe_qtable",
+        "dqtable": "abp.examples.open_ai.custom_envs.tic_tac_toe.tic_tac_toe_dqtable",
+        "user": "abp.examples.open_ai.custom_envs.tic_tac_toe.tic_tac_toe_user"
+    },
+    "traveller": {
+        "dqn": "abp.examples.open_ai.custom_envs.traveller.traveller_dqn",
+        "hra": "abp.examples.open_ai.custom_envs.traveller.traveller_hra",
+        "qtable": "abp.examples.open_ai.custom_envs.traveller.traveller_qtable",
+        "dqtable": "abp.examples.open_ai.custom_envs.traveller.traveller_dqtable",
+        "user": "abp.examples.open_ai.custom_envs.traveller.traveller_user"
     }
 }
 

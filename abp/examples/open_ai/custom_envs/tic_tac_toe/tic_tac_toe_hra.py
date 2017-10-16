@@ -114,12 +114,12 @@ def run_task(config):
     #                 time.sleep(1)
     #                 break
     # else:
-    
+
     # After learning Episodes
     for epoch in range(config.test_episodes):
         state = env_spec.reset()
         for steps in range(max_episode_steps):
-            if render:
+            if config.render:
                 env_spec.render()
             action = agent.predict(state)
             state, reward, done, info = env_spec.step(action)

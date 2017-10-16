@@ -1,4 +1,6 @@
 import numpy as np
+import operator
+import pickle
 
 class QTable(object):
     "Class for storing Q values"
@@ -14,6 +16,13 @@ class QTable(object):
             return self.q_table[state][action]
         else:
             return self.init_value
+
+    def get_for(self, state):
+        state = str(state)
+        if state in self.q_table:
+            return self.q_table[state].values()
+        else:
+            return [self.init_value] * self.action_size
 
     def qmax(self, state):
         """ Returns the action with max Q value """
@@ -42,14 +51,15 @@ class QTable(object):
         else:
             return False
 
-
     def clear(self):
         self.q_table = {}
 
-    def load(self, filename):
-        #TODO
+    #TODO Work with Gcloud storage
+    def save(self, file_path):
+        with open(file_path, "w+") as f:
+            pickle.dump(self.q_table, f, pickle.HIGHEST_PROTOCOL)
         pass
 
-    def save(self, filename):
-        #TODO
-        pass
+    def load(self, file_path):
+        with open(file_path) as f:
+            self.q_table = pickle.load(f)

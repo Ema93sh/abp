@@ -1,7 +1,11 @@
+import time
+
 import gym
 import numpy as np
+
 import abp.custom_envs
 from abp.adaptives.dqn import DQNAdaptive
+from abp.utils.bar_chart import SingleQBarChart
 
 def run_task(config):
     config.name = "TicTacToe-v0"
@@ -19,18 +23,42 @@ def run_task(config):
     for epoch in range(config.training_episode):
         state = env_spec.reset()
         for steps in range(max_episode_steps):
-            action = agent.predict(state)
+            action, _ = agent.predict(state)
 
             state, reward, done, info = env_spec.step(action)
 
-            if done:
-                if info['x_won'] == True:
-                    agent.reward(10)
-                elif info['o_won'] == True:
-                    agent.reward(-10)
-                else:
-                    agent.reward(5)
+            reshaped_board = np.reshape(info['board'], (3,3))
 
+            sum_rows = np.sum(reshaped_board, axis = 1)
+            sum_cols = np.sum(reshaped_board, axis = 0)
+            sum_diagonal = np.trace(reshaped_board)
+            sum_rev_diagonal = np.trace(np.flipud(reshaped_board))
+
+            reward_type = 0
+
+            for row in range(3):
+                if sum_rows[row] == 3:
+                    agent.reward(10)
+                elif sum_rows[row] == -3:
+                    agent.reward(-10)
+
+            reward_type = 3
+
+            for col in range(3):
+                if sum_cols[col] == 3:
+                    agent.reward(10)
+                elif sum_cols[col] == -3:
+                    agent.reward(-10)
+
+            if sum_diagonal == 3:
+                agent.reward(10)
+            elif sum_diagonal == -3:
+                agent.reward(-10)
+
+            if sum_rev_diagonal == 3:
+                agent.reward(10)
+            elif sum_diagonal == -3:
+                agent.reward(-10)
 
             if info['illegal_move']:
                 agent.reward(-10)
@@ -46,12 +74,16 @@ def run_task(config):
     agent.disable_learning()
 
     # After learning Episodes
+    chart = SingleQBarChart(env_spec.action_space.n, ('0', '1', '2', '3', '4', '5', '6', '7', '8'))
+
     for epoch in range(config.test_episodes):
         state = env_spec.reset()
         for steps in range(max_episode_steps):
+            action, q_values = agent.predict(state)
             if config.render:
-                env_spec.render()
-            action = agent.predict(state)
+                chart.render(q_values)
+                # env_spec.render()
+                time.sleep(1)
             state, reward, done, info = env_spec.step(action)
             agent.test_reward(reward)
 

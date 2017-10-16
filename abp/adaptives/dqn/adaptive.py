@@ -83,8 +83,9 @@ class DQNAdaptive(object):
 
         if self.learning and self.should_explore():
             action = np.random.choice(self.config.action_size)
+            q_values = [-1] * self.config.action_size 
         else:
-            action = self.eval_model.predict(state, self.session)
+            action, q_values = self.eval_model.predict(state, self.session)
 
 
         if self.learning and self.replay_memory.current_size > 30:
@@ -101,7 +102,7 @@ class DQNAdaptive(object):
         self.previous_state = state
         self.previous_action = action
 
-        return action
+        return action, q_values
 
     def disable_learning(self):
         logging.info("Disabled Learning")

@@ -23,6 +23,7 @@ class HRAAdaptive(object):
         self.total_psuedo_reward = 0
         self.total_actual_reward = 0
         self.current_test_reward = 0 # Used once learning is disabled
+        self.reward_explanations = {}
 
         self.eval_model = HRAModel(self.config.size_features, self.config.action_size, self.config.size_rewards, "eval_model")
 
@@ -147,9 +148,11 @@ class HRAAdaptive(object):
             self.current_test_reward = 0
 
 
-    def reward(self, r_type, r_value):
+    def reward(self, r_type, r_value, explanation = None):
         self.total_psuedo_reward += r_value
         self.current_reward[r_type] += r_value
+        if explanation is not None and r_type not in self.reward_explanations:
+            self.reward_explanations[r_type] = explanation
 
     def actual_reward(self, r): # Used to see the actual rewards while learning
         self.total_actual_reward += r

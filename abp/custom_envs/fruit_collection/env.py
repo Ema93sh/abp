@@ -178,7 +178,7 @@ class FruitCollectionEnv(gym.Env):
     def render_ansi(self):
         reshaped_board = np.reshape(self.grid, self.shape)
 
-        outfile = StringIO() if mode == 'ansi' else sys.stdout
+        outfile = StringIO()
 
         for i in range(len(self.grid)):
             if self.grid[i] == 1:
