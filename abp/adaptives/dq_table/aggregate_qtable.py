@@ -16,6 +16,12 @@ class AggregateQTable(object):
     def get(self, reward_type, state, action):
         return self.q_tables[reward_type].get(state, action)
 
+    def get_for(self, state):
+        q_values = []
+        for reward_type in range(self.reward_size):
+            q_values.append(self.q_tables[reward_type].get_for(state))
+        return q_values
+
     def contains(self, state):
         return self.q_tables[0].contains(state)
 

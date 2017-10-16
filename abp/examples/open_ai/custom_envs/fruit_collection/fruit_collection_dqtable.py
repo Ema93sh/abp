@@ -5,6 +5,7 @@ import os
 import time
 
 from abp.adaptives.dq_table import DQAdaptive
+from abp.utils.bar_chart import MultiQBarChart
 
 def run_task(config):
     config.name = "FruitCollection-v0"
@@ -18,13 +19,14 @@ def run_task(config):
     config.action_size = env_spec.action_space.n
 
     agent = DQAdaptive(config)
+    possible_fruit_locations = []
 
     #Training Episodes
     for epoch in range(config.training_episode):
         state = env_spec.reset()
         for steps in range(max_episode_steps):
 
-            action = agent.predict(state)
+            action, _ = agent.predict(state)
             state, reward, done, info = env_spec.step(action)
 
             possible_fruit_locations = info["possible_fruit_locations"]
@@ -36,9 +38,9 @@ def run_task(config):
                 r = possible_fruit_locations.index(collected_fruit)
                 agent.reward(r, 1)
 
-            for i in range(9):
-                if (r is None or r != i) and  possible_fruit_locations[i] in current_fruit_locations:
-                    agent.reward(i, -1)
+            # for i in range(9):
+            #     if (r is None or r != i) and  possible_fruit_locations[i] in current_fruit_locations:
+            #         agent.reward(i, -1)
 
             agent.actual_reward(-1)
 
@@ -48,6 +50,8 @@ def run_task(config):
                 break
 
     agent.disable_learning()
+
+    chart = MultiQBarChart(config.size_rewards, env_spec.action_space.n, ('Left', 'Right', 'Up', 'Down'))
 
     if config.render: #TODO Move inside ENV
         import curses
@@ -66,12 +70,13 @@ def run_task(config):
                 screen.addstr("Step: " + str(steps) + "\n")
                 s = env_spec.render(mode = "ansi")
                 screen.addstr(s.getvalue())
+                action, q_values = agent.predict(state)
+                chart.render(q_values, [ "Location_%d" % possible_fruit_locations[i] for i in range(1, 11)])
 
-                action = agent.predict(state)
                 screen.addstr("Action: " +str(action) + "\n")
 
                 screen.refresh()
-                time.sleep(1)
+                time.sleep(4)
 
                 state, reward, done, info = env_spec.step(action)
                 agent.test_reward(-1)

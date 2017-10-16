@@ -99,7 +99,7 @@ class HRAModel(object):
         merged = np.sum(q_heads * (1.0/self.size_rewards), axis=0)
         # import pdb; pdb.set_trace()
         action = np.argmax(merged)
-        return action
+        return action, q_heads
 
     def predict_batch(self, batch, session):
         q_current = session.run(self.q_current, feed_dict = {self.state : batch})

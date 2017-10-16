@@ -85,9 +85,9 @@ class HRAAdaptive(object):
             self.replay_memory.add(experience)
 
         if self.learning and self.should_explore():
-            action = np.random.choice(self.config.action_size)
+            action, q_values = np.random.choice(self.config.action_size), None
         else:
-            action = self.eval_model.predict(state, self.session)
+            action, q_values = self.eval_model.predict(state, self.session)
 
 
         if self.learning and self.replay_memory.current_size > 32:
@@ -104,7 +104,7 @@ class HRAAdaptive(object):
         self.previous_state = state
         self.previous_action = action
 
-        return action
+        return action, q_values
 
     def disable_learning(self):
         logging.info("Disabled Learning")

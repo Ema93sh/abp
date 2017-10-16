@@ -24,10 +24,11 @@ class FruitCollectionEnv(gym.Env):
 
 
         self.number_of_fruits = 5
-        self.possible_fruit_locations = [0, 9, 89, 99, 49, 54, 59, 4, 94, 64]
+        self.possible_fruit_locations = [0, 4, 9, 49, 54, 59, 64, 89, 94, 99]
         self.current_fruit_locations = []
         self.agent_location = None
         self.collected_fruit = 0
+        self.action_map = { 0: "Left", 1: "Right", 2: "Up", 3: "Down"}
 
         self.shape = (10, 10)
         self.current_step = 0
@@ -94,8 +95,9 @@ class FruitCollectionEnv(gym.Env):
                 "collected_fruit": None,
                 "possible_fruit_locations": self.possible_fruit_locations}
         updated_agent_location =  self.next_location(action)
+        valid_action = self.is_valid_next_location(updated_agent_location)
 
-        if self.is_valid_next_location(updated_agent_location):
+        if valid_action:
             self.grid[self.agent_location] = 0
 
             if updated_agent_location in self.current_fruit_locations:
@@ -179,17 +181,18 @@ class FruitCollectionEnv(gym.Env):
         reshaped_board = np.reshape(self.grid, self.shape)
 
         outfile = StringIO()
-
+        for i in range(10):
+            outfile.write(" %d " % (i+1))
         for i in range(len(self.grid)):
+            if i % 10 == 0:
+                outfile.write("\n%d" % ((i + 1) / 10 + 1))
+
             if self.grid[i] == 1:
                 outfile.write(" X ")
             elif i in self.current_fruit_locations:
                 outfile.write(" F ")
             else:
                 outfile.write(" - ")
-
-            if (i + 1) % 10 == 0:
-                outfile.write("\n")
 
         outfile.write('\n')
 

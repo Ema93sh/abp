@@ -5,7 +5,7 @@ import operator
 import os
 import logging
 
-from q_table import AggregateQTable
+from aggregate_qtable import AggregateQTable
 
 class DQAdaptive(object):
     """DQAdaptive using Q Learning algorithm with decomposed rewards"""
@@ -72,16 +72,18 @@ class DQAdaptive(object):
             self.update(state)
 
         if self.learning and self.should_explore():
-            action, q_value = np.random.choice(self.config.action_size), None
+            action = np.random.choice(self.config.action_size)
+            q_values = None
         else:
             action, q_value = self.aggregate_qtable.qmax_merged(state)
+            q_values = self.aggregate_qtable.get_for(state)
 
         self.current_reward = [0] * self.config.size_rewards
 
         self.previous_state = state
         self.previous_action = action
 
-        return action, q_value
+        return action, q_values
 
     def disable_learning(self):
         logging.info("Disabled Learning")
@@ -133,8 +135,6 @@ class DQAdaptive(object):
 
     def update(self, state, terminal = False):
         if self.previous_state is not None and self.previous_action is not None:
-            # if self.steps > 1000:
-            #     import pdb; pdb.set_trace()
             next_action, q_value = self.aggregate_qtable.qmax_merged(state)
 
             for reward_type in range(self.config.size_rewards):
