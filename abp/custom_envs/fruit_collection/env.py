@@ -181,11 +181,14 @@ class FruitCollectionEnv(gym.Env):
         reshaped_board = np.reshape(self.grid, self.shape)
 
         outfile = StringIO()
+        outfile.write("    ")
+
         for i in range(10):
-            outfile.write(" %d " % (i+1))
+            outfile.write("{:3}".format((i + 1)))
+
         for i in range(len(self.grid)):
             if i % 10 == 0:
-                outfile.write("\n%d" % ((i + 1) / 10 + 1))
+                outfile.write("\n{:3}  ".format((i + 1) / 10 + 1))
 
             if self.grid[i] == 1:
                 outfile.write(" X ")

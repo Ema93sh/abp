@@ -82,8 +82,8 @@ def run_task(config):
             action, q_values = agent.predict(state)
             if config.render:
                 chart.render(q_values)
-                # env_spec.render()
-                time.sleep(1)
+                env_spec.render()
+                time.sleep(10)
             state, reward, done, info = env_spec.step(action)
             agent.test_reward(reward)
 

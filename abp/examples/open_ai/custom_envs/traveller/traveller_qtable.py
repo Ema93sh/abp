@@ -55,7 +55,7 @@ def run_task(config):
     agent.disable_learning()
 
     #Test Episodes
-    chart = SingleQBarChart(env_spec.action_space.n, ['Left', 'Right', 'Up', 'Down'])
+    chart = SingleQBarChart(env_spec.action_space.n, ['Left', 'Right', 'Up', 'Down'], y_lim = 15)
 
     import curses
 

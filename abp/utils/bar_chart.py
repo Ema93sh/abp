@@ -3,14 +3,16 @@ import matplotlib.pyplot as plt
 import time
 
 plt.ion()
-
+plt.style.use('ggplot')
 
 class SingleQBarChart(object):
     """Bar chart for single q values"""
-    def __init__(self, action_size, action_names):
+    def __init__(self, action_size, action_names, width = 0.25, y_lim = 10):
         super(SingleQBarChart, self).__init__()
         self.action_size = action_size
-        self.action_names = action_names #TODO
+        self.action_names = action_names
+        self.width = width
+        self.y_lim = y_lim
         self.fig, self.ax = plt.subplots()
         self.bar = None
 
@@ -18,30 +20,34 @@ class SingleQBarChart(object):
     def render(self, q_values, title = 'Why did I make the move?'):
         if self.bar is None:
             x_pos = np.arange(self.action_size)
-            self.bar = self.ax.bar(x_pos, q_values, align='center',
-                            color='green', ecolor='black')
+            self.bar = self.ax.bar(x_pos, q_values, self.width, align='center')
             self.ax.set_xticks(x_pos)
             self.ax.set_xticklabels(self.action_names)
             self.ax.set_xlabel('Q Value')
             self.ax.set_title(title)
+            self.ax.set_ylim([-self.y_lim, self.y_lim])
+            plt.show()
+            plt.pause(0.001)
         else:
             for i, b in enumerate(self.bar):
                 b.set_height(q_values[i])
 
-        plt.show()
-        plt.pause(0.001)
+            self.ax.autoscale_view()
+            self.fig.canvas.flush_events()
+            plt.pause(0.001)
         pass
 
 
 class MultiQBarChart(object):
     """Bar chart for single q values"""
-    def __init__(self, reward_size, action_size, action_names, width = 0.25):
+    def __init__(self, reward_size, action_size, action_names, width = 0.25, ylim = 10):
         super(MultiQBarChart, self).__init__()
         self.reward_size = reward_size
         self.action_size = action_size
-        self.action_names = action_names #TODO
+        self.action_names = action_names
         self.fig, self.ax = plt.subplots(figsize = (10, 7))
         self.width = width
+        self.ylim = ylim
         self.bars = []
         self.labels = []
 
@@ -61,16 +67,16 @@ class MultiQBarChart(object):
             self.ax.spines['right'].set_visible(False)
             self.ax.spines['top'].set_visible(False)
             self.ax.legend(self.bars, q_labels, bbox_to_anchor=(1, 1), bbox_transform=plt.gcf().transFigure)
+            # self.ax.set_ylim([-self.ylim, self.ylim])
             plt.show()
             plt.pause(0.001)
         else:
-
             for reward_type in range(self.reward_size):
                 for i, bar in enumerate(self.bars[reward_type]):
                     height = q_values[reward_type][i]
                     bar.set_height(height)
 
-        self.ax.autoscale_view()
-        self.fig.canvas.flush_events()
-        plt.pause(0.001)
+            self.ax.autoscale_view()
+            self.fig.canvas.flush_events()
+            plt.pause(0.001)
         pass

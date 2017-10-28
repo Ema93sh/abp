@@ -3,7 +3,7 @@ import numpy as np
 import abp.custom_envs
 import time
 
-from abp.adaptives.dq_table import DQAdaptive
+from abp.adaptives.hra import HRAAdaptive
 
 from abp.utils.bar_chart import MultiQBarChart
 
@@ -18,7 +18,7 @@ def run_task(config):
     config.action_size = env_spec.action_space.n
     config.size_rewards = 3
 
-    agent = DQAdaptive(config)
+    agent = HRAAdaptive(config)
 
     #Training Episodes
     for epoch in range(config.training_episode):

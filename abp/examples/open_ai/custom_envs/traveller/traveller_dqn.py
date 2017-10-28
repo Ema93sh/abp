@@ -5,7 +5,7 @@ import time
 
 from abp.adaptives.dqn import DQNAdaptive
 
-# from abp.utils.bar_chart import SingleQBarChart
+from abp.utils.bar_chart import SingleQBarChart
 
 def run_task(config):
     config.name = "Traveller-v0"
@@ -54,7 +54,7 @@ def run_task(config):
     agent.disable_learning()
 
     #Test Episodes
-    # chart = SingleQBarChart(env_spec.action_space.n, ('Left', 'Right', 'Up', 'Down'))
+    chart = SingleQBarChart(env_spec.action_space.n, ('Left', 'Right', 'Up', 'Down'),  y_lim = 20)
 
     import curses
 
@@ -79,9 +79,12 @@ def run_task(config):
             screen.addstr(s.getvalue())
             screen.addstr("Days Remaining: " + str(days_remaining) + "\n")
             screen.refresh()
+
+            action, q_values = agent.predict(state)
+            chart.render(q_values)
             time.sleep(1)
 
-            action, _ = agent.predict(state)
+
             state, reward, done, info = env_spec.step(action)
             agent.test_reward(reward)
 
