@@ -34,6 +34,7 @@ class YahtzeeEnv(gym.Env):
         self.current_turn = 0
         self.current_category_turn = 0
         self.upper_section_bonus = False
+        self.yahtzee_bonus = True
 
         self.category_score = {}
 
@@ -100,6 +101,12 @@ class YahtzeeEnv(gym.Env):
     def yahtzee(self):
         counts = collections.Counter(self.current_hand)
         [(_, c)] = counts.most_common(1)
+        if c == 5: #TODO: Arrggghh! too many ifssss
+            if self.categories[12] >= 1:
+                return 0 if self.category_score[12] == 0 else 100
+            return 50
+        else:
+            return 0
         return 50 if c == 5 else 0
 
     def chance(self):
@@ -117,11 +124,6 @@ class YahtzeeEnv(gym.Env):
                 self.upper_section_bonus = True
                 return 35
 
-        return 0
-
-    def add_lower_section_bonus(self, category, isYahtzee):
-        if category == 12 and self.categories[category] > 1 and self.category_score[category] > 50 and isYahtzee:
-            return 100
         return 0
 
     def longest_sequence(self):
@@ -166,7 +168,6 @@ class YahtzeeEnv(gym.Env):
             self.current_turn += 1
 
         reward += self.add_upper_section_bonus()
-        reward += self.add_lower_section_bonus(category, reward == 50)
 
         if self.current_category_turn == 13:
             done = True

@@ -188,23 +188,6 @@ class TestYahtzeeEnvScore(unittest.TestCase):
         score = self.env.add_upper_section_bonus()
         self.assertEqual(score, 0)
 
-    def test_add_lower_section_bonus(self):
-        self.env.categories[12] = 1
-        self.env.category_score[12] = 50
-        score = self.env.add_lower_section_bonus(12, True)
-        self.assertEqual(score, 0)
-
-        self.env.categories[12] = 2
-        self.env.category_score[12] = 100
-        score = self.env.add_lower_section_bonus(12, True)
-        self.assertEqual(score, 100)
-
-        self.env.categories[12] = 2
-        self.env.category_score[12] = 50
-        score = self.env.add_lower_section_bonus(12, True)
-        self.assertEqual(score, 0)
-
-
 
     def test_valid_select_category(self):
         for i in range(6):
@@ -331,7 +314,7 @@ class TestYahtzeeEnvGame(unittest.TestCase):
 
         self.skip_step(3)
         _, r, done, _ = self.env._step([], 12)
-        self.assertEqual(r, 150)
+        self.assertEqual(r, 100)
         self.assertEqual(done, False)
 
     def test_episode_without_yahtzee_bonus_score(self):
@@ -341,12 +324,16 @@ class TestYahtzeeEnvGame(unittest.TestCase):
         self.assertEqual(r, 0)
 
         self.roll_dice_mock.return_value = [1] * 5
+
         self.skip_step(3)
         _, r, done, _ = self.env._step([], 12)
-        self.assertEqual(r, 50)
+        self.assertEqual(r, 0)
         self.assertEqual(done, False)
 
-
+        self.skip_step(3)
+        _, r, done, _ = self.env._step([], 12)
+        self.assertEqual(r, 0)
+        self.assertEqual(done, False)
 
 
     def tearDown(self):
