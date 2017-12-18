@@ -2,6 +2,7 @@ import gym
 import numpy as np
 import collections
 
+from six import StringIO
 from gym import spaces
 from functools import partial
 
@@ -29,24 +30,34 @@ class YahtzeeEnv(gym.Env):
 
     def __init__(self):
         super(YahtzeeEnv, self).__init__()
-        self.current_hand = self.roll_dice()
-        self.categories = [0] * 13
-        self.current_turn = 0
-        self.current_category_turn = 0
-        self.upper_section_bonus = False
-        self.yahtzee_bonus = True
-
-        self.category_score = {}
-
         self.score_registry = {
-         6: partial(self.of_a_kind, 3),
-         7: partial(self.of_a_kind, 4),
-         8: self.full_house,
-         9: self.small_straight,
-         10: self.large_straight,
-         11: self.chance,
-         12: self.yahtzee
+             6: partial(self.of_a_kind, 3),
+             7: partial(self.of_a_kind, 4),
+             8: self.full_house,
+             9: self.small_straight,
+             10: self.large_straight,
+             11: self.chance,
+             12: self.yahtzee
         }
+
+        self.category_map = {
+            0: "Ones",
+            1: "Twoes",
+            2: "Threes",
+            3: "Fours",
+            4: "Fives",
+            5: "Sixes",
+            6: "3 of a kind",
+            7: "4 of a kind",
+            8: "Full House",
+            9: "Small Straight",
+            10: "Large Straight",
+            11: "Chance",
+            12: "Yahtzee",
+            13: "Bonus"
+        }
+
+        self._reset()
 
     def roll_dice(self, holds = [0, 0, 0, 0, 0]):
         dice = []
@@ -64,12 +75,13 @@ class YahtzeeEnv(gym.Env):
         return {"current_hand": self.current_hand, "categories": self.categories, "turn": self.current_turn}
 
     def _reset(self):
-        self.current_hand = []
+        self.current_hand = self.roll_dice()
         self.categories = [0] * 13
         self.current_turn = 0
         self.current_category_turn = 0
         self.upper_section_bonus = False
-        pass
+        self.category_score = {}
+        return self.generate_state()
 
     def score_upper_section(self, kind):
         return sum(filter(lambda x: x == kind, self.current_hand))
@@ -142,7 +154,7 @@ class YahtzeeEnv(gym.Env):
         if category < 0 or category >= 13:
             return -1000 # Invalid category
 
-        if category != 12 and self.categories[category]:
+        if category != 12 and self.categories[category] > 0:
             return -1000 #Category already choosen and its not yahtzee
 
         if category in range(6):
@@ -151,7 +163,8 @@ class YahtzeeEnv(gym.Env):
             return self.score_lower_section(category)
 
 
-    def _step(self, holds, category):
+    def _step(self, action):
+        holds, category = action
         reward = 0
         info = {}
         done = False
@@ -166,12 +179,16 @@ class YahtzeeEnv(gym.Env):
             self.current_hand = self.roll_dice(holds)
             self.current_turn += 1
 
-        reward += self.add_upper_section_bonus()
+        bonus = self.add_upper_section_bonus()
+        if bonus > 0:
+            self.category_score[13] = bonus
+
+        reward += bonus
 
         if self.current_category_turn == 13:
             done = True
 
-        if reward == -1000: # End when you choose an invalid category
+        if reward < 0: # End when you choose an invalid category
             done = True
 
         return self.generate_state(), reward, done, self.info()
@@ -179,13 +196,19 @@ class YahtzeeEnv(gym.Env):
 
     def render_ansi(self):
         outfile = StringIO()
-        outfile.write("Category | Score")
+        outfile.write("%-25s | %-5s\n" % ("Category", "Score"))
+        outfile.write("-" * 35 + "\n")
 
-        for category in range(13):
-            score = self.category_score[category] if category in self.category_score else 0
-            outfile.write("%-9d | %-5d \n" % (i + 1, score))
+        for category in range(14):
+            score = str(self.category_score[category]) if category in self.category_score else " -- "
+            outfile.write("%-25s | %-5s \n" % (self.category_map[category], score))
 
-        outfile.write("Current Dice: " + str(self.current_hand) + "\n")
+        outfile.write("-" * 35 + "\n")
+        outfile.write("Total Score: " + str(sum(self.category_score.values()))+ "\n")
+        outfile.write("-" * 35 + "\n\n\n")
+        outfile.write("Current Hand: " + str(self.current_hand) + "\n")
+        outfile.write("Current Turn: " + str(self.current_turn) + "\n")
+
 
         return outfile
 

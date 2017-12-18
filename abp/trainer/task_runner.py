@@ -33,6 +33,9 @@ task_map = {
         "qtable": "abp.examples.open_ai.custom_envs.traveller.traveller_qtable",
         "dqtable": "abp.examples.open_ai.custom_envs.traveller.traveller_dqtable",
         "user": "abp.examples.open_ai.custom_envs.traveller.traveller_user"
+    },
+    "yahtzee": {
+        "user": "abp.examples.open_ai.custom_envs.yahtzee.user"
     }
 }
 
