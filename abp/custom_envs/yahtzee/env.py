@@ -58,8 +58,7 @@ class YahtzeeEnv(gym.Env):
         return dice
 
     def generate_state(self):
-        #TODO
-        return {"current_hand": self.current_hand, "categories": self.categories, "turn": self.current_turn}
+        return self.current_hand + self.categories + [self.current_turn]
 
     def info(self):
         return {"current_hand": self.current_hand, "categories": self.categories, "turn": self.current_turn}

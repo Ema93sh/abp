@@ -200,6 +200,16 @@ class TestYahtzeeEnvScore(unittest.TestCase):
             score = self.env.select_category(i)
             self.assertEqual(expected_score, score, "%d : %d != %d" % (i, expected_score, score))
 
+    def test_generate_state(self):
+        self.env.current_hand = [1, 2, 3, 4, 5]
+        self.env.categories = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        self.env.current_turn = 2
+
+        actual_state = self.env.generate_state()
+        expected_state = self.env.current_hand + self.env.categories + [self.env.current_turn]
+        self.assertEqual(expected_state, actual_state)
+
+
     def tearDown(self):
         self.env._reset()
 
@@ -295,6 +305,10 @@ class TestYahtzeeEnvGame(unittest.TestCase):
 
         self.assertEqual(done, True)
         self.assertEqual(reward, 70)
+
+    def test_state_for_a_step(self):
+        state, _, _, _ = self.env._step([], 0)
+        self.assertEqual([1, 1, 1, 1, 1] + [0] * 13 + [1], state)
 
     def test_episode_with_upper_section_bonus_score(self):
         for i in range(6):
