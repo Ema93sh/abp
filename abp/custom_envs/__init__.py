@@ -21,3 +21,10 @@ register(
     max_episode_steps=8, #TODO
     reward_threshold=12 #TODO
 )
+
+register(
+    id = 'Yahtzee-v0',
+    entry_point = 'abp.custom_envs.yahtzee:YahtzeeEnv',
+    max_episode_steps = 39,
+    reward_threshold = 1505  #https://blogs.msdn.microsoft.com/matthew_van_eerde/2011/11/30/what-is-a-perfect-score-in-yahtzee/
+)
