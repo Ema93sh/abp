@@ -163,7 +163,7 @@ class YahtzeeEnv(gym.Env):
             return self.score_lower_section(category)
 
 
-    def _step(self, action):
+    def _step(self, action, decompose_reward = False):
         holds, category = action
         reward = 0
         info = {}
