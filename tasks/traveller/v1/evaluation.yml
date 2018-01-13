@@ -1,0 +1,6 @@
+name: "Traveller"
+env: "Traveller-v0"
+summaries_path: "./tensorflow_summaries/traveller/v1/evaluation_summary"
+test_episodes: 100
+training_episodes: 3000
+render: False

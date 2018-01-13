@@ -1,29 +1,42 @@
 import gym
+import tensorflow as tf
+
 from abp import DQNAdaptive
+from abp.utils import clear_summary_path
 
-
-def run_task(config):
-    config.name = "CartPole-v0"
-    env_spec = gym.make(config.name)
-    max_episode_steps = env_spec._max_episode_steps
-    state = env_spec.reset()
-
-
-    config.size_features = len(state)
-    config.action_size = env_spec.action_space.n
+def run_task(evaluation_config, network_config, reinforce_config):
+    env = gym.make(evaluation_config.env)
+    max_episode_steps = env._max_episode_steps
+    state = env.reset()
 
     threshold_angle = 0.087266463
     threshold_x = 1.5
+    LEFT, RIGHT = [0, 1]
 
-    agent = DQNAdaptive(config)
+    agent = DQNAdaptive(name = "cartpole",
+                        choices = [LEFT, RIGHT],
+                        network_config = network_config,
+                        reinforce_config = reinforce_config)
 
-    #Episodes
-    for epoch in range(config.training_episode):
-        state = env_spec.reset()
+    training_summaries_path = evaluation_config.summaries_path + "/train"
+    clear_summary_path(training_summaries_path)
+    train_summary_writer = tf.summary.FileWriter(training_summaries_path)
+
+    test_summaries_path = evaluation_config.summaries_path + "/test"
+    clear_summary_path(test_summaries_path)
+    test_summary_writer = tf.summary.FileWriter(test_summaries_path)
+
+
+    #Training Episodes
+    for episode in range(evaluation_config.training_episodes):
+        state = env.reset()
+        total_reward = 0
+        episode_summary = tf.Summary()
         for steps in range(max_episode_steps):
-            action = agent.predict(state)
-            state, reward, done, info = env_spec.step(action)
+            action, q_values = agent.predict(state)
+            state, reward, done, info = env.step(action)
             cart_position, cart_velocity, pole_angle, pole_velocity = state
+
             agent.reward(reward) # Reward for every step
 
             # Reward for pole angle increase or decrease
@@ -40,27 +53,39 @@ def run_task(config):
             else:
                 agent.reward(-1)
 
-            agent.actual_reward(reward)
+            total_reward += reward
 
             if done:
                 agent.end_episode(state)
+                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
+                train_summary_writer.add_summary(episode_summary, episode + 1)
                 break
 
+    train_summary_writer.flush()
 
     agent.disable_learning()
 
-    for epoch in range(config.test_episodes):
-        state = env_spec.reset()
-        for t in range(max_episode_steps):
-            if config.render:
-                env_spec.render()
-            action = agent.predict(state)
-            state, reward, done, info = env_spec.step(action)
-            agent.test_reward(reward)
+
+    for episode in range(evaluation_config.test_episodes):
+        state = env.reset()
+        total_reward = 0
+        episode_summary = tf.Summary()
+        for step in range(max_episode_steps):
+            if evaluation_config.render:
+                env.render()
+
+            action, q_values = agent.predict(state)
+
+            state, reward, done, info = env.step(action)
+
+            total_reward += reward
 
             if done:
-                agent.end_episode(state)
+                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
+                test_summary_writer.add_summary(episode_summary, episode + 1)
                 break
 
-    env_spec.close()
+    test_summary_writer.flush()
+
+    env.close()
     pass

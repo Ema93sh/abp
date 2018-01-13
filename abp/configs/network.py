@@ -1,0 +1,40 @@
+from abp.configs import BaseConfig
+
+
+#TODO
+# Maybe use keras instead of reinventing the wheel?
+# Input and Output shape should be more customizable
+# CNN and other types of network config
+
+
+default_network_config = {
+    "input_shape" : [10], # This is for the shape of the input layer
+    "layers" : [100, 100], # Hidden layers shape
+    "output_shape": [5], # the number of ouput layers
+    "restore_network": True, # restore from the saved model.
+    "network_path": None, # path used to load/store the network. Wont restore if the network path is None or restore_network is False
+    "summaries_path": None, # path to store the tensorflow summaries for the network
+    "summaries_step": 100 # generates summaries for the network after every n steps
+}
+
+
+class NetworkConfig(BaseConfig):
+    """ Use this object to configure the network for the adpative """
+
+    def __init__(self, config = None):
+        super(NetworkConfig, self).__init__(config = config, default_config =  default_network_config)
+
+
+    input_shape = property(BaseConfig.get_property("input_shape"), BaseConfig.set_property("input_shape"))
+
+    layers = property(BaseConfig.get_property("layers"), BaseConfig.set_property("layers"))
+
+    output_shape = property(BaseConfig.get_property("output_shape"), BaseConfig.set_property("output_shape"))
+
+    restore_network = property(BaseConfig.get_property("restore_network"), BaseConfig.set_property("restore_network"))
+
+    network_path = property(BaseConfig.get_property("network_path"), BaseConfig.set_property("network_path"))
+
+    summaries_path = property(BaseConfig.get_property("summaries_path"), BaseConfig.set_property("summaries_path"))
+
+    summaries_step = property(BaseConfig.get_property("summaries_step"), BaseConfig.set_property("summaries_step"))

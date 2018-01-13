@@ -1,9 +1,9 @@
 import unittest
 import gym
-import abp.custom_envs
+import abp.openai.envs
 
 from mock import Mock, patch
-from abp.custom_envs.wrappers import RewardWrapper
+from abp.openai.wrappers import RewardWrapper
 
 class DecomposedRewardWrapperTests(unittest.TestCase):
 

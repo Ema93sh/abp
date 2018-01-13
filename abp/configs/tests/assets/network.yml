@@ -1,0 +1,14 @@
+input_shape:
+    - 20
+
+layers:
+    - 50
+    - 50
+
+output_shape:
+    - 5
+
+network_path: "test/the/network/path.ckpt"
+summaries_path: "test/summaries/path.ckpt"
+summaries_step: 50
+restore_network: False

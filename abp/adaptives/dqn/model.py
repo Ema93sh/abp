@@ -1,96 +1,176 @@
+import logging
+import os
+
 import tensorflow as tf
 import numpy as np
 
+
+from abp.utils import clear_summary_path
+
 class DQNModel(object):
     """Neural Network for the DQN algorithm """
-    def __init__(self, size_features, size_actions, name = "default_model", learning_rate = 0.001, trainable = True):
+
+    def __init__(self, name, network_config, learning_rate = 0.001):
         super(DQNModel, self).__init__()
         self.name = name
-        self.size_features = size_features
-        self.size_actions = size_actions
-        self.trainable = trainable
+        self.network_config = network_config
+        self.collections = []
 
-        self.learning_rate = learning_rate #TODO: Change to expoential decay?
+        # TODO add ability to configure learning rate for network!
+        self.learning_rate = learning_rate
+
         self.summaries = []
+
         self.build_network()
 
-    def build_network(self):
-        self.state = tf.placeholder(tf.float32, [None, self.size_features], name= self.name + "_state")
-        self.q_target = tf.placeholder(tf.float32, [None, self.size_actions], name= self.name + "_qvalues")
+        self.session = tf.Session()
 
-        n_h1 = 250
-        n_h2 = 250
-        # TODO Random initialization
+        # TODO
+        # * Option to disable summaries
+
+        clear_summary_path(self.network_config.summaries_path + "/" + self.name)
+
+        self.summaries_writer = tf.summary.FileWriter(self.network_config.summaries_path + "/" + self.name)
+
+        self.saver = tf.train.Saver()
+
+
+        #TODO:
+        # * This session should be independent. Use current model collection instead
+
+        self.session.run(tf.global_variables_initializer())
+        # map(lambda v: v.initializer, tf.get_collection(self.name + "_Collection")
+        # self.session.run(map(lambda v: v.initializer, tf.get_collection(self.name + "_Collection")))
+
+        print "Created network for...", self.name
+
+        # self.restore_network() TODO
+
+
+    def __del__(self):
+        # self.save_network() TODO
+        self.session.close()
+        self.summaries_writer.close()
+
+
+    def save_network(self):
+        if self.network_config.network_path:
+            dirname = os.path.dirname(self.network_config.network_path)
+            if not tf.gfile.Exists(dirname):
+                logging.info("Creating network path directories...")
+                tf.gfile.MakeDirs(dirname)
+            logging.info("Saving the network at %s" % self.network_config.network_path)
+            self.saver.save(self.session, self.network_config.network_path)
+
+
+    def restore_network(self):
+        if self.network_config.restore_network and self.network_config.network_path:
+            dirname = os.path.dirname(self.network_config.network_path)
+            if not tf.gfile.Exists(dirname):
+                logging.error("Can not restore model. Reason: The network path (%s) does not exists" % self.network_config.network_path)
+                return
+            self.saver.restore(self.session, self.network_config.network_path)
+
+
+    def build_network(self):
+        self.state = tf.placeholder(tf.float32, shape = [None, self.network_config.input_shape[0]], name = self.name + "_state")
+        self.q_target = tf.placeholder(tf.float32, shape = [None, self.network_config.output_shape[0]], name = self.name + "_qvalues")
+
         w_initializer = tf.random_normal_initializer(0., 0.1)
         b_initializer = tf.constant_initializer(0.1)
 
-        collections = [tf.GraphKeys.GLOBAL_VARIABLES, self.name + "_Collection"]
+        self.collections = [tf.GraphKeys.GLOBAL_VARIABLES, self.name + "_Collection"]
+
+        L = []
+
+        with tf.variable_scope(self.name): #TODO. Create a valid scope name
+
+            with tf.variable_scope("Hidden_Layer"):
+                first_layer_size = self.network_config.layers[0]
+
+                w = tf.get_variable("w1", shape = (self.network_config.input_shape[0], first_layer_size),
+                                     initializer = w_initializer,
+                                     collections = self.collections)
+
+                b = tf.get_variable("b1", shape = (1, first_layer_size),
+                                     initializer = b_initializer,
+                                     collections = self.collections)
+
+                L.append(tf.nn.relu(tf.matmul(self.state, w) + b))
 
 
-        with tf.variable_scope(self.name):
+                # Generate other Hidden Layers
+                for i in range(1, len(self.network_config.layers)):
+                    previous_layer_size = self.network_config.layers[i-1]
+                    current_layer_size = self.network_config.layers[i]
 
-            with tf.variable_scope("HiddenLayer1"):
-                w1 = tf.get_variable("W1", [self.size_features, n_h1], initializer = w_initializer, collections = collections)
-                self.summaries.append(tf.summary.histogram('W1', w1))
-                b1 = tf.get_variable("B1", [1, n_h1], initializer = b_initializer, collections = collections)
-                self.summaries.append(tf.summary.histogram('B1', b1))
-                l1 = tf.nn.relu(tf.matmul(self.state, w1) + b1)
+                    w = tf.get_variable("w" + str(i+1),
+                                    shape = (previous_layer_size, current_layer_size),
+                                    initializer = w_initializer,
+                                    collections = self.collections)
 
-            with tf.variable_scope("HiddenLayer2"):
-                w2 = tf.get_variable("W2", [n_h1, n_h2], initializer = w_initializer, collections = collections)
-                self.summaries.append(tf.summary.histogram('W2', w2))
-                b2 = tf.get_variable("B2", [1, n_h2], initializer = b_initializer, collections = collections)
-                self.summaries.append(tf.summary.histogram('B2', b2))
-                l2 = tf.nn.relu(tf.matmul(l1, w2) + b2)
+                    b = tf.get_variable("b" + str(i+1),
+                                    shape = (1, current_layer_size),
+                                    initializer = b_initializer,
+                                    collections = self.collections)
 
-            with tf.variable_scope("OutputLayer"):
-                w3 = tf.get_variable("W3", [n_h2, self.size_actions], initializer = w_initializer, collections = collections)
-                self.summaries.append(tf.summary.histogram('W3', w3))
-                b3 = tf.get_variable("B3", [1, self.size_actions], initializer = b_initializer, collections = collections)
-                self.summaries.append(tf.summary.histogram('B3', b3))
-                self.q_current = tf.matmul(l2, w3) + b3
+                    l = tf.nn.relu(tf.matmul(L[i-1], w) + b)
+                    L.append(l)
+
+            with tf.variable_scope("Output_Layer"):
+                w = tf.get_variable("w_output",
+                                shape = (self.network_config.layers[-1], self.network_config.output_shape[0]),
+                                initializer = w_initializer,
+                                collections = self.collections)
+
+                b = tf.get_variable("b_output",
+                                shape = (1, self.network_config.output_shape[0]),
+                                initializer = b_initializer,
+                                collections = self.collections)
+
+                self.q_current = tf.matmul(L[-1], w) + b
+
                 self.summaries.append(tf.summary.histogram("Q", self.q_current))
-            #
-            # for action in range(self.size_actions):
-            #     self.summaries.append(tf.summary.histogram('Q%s' % action, self.q_current[action]))
 
 
-            if self.trainable:
-                with tf.variable_scope('loss'):
-                    self.loss = tf.reduce_mean(tf.squared_difference(self.q_target, self.q_current))
-                    self.summaries.append(tf.summary.scalar('loss', self.loss))
+        with tf.variable_scope('loss'):
+            self.loss = tf.reduce_mean(tf.squared_difference(self.q_target, self.q_current))
+            self.summaries.append(tf.summary.scalar('loss', self.loss))
 
-                with tf.variable_scope('train'):
-                    self.train_op = tf.train.RMSPropOptimizer(self.learning_rate).minimize(self.loss)
+        with tf.variable_scope('train'):
+            self.train_op = tf.train.RMSPropOptimizer(self.learning_rate).minimize(self.loss)
 
 
-            self.merged_summary = tf.summary.merge(self.summaries)
+        self.merged_summary = tf.summary.merge(self.summaries)
 
-    def predict(self, state, session):
-        q_values = self.predict_batch([state], session)
+
+    def predict(self, state):
+        q_values = self.predict_batch([state])
         action = np.argmax(q_values[0])
         return action, q_values[0]
 
-    def predict_batch(self, batch, session):
-        q_values, = session.run([self.q_current], feed_dict = {self.state : batch})
+
+    def predict_batch(self, batch):
+        q_values, = self.session.run([self.q_current], feed_dict = {self.state : batch})
         return q_values
 
-    def generate_summaries(self, session, states, writer, steps,  q_target = None):
+
+    def generate_summaries(self, states, steps,  q_target = None):
         feed_dict = {self.state: states}
 
         if q_target is not None:
             feed_dict[self.q_target] = q_target
 
-        summary_str = session.run(self.merged_summary, feed_dict = feed_dict)
-        writer.add_summary(summary_str, steps)
+        summary_str = self.session.run(self.merged_summary, feed_dict = feed_dict)
+        self.summaries_writer.add_summary(summary_str, steps)
 
 
-    def fit(self, states, q_target, session, writer, steps):
+    def fit(self, states, q_target, steps):
         if steps % 100 == 0:
-            self.generate_summaries(session, states, writer, steps, q_target)
+            self.generate_summaries(states, steps, q_target)
 
 
-        _  = session.run(self.train_op, feed_dict = {
+        _  = self.session.run(self.train_op, feed_dict = {
                                                         self.state: states,
                                                         self.q_target: q_target
                                                       })

@@ -1,0 +1,14 @@
+input_shape:
+    - 18
+
+layers:
+    - 250
+    - 250
+
+output_shape:
+    - 9
+
+network_path: "./saved_models/tic_tac_toe/v1/network.ckpt"
+summaries_path: "./tensorflow_summaries/tic_tac_toe/v1/network_summary"
+summaries_step: 150
+restore_network: False

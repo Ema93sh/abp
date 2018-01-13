@@ -1,30 +1,42 @@
-import gym
-import numpy as np
-import abp
 import time
 
+import gym
+import numpy as np
+import tensorflow as tf
+
 from abp import DQNAdaptive
+from abp.utils import clear_summary_path
 
-from abp.utils.bar_chart import SingleQBarChart
 
-def run_task(config):
-    config.name = "Traveller-v0"
+def run_task(evaluation_config, network_config, reinforce_config):
+    env = gym.make(evaluation_config.env)
+    max_episode_steps = env._max_episode_steps
+    state = env.reset()
+    LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
 
-    env_spec = gym.make(config.name)
-    max_episode_steps = env_spec._max_episode_steps
-    state = env_spec.reset()
+    agent = DQNAdaptive(name="traveller",
+                        choices = [LEFT, RIGHT, UP, DOWN],
+                        network_config = network_config,
+                        reinforce_config = reinforce_config)
 
-    config.size_features = len(state)
-    config.action_size = env_spec.action_space.n
+    training_summaries_path = evaluation_config.summaries_path + "/train"
+    clear_summary_path(training_summaries_path)
+    train_summary_writer = tf.summary.FileWriter(training_summaries_path)
 
-    agent = DQNAdaptive(config)
+    test_summaries_path = evaluation_config.summaries_path + "/test"
+    clear_summary_path(test_summaries_path)
+    test_summary_writer = tf.summary.FileWriter(test_summaries_path)
 
     #Training Episodes
-    for epoch in range(config.training_episode):
-        state = env_spec.reset()
+    for episode in range(evaluation_config.training_episodes):
+        state = env.reset()
+        total_reward = 0
+        episode_summary = tf.Summary()
         for steps in range(max_episode_steps):
             action, _ = agent.predict(state)
-            state, reward, done, info = env_spec.step(action)
+            state, reward, done, info = env.step(action)
+            total_reward += reward
+
             traveller_location = info['traveller_location']
 
             if np.where(info['mountain_locations'] == traveller_location):
@@ -39,22 +51,26 @@ def run_task(config):
             if np.where(info['diamond_locations'] == traveller_location):
                 agent.reward(3)
 
-            agent.actual_reward(reward)
-
             if done:
                 if traveller_location == info['house_location']:
                     agent.reward(10)
+                    total_reward += reward
                 else:
                     agent.reward(-10)
+                    total_reward += reward
 
                 agent.end_episode(state)
+                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
+                train_summary_writer.add_summary(episode_summary, episode + 1)
                 break
 
 
     agent.disable_learning()
 
+    #TODO disable render based on the evaluation_config
+
     #Test Episodes
-    chart = SingleQBarChart(env_spec.action_space.n, ('Left', 'Right', 'Up', 'Down'),  y_lim = 20)
+    chart = SingleQBarChart(env.action_space.n, ('Left', 'Right', 'Up', 'Down'),  y_lim = 20)
 
     import curses
 
@@ -68,14 +84,16 @@ def run_task(config):
 
 
     # Test Episodes
-    for epoch in range(config.test_episodes):
+    for episode in range(evaluation_config.test_episodes):
         reward = 0
         action = None
-        state = env_spec.reset()
+        state = env.reset()
         days_remaining = 8
+        total_reward = 0
+        episode_summary = tf.Summary()
         for steps in range(max_episode_steps):
             screen.clear()
-            s = env_spec.render(mode='ansi')
+            s = env.render(mode='ansi')
             screen.addstr(s.getvalue())
             screen.addstr("Days Remaining: " + str(days_remaining) + "\n")
             screen.refresh()
@@ -84,18 +102,19 @@ def run_task(config):
             chart.render(q_values)
             time.sleep(1)
 
-
-            state, reward, done, info = env_spec.step(action)
-            agent.test_reward(reward)
+            state, reward, done, info = env.step(action)
+            total_reward += reward
 
             if done:
+                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
+                test_summary_writer.add_summary(episode_summary, episode + 1)
                 agent.end_episode(state)
                 screen.clear()
-                s = env_spec.render(mode='ansi')
+                s = env.render(mode='ansi')
                 screen.addstr(s.getvalue())
                 screen.addstr("End Episode\n")
                 screen.refresh()
                 time.sleep(1)
                 break
 
-    env_spec.close()
+    env.close()

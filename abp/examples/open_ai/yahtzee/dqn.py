@@ -1,42 +1,112 @@
+import copy
+import gym
+import tensorflow as tf
+
 from abp import DQNAdaptive
+from abp.utils import clear_summary_path
 
+def run_task(evaluation_config, network_config, reinforce_config):
+    env = gym.make(evaluation_config.env)
+    max_episode_steps = 10000
+    state = env.reset()
+    HOLD, ROLL = [0, 1]
 
-def run_task(config):
-    config.name = "Yahtzee-v0"
-    env = YahtzeeState()
+    dice1 = DQNAdaptive(name = "dice1", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice2 = DQNAdaptive(name = "dice2", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice3 = DQNAdaptive(name = "dice3", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice4 = DQNAdaptive(name = "dice4", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice5 = DQNAdaptive(name = "dice5", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
 
-    max_episode_steps = 1000
+    category_network_config = copy.deepcopy(network_config)
+    category_network_config.output_shape = [13]
 
-    config.size_features = 18 # 5 (dice) + 13 (configs)
-    config.action_size = 8 + 1 # 0 : roll, 1-8 : category
+    which_category = DQNAdaptive(name = "which_category", choices = range(13), network_config = network_config, reinforce_config = reinforce_config)
 
-    agent = DQNAdaptive(config)
-    print config.training_episode
+    training_summaries_path = evaluation_config.summaries_path + "/train"
+    clear_summary_path(training_summaries_path)
+    train_summary_writer = tf.summary.FileWriter(training_summaries_path)
+
     #Training Episodes
-    for episode in config.training_episode:
-        env.reinitialize()
-        for step in max_episode_steps:
-            if env.is_terminal():
+    for episode in range(evaluation_config.training_episodes):
+        state = env.reset()
+        total_reward = 0
+        episode_summary = tf.Summary()
+        for step in range(max_episode_steps):
+            dice1_action, _ = dice1.predict(state)
+            dice2_action, _ = dice2.predict(state)
+            dice3_action, _ = dice3.predict(state)
+            dice4_action, _ = dice4.predict(state)
+            dice5_action, _ = dice5.predict(state)
+
+            category, _ =  which_category.predict(state)
+            action  = ([dice1_action, dice2_action, dice3_action, dice4_action, dice5_action], category)
+
+            state, reward, done, info = env.step(action)
+
+            dice1.reward(reward)
+            dice2.reward(reward)
+            dice3.reward(reward)
+            dice4.reward(reward)
+            dice5.reward(reward)
+
+            which_category.reward(reward)
+
+            total_reward += reward
+
+            if done:
+                dice1.end_episode(state)
+                dice2.end_episode(state)
+                dice3.end_episode(state)
+                dice4.end_episode(state)
+                dice5.end_episode(state)
+
+                which_category.end_episode(state)
+
+                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
+                train_summary_writer.add_summary(episode_summary, episode + 1)
                 break
-            state = generate_state(env) #get current state
-            action = agent.predict(state)
-            # action = generate_action(action)
-            reward = env.take_action(action) #gets a reward vector
-            import pdb; pdb.set_trace()
 
+    train_summary_writer.flush()
 
+    dice1.disable_learning()
+    dice2.disable_learning()
+    dice3.disable_learning()
+    dice4.disable_learning()
+    dice5.disable_learning()
 
-    agent.disable_learning()
+    which_category.disable_learning()
+
+    test_summaries_path = evaluation_config.summaries_path + "/test"
+    clear_summary_path(test_summaries_path)
+    test_summary_writer = tf.summary.FileWriter(test_summaries_path)
+
 
     #Test Episodes
-    # for episode in config.test_episodes:
-    #     env.reinitialize()
-    #     for step in max_episode_steps:
-    #         if env.is_terminal():
-    #             break
-    #
-    #         action = ???
-    #         action_type = ??? #Choose whether to roll dice or not
-    #         action_category = ??? #Choose category
-    #
-    #         reward = env.take_action(action) #gets a reward vector
+    for episode in range(evaluation_config.test_episodes):
+        state = env.reset()
+        total_reward = 0
+        episode_summary = tf.Summary()
+        for step in range(max_episode_steps):
+            dice1_action = dice1.predict(state)
+            dice2_action = dice2.predict(state)
+            dice3_action = dice3.predict(state)
+            dice4_action = dice4.predict(state)
+            dice5_action = dice5.predict(state)
+
+            category =  which_category.predict(state)
+            action = ([dice1_action, dice2_action, dice3_action, dice4_action, dice5_action], category)
+
+            state, reward, done, info = env.step(action)
+
+            dice1.test_reward(reward)
+            dice2.test_reward(reward)
+            dice3.test_reward(reward)
+            dice4.test_reward(reward)
+            dice5.test_reward(reward)
+
+            total_reward += reward
+
+            if done:
+                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
+                train_summary_writer.add_summary(episode_summary, episode + 1)
+                break
