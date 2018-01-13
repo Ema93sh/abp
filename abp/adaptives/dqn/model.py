@@ -44,32 +44,32 @@ class DQNModel(object):
 
         print "Created network for...", self.name
 
-        # self.restore_network() TODO
+        self.restore_network()
 
 
     def __del__(self):
-        # self.save_network() TODO
+        self.save_network()
         self.session.close()
         self.summaries_writer.close()
 
 
     def save_network(self):
         if self.network_config.network_path:
-            dirname = os.path.dirname(self.network_config.network_path)
+            dirname = os.path.dirname(self.network_config.network_path + "/" + self.name)
             if not tf.gfile.Exists(dirname):
                 logging.info("Creating network path directories...")
                 tf.gfile.MakeDirs(dirname)
-            logging.info("Saving the network at %s" % self.network_config.network_path)
-            self.saver.save(self.session, self.network_config.network_path)
+            logging.info("Saving the network at %s" % self.network_config.network_path + "/" + self.name)
+            self.saver.save(self.session, self.network_config.network_path + "/" + self.name)
 
 
     def restore_network(self):
         if self.network_config.restore_network and self.network_config.network_path:
-            dirname = os.path.dirname(self.network_config.network_path)
+            dirname = os.path.dirname(self.network_config.network_path + "/" + self.name)
             if not tf.gfile.Exists(dirname):
                 logging.error("Can not restore model. Reason: The network path (%s) does not exists" % self.network_config.network_path)
                 return
-            self.saver.restore(self.session, self.network_config.network_path)
+            self.saver.restore(self.session, self.network_config.network_path + "/" + self.name)
 
 
     def build_network(self):
