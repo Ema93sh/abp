@@ -1,15 +1,12 @@
-from memory import Memory
-from model import DQNModel
-from experience import Experience
+import logging
 
 import tensorflow as tf
 import numpy as np
-import os
-import logging
 
-
+from abp.adaptives.common.memory import Memory
+from abp.adaptives.common.experience import Experience
+from model import DQNModel
 from abp.utils import clear_summary_path
-
 
 
 class DQNAdaptive(object):
