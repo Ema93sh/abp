@@ -14,7 +14,11 @@ default_network_config = {
     "restore_network": True, # restore from the saved model.
     "network_path": None, # path used to load/store the network. Wont restore if the network path is None or restore_network is False
     "summaries_path": None, # path to store the tensorflow summaries for the network
-    "summaries_step": 100 # generates summaries for the network after every n steps
+    "summaries_step": 100, # generates summaries for the network after every n steps
+    "networks": [], # cointaining details of multiple network
+    "shared_layers": [], # the layers shared among the networks TODO
+    "aggregator": "average" # the type of the aggregator TODO
+
 }
 
 
@@ -38,3 +42,9 @@ class NetworkConfig(BaseConfig):
     summaries_path = property(BaseConfig.get_property("summaries_path"), BaseConfig.set_property("summaries_path"))
 
     summaries_step = property(BaseConfig.get_property("summaries_step"), BaseConfig.set_property("summaries_step"))
+
+    networks = property(BaseConfig.get_property("networks"), BaseConfig.set_property("networks"))
+
+    shared_layers = property(BaseConfig.get_property("shared_layers"), BaseConfig.set_property("shared_layers"))
+
+    aggregator = property(BaseConfig.get_property("aggregator"), BaseConfig.set_property("aggregator"))

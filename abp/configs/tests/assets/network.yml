@@ -1,3 +1,41 @@
+networks:
+  -  #UP
+    input_shape:
+        - 110
+
+    layers:
+        - 100
+
+    output_shape:
+        - 4
+
+  -  #DOWN
+    input_shape:
+         - 110
+    layers:
+         - 50
+         - 50
+    output_shape:
+         - 4
+
+  -  #LEFT
+    input_shape:
+        - 110
+
+    layers:
+        - 100
+
+    output_shape:
+        - 4
+
+  -  #RIGHT
+    input_shape:
+         - 110
+    layers:
+         - 100
+    output_shape:
+         - 4
+
 input_shape:
     - 20
 
@@ -12,3 +50,5 @@ network_path: "test/the/network/path.ckpt"
 summaries_path: "test/summaries/path.ckpt"
 summaries_step: 50
 restore_network: False
+shared_layers: [250]
+aggregator: "average"
