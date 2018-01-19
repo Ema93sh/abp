@@ -2,8 +2,17 @@ import copy
 import gym
 import tensorflow as tf
 
-from abp import DQNAdaptive
+from abp import HRAAdaptive
 from abp.utils import clear_summary_path
+
+def decompose_reward(action, reward):
+    holds, category = action
+    rewards = [0, 0] #UpperSection, #LowerSection
+    if category in range(0, 6):
+        rewards[0] = reward
+    else:
+        rewards[1] = reward
+
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
@@ -11,16 +20,16 @@ def run_task(evaluation_config, network_config, reinforce_config):
     state = env.reset()
     HOLD, ROLL = [0, 1]
 
-    dice1 = DQNAdaptive(name = "dice1", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
-    dice2 = DQNAdaptive(name = "dice2", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
-    dice3 = DQNAdaptive(name = "dice3", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
-    dice4 = DQNAdaptive(name = "dice4", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
-    dice5 = DQNAdaptive(name = "dice5", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice1 = HRAAdaptive(name = "dice1", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice2 = HRAAdaptive(name = "dice2", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice3 = HRAAdaptive(name = "dice3", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice4 = HRAAdaptive(name = "dice4", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice5 = HRAAdaptive(name = "dice5", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
 
     category_network_config = copy.deepcopy(network_config)
-    category_network_config.output_shape = [13]
+    category_network_config.output_shape = [12]
 
-    which_category = DQNAdaptive(name = "which_category", choices = range(13), network_config = network_config, reinforce_config = reinforce_config)
+    which_category = HRAAdaptive(name = "which_category", choices = range(12), network_config = category_network_config, reinforce_config = reinforce_config)
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
     clear_summary_path(training_summaries_path)
@@ -43,6 +52,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             state, reward, done, info = env.step(action)
 
+            reward = decompose_reward(action, reward)
+
             dice1.reward(reward)
             dice2.reward(reward)
             dice3.reward(reward)
@@ -51,7 +62,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             which_category.reward(reward)
 
-            total_reward += reward
+            total_reward += sum(reward)
 
             if done:
                 dice1.end_episode(state)
@@ -61,6 +72,12 @@ def run_task(evaluation_config, network_config, reinforce_config):
                 dice5.end_episode(state)
 
                 which_category.end_episode(state)
+
+                if episode > 150:
+                    print episode + 1
+                    print info["categories"]
+                    print info["category_score"]
+                    print "****************************"
 
                 episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
                 train_summary_writer.add_summary(episode_summary, episode + 1)
@@ -97,12 +114,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
             action = ([dice1_action, dice2_action, dice3_action, dice4_action, dice5_action], category)
 
             state, reward, done, info = env.step(action)
-
-            dice1.test_reward(reward)
-            dice2.test_reward(reward)
-            dice3.test_reward(reward)
-            dice4.test_reward(reward)
-            dice5.test_reward(reward)
 
             total_reward += reward
 
