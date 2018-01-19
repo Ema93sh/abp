@@ -68,9 +68,7 @@ class DQNAdaptive(object):
             action, q_values = self.eval_model.predict(state)
             choice = self.choices[action]
 
-
-        if self.learning and self.replay_memory.current_size > 30:
-            self.update()
+        self.update()
 
         self.current_reward = 0
 
@@ -90,9 +88,9 @@ class DQNAdaptive(object):
 
         self.episode += 1
 
-        psuedo_reward_summary = tf.Summary()
-        psuedo_reward_summary.value.add(tag='%s agent reward' % self.name, simple_value = self.total_reward)
-        self.summaries_writer.add_summary(psuedo_reward_summary, self.episode)
+        reward_summary = tf.Summary()
+        reward_summary.value.add(tag='%s agent reward' % self.name, simple_value = self.total_reward)
+        self.summaries_writer.add_summary(reward_summary, self.episode)
 
 
         experience = Experience(self.previous_state, self.previous_action, self.current_reward, state, True)
@@ -113,10 +111,10 @@ class DQNAdaptive(object):
         self.current_reward += r
 
     def update(self):
-        batch_size = 32
-        batch = self.replay_memory.sample(batch_size)
+        if self.replay_memory.current_size < self.reinforce_config.batch_size:
+            return
 
-        batch_size = len(batch)
+        batch = self.replay_memory.sample(self.reinforce_config.batch_size)
 
         # TODO: Convert to tensor operations instead of for loops
 
@@ -140,7 +138,7 @@ class DQNAdaptive(object):
 
         q_target = q_values.copy()
 
-        batch_index = np.arange(batch_size, dtype=np.int32)
+        batch_index = np.arange(self.reinforce_config.batch_size, dtype=np.int32)
 
         q_target[batch_index, actions] = reward + self.reinforce_config.discount_factor * q_max
 

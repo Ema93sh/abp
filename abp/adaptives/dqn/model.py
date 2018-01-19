@@ -15,32 +15,35 @@ class DQNModel(object):
         self.name = name
         self.network_config = network_config
         self.collections = []
+        self.graph = tf.Graph()
 
         # TODO add ability to configure learning rate for network!
         self.learning_rate = learning_rate
 
         self.summaries = []
 
-        self.build_network()
+        with self.graph.as_default():
+            self.build_network()
 
-        self.session = tf.Session()
+            self.session = tf.Session()
+
+            self.saver = tf.train.Saver()
+
+            #TODO:
+            # * This session should be independent. Use current model collection instead
+
+            self.session.run(tf.global_variables_initializer())
+            # map(lambda v: v.initializer, tf.get_collection(self.name + "_Collection")
+            # self.session.run(map(lambda v: v.initializer, tf.get_collection(self.name + "_Collection")))
+
 
         # TODO
         # * Option to disable summaries
 
         clear_summary_path(self.network_config.summaries_path + "/" + self.name)
 
-        self.summaries_writer = tf.summary.FileWriter(self.network_config.summaries_path + "/" + self.name)
+        self.summaries_writer = tf.summary.FileWriter(self.network_config.summaries_path + "/" + self.name, graph = self.graph)
 
-        self.saver = tf.train.Saver()
-
-
-        #TODO:
-        # * This session should be independent. Use current model collection instead
-
-        self.session.run(tf.global_variables_initializer())
-        # map(lambda v: v.initializer, tf.get_collection(self.name + "_Collection")
-        # self.session.run(map(lambda v: v.initializer, tf.get_collection(self.name + "_Collection")))
 
         print "Created network for...", self.name
 
