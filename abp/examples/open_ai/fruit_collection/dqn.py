@@ -22,6 +22,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
     clear_summary_path(training_summaries_path)
     train_summary_writer = tf.summary.FileWriter(training_summaries_path)
 
+    test_summaries_path = evaluation_config.summaries_path + "/test"
+    clear_summary_path(test_summaries_path)
+    test_summary_writer = tf.summary.FileWriter(test_summaries_path)
+
     #Training Episodes
     for episode in range(evaluation_config.training_episodes):
         state = env_spec.reset()
@@ -44,15 +48,13 @@ def run_task(evaluation_config, network_config, reinforce_config):
             if done or steps == (max_episode_steps - 1):
                 agent.end_episode(state)
                 episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
-                episode_summary.value.add(tag = "Episode Steps", simple_value = steps + 1)
+                episode_summary.value.add(tag = "Steps to collect all fruits", simple_value = steps + 1)
                 train_summary_writer.add_summary(episode_summary, episode + 1)
                 break
 
-    agent.disable_learning()
+    train_summary_writer.flush()
 
-    test_summaries_path = evaluation_config.summaries_path + "/test"
-    clear_summary_path(test_summaries_path)
-    test_summary_writer = tf.summary.FileWriter(test_summaries_path)
+    agent.disable_learning()
 
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
@@ -70,7 +72,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             if done:
                 episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
-                episode_summary.value.add(tag = "Episode Steps", simple_value = steps + 1)
+                episode_summary.value.add(tag = "Steps to collect all fruits", simple_value = steps + 1)
                 test_summary_writer.add_summary(episode_summary, episode + 1)
                 break
 

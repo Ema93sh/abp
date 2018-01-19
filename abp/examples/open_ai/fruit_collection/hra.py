@@ -1,87 +1,77 @@
 import gym
 import numpy as np
-import abp
-import os
-import time
+import tensorflow as tf
 
 from abp import HRAAdaptive
-from abp.utils.bar_chart import MultiQBarChart
+from abp.utils import clear_summary_path
+from abp.openai.wrappers import RewardWrapper
 
-def run_task(config):
-    config.name = "FruitCollection-v0"
+#TODO
+# *reward wrapper
 
-    env_spec = gym.make(config.name)
-    state = env_spec.reset()
-    max_episode_steps = env_spec._max_episode_steps
+def run_task(evaluation_config, network_config, reinforce_config):
+    env = gym.make(evaluation_config.env)
+    max_episode_steps = env._max_episode_steps
+    # env = RewardWrapper(env)
+    state = env.reset()
+    LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
 
-    config.size_rewards = 10
-    config.size_features = len(state)
-    config.action_size = env_spec.action_space.n
+    agent = HRAAdaptive(name = "FruitCollecter",
+                        choices = [LEFT, RIGHT, UP, DOWN],
+                        network_config =  network_config,
+                        reinforce_config = reinforce_config)
 
-    agent = HRAAdaptive(config)
-    possible_fruit_locations = env_spec.env.possible_fruit_locations
+    training_summaries_path = evaluation_config.summaries_path + "/train"
+    clear_summary_path(training_summaries_path)
+    train_summary_writer = tf.summary.FileWriter(training_summaries_path)
+
+    test_summaries_path = evaluation_config.summaries_path + "/test"
+    clear_summary_path(test_summaries_path)
+    test_summary_writer = tf.summary.FileWriter(test_summaries_path)
 
     #Training Episodes
-    for epoch in range(config.training_episode):
-        state = env_spec.reset()
+    for episode in range(evaluation_config.training_episodes):
+        state = env.reset()
+        total_reward = 0
+        episode_summary = tf.Summary()
         for steps in range(max_episode_steps):
             action, q_values = agent.predict(state)
-            state, reward, done, info = env_spec.step(action)
+            state, reward, done, info = env.step(action)
 
-            possible_fruit_locations = info["possible_fruit_locations"]
-            collected_fruit = info["collected_fruit"]
-            current_fruit_locations = info["current_fruit_locations"]
+            agent.reward(reward)
 
-            r = None
-            if collected_fruit is not None:
-                r = possible_fruit_locations.index(collected_fruit)
-                agent.reward(r, 1, "Collected Fruit at location %d" % collected_fruit)
-
-            # for i in range(9):
-            #     if (r is None or r != i) and  possible_fruit_locations[i] in current_fruit_locations:
-            #         agent.reward(i, -1, "Missed Fruit at location %d" % possible_fruit_locations[i])
-
-            agent.actual_reward(-1)
-
+            total_reward += sum(reward)
 
             if done or steps == (max_episode_steps - 1):
                 agent.end_episode(state)
+                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
+                episode_summary.value.add(tag = "Steps to collect all fruits",  simple_value = steps + 1)
+                train_summary_writer.add_summary(episode_summary, episode + 1)
                 break
+
+    train_summary_writer.flush()
 
     agent.disable_learning()
 
-    chart = MultiQBarChart(config.size_rewards, env_spec.action_space.n, ('Left', 'Right', 'Up', 'Down'), width = 0.08)
-
-    import curses
-
-    screen = curses.initscr()
-    curses.savetty()
-    curses.noecho()
-    curses.cbreak()
-    curses.curs_set(0)
-    # screen.nodelay(0)
-    screen.keypad(1)
-
     #Test Episodes
-    for epoch in range(config.test_episodes):
-        state = env_spec.reset()
-        for steps in range(max_episode_steps):
-            # env_spec.render()
-            screen.clear()
-            s = env_spec.render(mode='ansi')
-            screen.addstr(s.getvalue())
-            action, q_values = agent.predict(state)
-            merged = np.sum(q_values, axis=0)
-            merged_action = np.argmax(merged)
-            chart.render(q_values, [ "Location_(%d, %d)" % ((possible_fruit_locations[i] / 10 + 1), (possible_fruit_locations[i] % 10 + 1)) for i in range(config.size_rewards)])
-            screen.refresh()
+    for episode in range(evaluation_config.test_episodes):
+        state = env.reset()
+        total_reward = 0
+        episode_summary = tf.Summary()
 
-            time.sleep(10)
-            state, reward, done, info = env_spec.step(action)
-            agent.test_reward(-1)
+        for steps in range(max_episode_steps):
+            action, q_values = agent.predict(state)
+
+            state, reward, done, info = env.step(action)
+
+            total_reward += reward
 
             if done:
                 agent.end_episode(state)
+                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
+                episode_summary.value.add(tag = "Steps to collect all fruits", simple_value = steps + 1)
+                test_summary_writer.add_summary(episode_summary, episode + 1)
                 break
 
-    env_spec.close()
+    test_summary_writer.flush()
+    env.close()
