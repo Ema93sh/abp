@@ -29,6 +29,7 @@ class RewardWrapper(Wrapper):
         super(RewardWrapper, self).__init__(env)
 
     def step(self, action, decompose_reward = True):
+        #TODO THIS DOES NOT WORK!!!!
         args , _ = inspect.getargspec(self.unwrapped._step, )
         if "decompose_reward" in args:
             self.unwrapped._step = partial(self.unwrapped._step, decompose_reward = decompose_reward)

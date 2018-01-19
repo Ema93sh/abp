@@ -50,7 +50,6 @@ class FruitCollectionEnv(gym.Env):
 
         return self.generate_state()
 
-
     def generate_state(self):
         state_fruit = np.array([0] * 10)
         fruit_idx = np.where(np.isin(self.possible_fruit_locations, self.current_fruit_locations))
@@ -86,16 +85,18 @@ class FruitCollectionEnv(gym.Env):
         return True
 
 
-    def _step(self, action):
+    def _step(self, action, decompose_reward = True): #TODO clear this mess!
         self.current_step += 1
         done = False
         reward = 0
+        d_reward = np.array([0] * len(self.possible_fruit_locations))
         info = {"current_fruit_locations": self.current_fruit_locations,
                 "agent_location": self.agent_location,
                 "collected_fruit": None,
                 "possible_fruit_locations": self.possible_fruit_locations}
         updated_agent_location =  self.next_location(action)
         valid_action = self.is_valid_next_location(updated_agent_location)
+
 
         if valid_action:
             self.grid[self.agent_location] = 0
@@ -105,6 +106,7 @@ class FruitCollectionEnv(gym.Env):
                 info["collected_fruit"] = updated_agent_location
                 self.collected_fruit += 1
                 idx = np.where(self.current_fruit_locations == updated_agent_location)
+                d_reward[idx] = reward
                 self.current_fruit_locations = np.delete(self.current_fruit_locations, idx)
 
             self.grid[updated_agent_location] = 1
@@ -112,6 +114,7 @@ class FruitCollectionEnv(gym.Env):
 
         done = (self.collected_fruit == self.number_of_fruits or self.current_step >= 300)
 
+        reward = d_reward if decompose_reward else reward
         return self.generate_state(), reward, done, info
 
     def render_human(self):
