@@ -12,6 +12,7 @@ def decompose_reward(action, reward):
         rewards[0] = reward
     else:
         rewards[1] = reward
+    return rewards
 
 
 def run_task(evaluation_config, network_config, reinforce_config):
@@ -65,6 +66,12 @@ def run_task(evaluation_config, network_config, reinforce_config):
             total_reward += sum(reward)
 
             if done:
+                if episode % 20 == 0 or total_reward > 20:
+                    print episode + 1, total_reward
+                    print info["categories"]
+                    print info["category_score"]
+                    print "****************************"
+
                 dice1.end_episode(state)
                 dice2.end_episode(state)
                 dice3.end_episode(state)
@@ -72,12 +79,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
                 dice5.end_episode(state)
 
                 which_category.end_episode(state)
-
-                if episode > 150:
-                    print episode + 1
-                    print info["categories"]
-                    print info["category_score"]
-                    print "****************************"
 
                 episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
                 train_summary_writer.add_summary(episode_summary, episode + 1)

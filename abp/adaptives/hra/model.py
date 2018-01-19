@@ -1,3 +1,6 @@
+import os
+import logging
+
 import tensorflow as tf
 import numpy as np
 
@@ -130,7 +133,7 @@ class HRAModel(object):
 
                         with tf.variable_scope("Output_Layer"): #TODO the output layer should be the same for all networks?
                             w = tf.get_variable("w_output",
-                                        shape = (self.network_config.layers[-1], self.network_config.output_shape[0]),
+                                        shape = (network["layers"][-1], self.network_config.output_shape[0]),
                                         initializer = w_initializer,
                                         collections = self.collections)
 

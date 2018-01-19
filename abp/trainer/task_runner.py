@@ -23,6 +23,12 @@ def main():
         required = True
     )
 
+    parser.add_argument(
+        '-j', '--job-dir',
+        help = "Job dir",
+        required = False
+    )
+
     args = parser.parse_args()
 
     evaluation_config = EvaluationConfig.load_from_yaml(os.path.join(args.folder, "evaluation.yml"))
@@ -35,6 +41,7 @@ def main():
 
     task_module.run_task(evaluation_config, network_config, reinforce_config)
 
+    return 0
 
 if __name__ == '__main__':
     main()

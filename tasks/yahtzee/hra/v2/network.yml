@@ -19,7 +19,7 @@ layers:
 output_shape:
     - 2
 
-network_path: "./saved_models/Yahtzee/hra/v1/network.ckpt"
-summaries_path: "./tensorflow_summaries/Yahtzee/hra/v1/network_summary"
+network_path: "./saved_models/Yahtzee/hra/v2/network.ckpt"
+summaries_path: "./tensorflow_summaries/Yahtzee/hra/v2/network_summary"
 summaries_step: 150
 restore_network: False

@@ -1,7 +1,7 @@
 from setuptools import find_packages
 from setuptools import setup
 
-REQUIRED_PACKAGES = ["tensorflow-gpu", "gym", "numpy>=1.13"]
+REQUIRED_PACKAGES = ["tensorflow-gpu", "gym", "numpy==1.13.1"]
 
 
 setup( name='abp',
@@ -10,6 +10,7 @@ setup( name='abp',
        author='Magesh Kumar',
        author_email='muralim@oregonstate.edu',
        include_package_data=True,
+       package_data={'': ['tasks']},
        packages=find_packages(),
        install_requires=REQUIRED_PACKAGES
      )

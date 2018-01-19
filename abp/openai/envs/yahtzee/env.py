@@ -70,7 +70,7 @@ class YahtzeeEnv(gym.Env):
         return dice
 
     def generate_state(self):
-        return self.current_hand + self.categories + [self.current_turn]
+        return map(lambda x: x/10.0, self.current_hand) + self.categories + [self.current_turn]
 
     def info(self):
         return {"current_hand": self.current_hand, "categories": self.categories, "turn": self.current_turn, "category_score": self.category_score}
@@ -115,7 +115,7 @@ class YahtzeeEnv(gym.Env):
         [(_, c)] = counts.most_common(1)
         if c == 5: #TODO: Arrggghh! too many ifssss
             if self.categories[12] >= 1:
-                return -200 if self.category_score[12] <= 0 else 100
+                return -20 if self.category_score[12] <= 0 else 100
             return 50
         else:
             return 0
@@ -153,10 +153,10 @@ class YahtzeeEnv(gym.Env):
 
     def select_category(self, category):
         if category < 0 or category >= 13:
-            return -200 # Invalid category
+            return -20 # Invalid category
 
         if category != 12 and self.categories[category] > 0:
-            return -200 #Category already choosen and its not yahtzee
+            return -20 #Category already choosen and its not yahtzee
 
 
         if category in range(6):

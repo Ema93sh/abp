@@ -2,8 +2,16 @@ import copy
 import gym
 import tensorflow as tf
 
-from abp import DQNAdaptive
+from abp import HRAAdaptive
 from abp.utils import clear_summary_path
+
+def decompose_reward(action, reward):
+    holds, category = action
+    rewards = [0] * 13 #UpperSection, #LowerSection
+    if category is not None:
+        rewards[category] = reward
+    return rewards
+
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
@@ -11,16 +19,16 @@ def run_task(evaluation_config, network_config, reinforce_config):
     state = env.reset()
     HOLD, ROLL = [0, 1]
 
-    dice1 = DQNAdaptive(name = "dice1", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
-    dice2 = DQNAdaptive(name = "dice2", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
-    dice3 = DQNAdaptive(name = "dice3", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
-    dice4 = DQNAdaptive(name = "dice4", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
-    dice5 = DQNAdaptive(name = "dice5", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice1 = HRAAdaptive(name = "dice1", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice2 = HRAAdaptive(name = "dice2", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice3 = HRAAdaptive(name = "dice3", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice4 = HRAAdaptive(name = "dice4", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
+    dice5 = HRAAdaptive(name = "dice5", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
 
     category_network_config = copy.deepcopy(network_config)
     category_network_config.output_shape = [12]
 
-    which_category = DQNAdaptive(name = "which_category", choices = range(12), network_config = category_network_config, reinforce_config = reinforce_config)
+    which_category = HRAAdaptive(name = "which_category", choices = range(12), network_config = category_network_config, reinforce_config = reinforce_config)
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
     clear_summary_path(training_summaries_path)
@@ -37,7 +45,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         total_reward = 0
         episode_summary = tf.Summary()
 
-        for step in range(13):
+        for step in range(12):
 
             #Roll Dice Three times
             for dice_step in range(3):
@@ -51,12 +59,22 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
                 state, reward, done, info = env.step(action)
 
+                reward = decompose_reward(action, reward)
+
+                dice1.reward(reward)
+                dice2.reward(reward)
+                dice3.reward(reward)
+                dice4.reward(reward)
+                dice5.reward(reward)
+
             #Select Category
             category, _ =  which_category.predict(state)
 
             action  = ([], category)
 
             state, reward, done, info = env.step(action)
+
+            reward = decompose_reward(action, reward)
 
             dice1.reward(reward)
             dice2.reward(reward)
@@ -66,7 +84,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             which_category.reward(reward)
 
-            total_reward += reward
+             += sum(reward)
 
             if done:
                 if episode % 20 == 0 or total_reward > 20:
