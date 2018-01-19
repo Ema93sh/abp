@@ -26,6 +26,7 @@ class YahtzeeEnv(gym.Env):
     # 10 - Large Straight
     # 11 - Chance
     # 12 - Yahtzee
+    # 13 - No category (used when its not current turn)
 
 
     def __init__(self):
@@ -72,7 +73,7 @@ class YahtzeeEnv(gym.Env):
         return self.current_hand + self.categories + [self.current_turn]
 
     def info(self):
-        return {"current_hand": self.current_hand, "categories": self.categories, "turn": self.current_turn}
+        return {"current_hand": self.current_hand, "categories": self.categories, "turn": self.current_turn, "category_score": self.category_score}
 
     def _reset(self):
         self.current_hand = self.roll_dice()
@@ -114,7 +115,7 @@ class YahtzeeEnv(gym.Env):
         [(_, c)] = counts.most_common(1)
         if c == 5: #TODO: Arrggghh! too many ifssss
             if self.categories[12] >= 1:
-                return 0 if self.category_score[12] == 0 else 100
+                return -200 if self.category_score[12] <= 0 else 100
             return 50
         else:
             return 0
@@ -127,7 +128,7 @@ class YahtzeeEnv(gym.Env):
         if self.upper_section_bonus:
             return 0
 
-        if sum(self.categories[:6]) == 6:
+        if all(map(lambda x: x == 1, self.categories[:6])):
             s = 0
             for i in range(6):
                 s += self.category_score[i]
@@ -152,10 +153,11 @@ class YahtzeeEnv(gym.Env):
 
     def select_category(self, category):
         if category < 0 or category >= 13:
-            return -1000 # Invalid category
+            return -200 # Invalid category
 
         if category != 12 and self.categories[category] > 0:
-            return -1000 #Category already choosen and its not yahtzee
+            return -200 #Category already choosen and its not yahtzee
+
 
         if category in range(6):
             return self.score_upper_section(category + 1)
@@ -166,6 +168,7 @@ class YahtzeeEnv(gym.Env):
     def _step(self, action, decompose_reward = False):
         holds, category = action
         reward = 0
+        # d_reward = [0] * self.
         info = {}
         done = False
 

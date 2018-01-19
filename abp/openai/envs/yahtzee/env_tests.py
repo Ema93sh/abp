@@ -158,19 +158,19 @@ class TestYahtzeeEnvScore(unittest.TestCase):
 
     def test_invalid_select_category(self):
         score = self.env.select_category(-1)
-        self.assertEqual(-1000, score)
+        self.assertEqual(-200, score)
 
         score = self.env.select_category(13)
-        self.assertEqual(-1000, score)
+        self.assertEqual(-200, score)
 
         self.env.categories[0] = 1
         score = self.env.select_category(0)
-        self.assertEqual(-1000, score)
+        self.assertEqual(-200, score)
 
         self.env.categories[12] = 1
         self.env.category_score[12] = 50
         score = self.env.select_category(12)
-        self.assertNotEqual(-1000, score)
+        self.assertNotEqual(-200, score)
 
     def test_add_upper_section_bonus(self):
         self.env.categories = [1] * 6 + [0] * 7
@@ -287,7 +287,7 @@ class TestYahtzeeEnvGame(unittest.TestCase):
 
         _, reward, done, _ = self.env._step(([0]*5, 0))
 
-        self.assertEqual(-1000, reward)
+        self.assertEqual(-200, reward)
         self.assertEqual(done, True)
 
     def test_single_episode(self):
@@ -321,6 +321,17 @@ class TestYahtzeeEnvGame(unittest.TestCase):
             else:
                 self.assertEqual(r, 6 * 5 + 35)
 
+    def test_episode_without_upper_section_bonus_score(self):
+        for i in range(6):
+            self.roll_dice_mock.return_value = [i + 1] * 5
+            self.skip_step(3)
+            _, r, done, _ = self.env._step(([0] * 5, i))
+            if i != 5:
+                self.assertEqual(r, (i+1) * 5)
+            else:
+                self.assertEqual(r, 6 * 5 + 35)
+
+
     def test_episode_with_yahtzee_bonus_score(self):
         self.roll_dice_mock.return_value = [1] * 5
         self.skip_step(3)
@@ -342,13 +353,13 @@ class TestYahtzeeEnvGame(unittest.TestCase):
 
         self.skip_step(3)
         _, r, done, _ = self.env._step(([0] * 5, 12))
-        self.assertEqual(r, 0)
-        self.assertEqual(done, False)
+        self.assertEqual(r, -200)
+        self.assertEqual(done, True)
 
         self.skip_step(3)
         _, r, done, _ = self.env._step(([0] * 5, 12))
-        self.assertEqual(r, 0)
-        self.assertEqual(done, False)
+        self.assertEqual(r, -200)
+        self.assertEqual(done, True)
 
 
     def tearDown(self):
