@@ -1,6 +1,6 @@
 name: "Cart Pole"
 env: "CartPole-v0"
-summaries_path: "./tensorflow_summaries/cart_pole/v1/evaluation_summary"
+summaries_path: "./tensorflow_summaries/cart_pole/dqn/v1/evaluation_summary"
 test_episodes: 100
 training_episodes: 200
 render: True

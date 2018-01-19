@@ -1,0 +1,13 @@
+input_shape:
+    - 19
+
+layers:
+    - 100
+
+output_shape:
+    - 2
+
+network_path: "./saved_models/Yahtzee/dqn/v1/network.ckpt"
+summaries_path: "./tensorflow_summaries/Yahtzee/dqn/v1/network_summary"
+summaries_step: 150
+restore_network: False

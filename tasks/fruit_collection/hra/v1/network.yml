@@ -1,0 +1,32 @@
+networks:
+  - name: "UP"
+    layers:
+        - 100
+
+  - name: "DOWN"
+    layers:
+         - 100
+
+  - name: "LEFT"
+    layers:
+        - 100
+
+
+  - name: "RIGHT"
+    layers:
+         - 100
+
+
+input_shape:
+    - 110
+
+output_shape:
+     - 4
+
+shared_layers: [] #TODO
+aggeregator: "average" #TODO
+
+network_path: "./saved_models/fruit_collection/hra/v1.ckpt"
+summaries_path: "./tensorflow_summaries/fruit_collection/hra/v1/network_summary"
+summaries_step: 100
+restore_network: False

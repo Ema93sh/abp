@@ -1,0 +1,6 @@
+name: "Yahtzee"
+env: "Yahtzee-v0"
+summaries_path: "./tensorflow_summaries/Yahtzee/dqn/v1/evaluation_summary"
+test_episodes: 100
+training_episodes: 5000
+render: False
