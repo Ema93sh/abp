@@ -79,6 +79,7 @@ class DQNAdaptive(object):
 
     def disable_learning(self):
         logging.info("Disabled Learning for %s agent" % self.name)
+        self.eval_model.save_network()
         self.learning = False
         self.episode = 0
 

@@ -51,7 +51,6 @@ class DQNModel(object):
 
 
     def __del__(self):
-        self.save_network()
         self.session.close()
         self.summaries_writer.close()
 
