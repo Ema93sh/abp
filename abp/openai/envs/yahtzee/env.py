@@ -178,6 +178,9 @@ class YahtzeeEnv(gym.Env):
             self.categories[category] += 1
             self.current_turn = 0
             self.current_category_turn += 1
+
+            if self.current_category_turn >= 13:
+                done = True
         else:
             self.current_hand = self.roll_dice(holds)
             self.current_turn += 1
@@ -187,9 +190,6 @@ class YahtzeeEnv(gym.Env):
             self.category_score[13] = bonus
 
         reward += bonus
-
-        if self.current_category_turn == 13:
-            done = True
 
         if reward < 0: # End when you choose an invalid category
             done = True
