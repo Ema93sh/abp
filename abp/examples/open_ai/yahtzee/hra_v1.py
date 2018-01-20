@@ -28,9 +28,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
     dice5 = HRAAdaptive(name = "dice5", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
 
     category_network_config = copy.deepcopy(network_config)
-    category_network_config.output_shape = [12]
+    category_network_config.output_shape = [13]
+    category_choices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
 
-    which_category = HRAAdaptive(name = "which_category", choices = range(12), network_config = category_network_config, reinforce_config = reinforce_config)
+    which_category = HRAAdaptive(name = "which_category", choices = category_choices, network_config = category_network_config, reinforce_config = reinforce_config)
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
     clear_summary_path(training_summaries_path)

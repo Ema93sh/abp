@@ -18,9 +18,11 @@ def run_task(evaluation_config, network_config, reinforce_config):
     dice5 = DQNAdaptive(name = "dice5", choices = [ROLL, HOLD], network_config = network_config, reinforce_config = reinforce_config)
 
     category_network_config = copy.deepcopy(network_config)
-    category_network_config.output_shape = [12]
+    category_network_config.output_shape = [13]
 
-    which_category = DQNAdaptive(name = "which_category", choices = range(12), network_config = category_network_config, reinforce_config = reinforce_config)
+    category_choices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+    which_category = DQNAdaptive(name = "which_category", choices = category_choices, network_config = category_network_config, reinforce_config = reinforce_config)
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
     clear_summary_path(training_summaries_path)
@@ -103,7 +105,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         total_reward = 0
         episode_summary = tf.Summary()
 
-        for step in range(12):
+        for step in range(13):
 
             #Roll Dice Three times
             for dice_step in range(3):
