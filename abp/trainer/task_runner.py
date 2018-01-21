@@ -1,9 +1,12 @@
+import logging
 import argparse
 import os
 
 from importlib import import_module
 
 from abp.configs import NetworkConfig, ReinforceConfig, EvaluationConfig
+from abp.utils import setup_custom_logger
+logger = setup_custom_logger('root')
 
 #TODO: Need a better way to run a task.
 
@@ -29,7 +32,22 @@ def main():
         required = False
     )
 
+    parser.add_argument(
+    '-d', '--debug',
+        help="Print lots of debugging statements",
+        action="store_const", dest="loglevel", const=logging.DEBUG,
+        default=logging.WARNING,
+    )
+
+    parser.add_argument(
+        '-v', '--verbose',
+        help="Be verbose",
+        action="store_const", dest="loglevel", const=logging.INFO,
+    )
+
     args = parser.parse_args()
+
+    logger.setLevel(args.loglevel)
 
     evaluation_config = EvaluationConfig.load_from_yaml(os.path.join(args.folder, "evaluation.yml"))
 

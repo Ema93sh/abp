@@ -1,4 +1,5 @@
 import logging
+logger = logging.getLogger('root')
 
 import tensorflow as tf
 import numpy as np
@@ -78,7 +79,7 @@ class DQNAdaptive(object):
         return choice, q_values
 
     def disable_learning(self):
-        logging.info("Disabled Learning for %s agent" % self.name)
+        logger.info("Disabled Learning for %s agent" % self.name)
         self.eval_model.save_network()
         self.learning = False
         self.episode = 0

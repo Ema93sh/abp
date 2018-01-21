@@ -1,4 +1,6 @@
 import logging
+logger = logging.getLogger('root')
+
 import os
 
 import tensorflow as tf
@@ -51,17 +53,19 @@ class DQNModel(object):
 
 
     def __del__(self):
+        self.save_network()
         self.session.close()
         self.summaries_writer.close()
 
 
     def save_network(self):
-        if self.network_config.network_path:
+        if self.network_config.network_path and self.network_config.save_network:
+            logger.info("Saving network for..." + self.name)
             dirname = os.path.dirname(self.network_config.network_path + "/" + self.name)
             if not tf.gfile.Exists(dirname):
-                logging.info("Creating network path directories...")
+                logger.info("Creating network path directories...")
                 tf.gfile.MakeDirs(dirname)
-            logging.info("Saving the network at %s" % self.network_config.network_path + "/" + self.name)
+            logger.info("Saving the network at %s" % self.network_config.network_path + "/" + self.name)
             self.saver.save(self.session, self.network_config.network_path + "/" + self.name)
 
 
@@ -69,7 +73,7 @@ class DQNModel(object):
         if self.network_config.restore_network and self.network_config.network_path:
             dirname = os.path.dirname(self.network_config.network_path + "/" + self.name)
             if not tf.gfile.Exists(dirname):
-                logging.error("Can not restore model. Reason: The network path (%s) does not exists" % self.network_config.network_path)
+                logger.error("Can not restore model. Reason: The network path (%s) does not exists" % self.network_config.network_path)
                 return
             self.saver.restore(self.session, self.network_config.network_path + "/" + self.name)
 

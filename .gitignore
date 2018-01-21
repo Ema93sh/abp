@@ -5,3 +5,6 @@ tensorflow_summaries
 abp.egg-info
 dist
 saved_models
+run_all_yahtzee.sh
+cloud_saves
+log
