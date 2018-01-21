@@ -22,4 +22,5 @@ output_shape:
 network_path: "./saved_models/Yahtzee/hra/v2/network.ckpt"
 summaries_path: "./tensorflow_summaries/Yahtzee/hra/v2/network_summary"
 summaries_step: 150
-restore_network: False
+restore_network: True
+save_network: False

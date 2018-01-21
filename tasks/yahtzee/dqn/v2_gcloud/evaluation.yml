@@ -1,6 +1,6 @@
 name: "Yahtzee"
 env: "Yahtzee-v0"
-summaries_path: "./tensorflow_summaries/Yahtzee/dqn/v2/evaluation_summary"
+summaries_path: "gs://abp-bucket/abp/tensorflow_summaries/Yahtzee/dqn/v2/evaluation_summary"
 test_episodes: 100
 training_episodes: 5000
 render: False

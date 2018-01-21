@@ -158,19 +158,19 @@ class TestYahtzeeEnvScore(unittest.TestCase):
 
     def test_invalid_select_category(self):
         score = self.env.select_category(-1)
-        self.assertEqual(-20, score)
+        self.assertEqual(-100, score)
 
         score = self.env.select_category(13)
-        self.assertEqual(-20, score)
+        self.assertEqual(-100, score)
 
         self.env.categories[0] = 1
         score = self.env.select_category(0)
-        self.assertEqual(-20, score)
+        self.assertEqual(-100, score)
 
         self.env.categories[12] = 1
         self.env.category_score[12] = 50
         score = self.env.select_category(12)
-        self.assertNotEqual(-20, score)
+        self.assertNotEqual(-100, score)
 
     def test_add_upper_section_bonus(self):
         self.env.categories = [1] * 6 + [0] * 7
@@ -287,7 +287,7 @@ class TestYahtzeeEnvGame(unittest.TestCase):
 
         _, reward, done, _ = self.env._step(([0]*5, 0))
 
-        self.assertEqual(-20, reward)
+        self.assertEqual(-100, reward)
         self.assertEqual(done, True)
 
     def test_single_episode(self):
@@ -353,12 +353,12 @@ class TestYahtzeeEnvGame(unittest.TestCase):
 
         self.skip_step(3)
         _, r, done, _ = self.env._step(([0] * 5, 12))
-        self.assertEqual(r, -20)
+        self.assertEqual(r, -100)
         self.assertEqual(done, True)
 
         self.skip_step(3)
         _, r, done, _ = self.env._step(([0] * 5, 12))
-        self.assertEqual(r, -20)
+        self.assertEqual(r, -100)
         self.assertEqual(done, True)
 
 

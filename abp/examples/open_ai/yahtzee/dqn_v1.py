@@ -1,4 +1,6 @@
 import copy
+import logging
+
 import gym
 import tensorflow as tf
 
@@ -62,11 +64,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
 
             if done:
-                if episode % 20 == 0 or total_reward > 20:
-                    print episode + 1, total_reward
-                    print info["categories"]
-                    print info["category_score"]
-                    print "****************************"
+                logging.info("Episode %d : %d" % (episode + 1, total_reward))
 
                 dice1.end_episode(state)
                 dice2.end_episode(state)
@@ -116,5 +114,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             if done:
                 episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
-                train_summary_writer.add_summary(episode_summary, episode + 1)
+                test_summary_writer.add_summary(episode_summary, episode + 1)
                 break
+
+    test_summary_writer.flush()

@@ -1,6 +1,6 @@
 decay_steps: 300
 starting_epsilon: 1
-discount_factor: 0.95
+discount_factor: 0.98
 batch_size: 35
 memory_size: 10000
 summaries_path: "gs://abp-bucket/abp/tensorflow_summaries/Yahtzee/hra/v1/reinforce_summary"

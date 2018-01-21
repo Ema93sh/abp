@@ -1,55 +1,68 @@
 networks:
   - name: "Ones"
     layers:
-         - 50
+        - 25
+        - 25
 
   - name: "Twos"
     layers:
-        - 50
+        - 25
+        - 25
 
   - name: "Threes"
     layers:
-         - 50
+         - 25
+         - 25
 
   - name: "Fours"
     layers:
-        - 50
+        - 25
+        - 25
 
   - name: "Fives"
     layers:
-         - 50
+         - 25
+         - 25
 
   - name: "Sixes"
     layers:
-         - 50
+         - 25
+         - 25
 
   - name: "ThreeOfKind"
     layers:
-         - 50
+         - 25
+         - 25
 
   - name: "FourOfKind"
     layers:
-         - 50
+         - 25
+         - 25
 
   - name: "FullHouse"
     layers:
-         - 50
+         - 25
+         - 25
 
   - name: "SmallStraight"
     layers:
-         - 50
+         - 25
+         - 25
 
   - name: "LargeStraight"
     layers:
-         - 50
+         - 25
+         - 25
 
   - name: "Chance"
     layers:
-         - 50
+         - 25
+         - 25
 
   - name: "Yahtzee"
     layers:
-         - 50
+         - 25
+         - 25
 
 input_shape:
     - 19
@@ -64,4 +77,3 @@ network_path: "./saved_models/Yahtzee/hra/v3/network.ckpt"
 summaries_path: "./tensorflow_summaries/Yahtzee/hra/v3/network_summary"
 summaries_step: 150
 restore_network: False
-save_network: False

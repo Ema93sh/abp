@@ -19,7 +19,7 @@ layers:
 output_shape:
     - 2
 
-network_path: "gs://abp-bucket/abp/saved_models/Yahtzee/hra/v2/network.ckpt"
+network_path: "gs://abp-bucket/abp/saved_models/Yahtzee/hra/v2/network"
 summaries_path: "gs://abp-bucket/abp/tensorflow_summaries/Yahtzee/hra/v2/network_summary"
 summaries_step: 150
 restore_network: False

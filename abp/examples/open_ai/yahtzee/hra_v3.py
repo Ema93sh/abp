@@ -1,4 +1,7 @@
 import copy
+import sys
+
+
 import gym
 import tensorflow as tf
 
@@ -41,6 +44,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
     test_summary_writer = tf.summary.FileWriter(test_summaries_path)
 
 
+    print "Training", evaluation_config.training_episodes
     #Training Episodes
     for episode in range(evaluation_config.training_episodes):
         state = env.reset()
@@ -117,13 +121,19 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     which_category.disable_learning()
 
+    print "Testing", evaluation_config.test_episodes
     #Test Episodes
-    for episode in range(evaluation_config.training_episodes):
+    for episode in range(evaluation_config.test_episodes):
         state = env.reset()
         total_reward = 0
         episode_summary = tf.Summary()
 
-        for step in range(12):
+        for step in range(13):
+            if evaluation_config.render:
+                s = env.render()
+                print s.getvalue()
+                print "Press enter to continue:"
+                sys.stdin.read(1)
 
             #Roll Dice Three times
             for dice_step in range(3):
@@ -135,10 +145,22 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
                 action  = ([dice1_action, dice2_action, dice3_action, dice4_action, dice5_action], None)
 
+                if evaluation_config.render:
+                    print "Current Hand", env.env.current_hand
+                    print "Action(Hold = 1, Roll = 0)", action[0]
+                    print "Press enter to continue:"
+                    sys.stdin.read(1)
+
                 state, reward, done, info = env.step(action)
 
             #Select Category
+            if evaluation_config.render:
+                print "Final Hand", env.env.current_hand
+
             category, _ =  which_category.predict(state)
+
+            if evaluation_config.render:
+                print "Slecting Category", category + 1
 
             action  = ([], category)
 
@@ -147,6 +169,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
             total_reward += reward
 
             if done:
+                if evaluation_config.render:
+                    s = env.render()
+                    print s.getvalue()
+                    print "End of episode"
                 episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
                 test_summary_writer.add_summary(episode_summary, episode + 1)
                 break

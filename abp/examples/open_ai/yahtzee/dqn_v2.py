@@ -1,4 +1,6 @@
+import logging
 import copy
+
 import gym
 import tensorflow as tf
 
@@ -71,11 +73,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
             total_reward += reward
 
             if done:
-                if episode % 20 == 0 or total_reward > 20:
-                    print episode + 1, total_reward
-                    print info["categories"]
-                    print info["category_score"]
-                    print "****************************"
+                logging.info("Episode %d : %d" % (episode + 1, total_reward))
 
                 dice1.end_episode(state)
                 dice2.end_episode(state)
@@ -100,7 +98,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
     which_category.disable_learning()
 
     #Test Episodes
-    for episode in range(evaluation_config.training_episodes):
+    for episode in range(evaluation_config.test_episodes):
         state = env.reset()
         total_reward = 0
         episode_summary = tf.Summary()

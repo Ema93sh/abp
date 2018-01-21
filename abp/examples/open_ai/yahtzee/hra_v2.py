@@ -130,7 +130,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
             if evaluation_config.render:
                 s = env.render()
                 print s.getvalue()
-                print "Press enter to continue:"
+                print "State:", state
+                print "Press enter to continue"
                 sys.stdin.read(1)
 
             #Roll Dice Three times
@@ -146,7 +147,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
                 if evaluation_config.render:
                     print "Current Hand", env.env.current_hand
                     print "Action(Hold = 1, Roll = 0)", action[0]
-                    print "Press enter to continue:"
+                    print "State:", state
+                    print "Press enter to continue"
                     sys.stdin.read(1)
 
                 state, reward, done, info = env.step(action)

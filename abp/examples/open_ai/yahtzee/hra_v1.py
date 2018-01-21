@@ -105,21 +105,53 @@ def run_task(evaluation_config, network_config, reinforce_config):
         state = env.reset()
         total_reward = 0
         episode_summary = tf.Summary()
-        for step in range(max_episode_steps):
-            dice1_action = dice1.predict(state)
-            dice2_action = dice2.predict(state)
-            dice3_action = dice3.predict(state)
-            dice4_action = dice4.predict(state)
-            dice5_action = dice5.predict(state)
 
-            category =  which_category.predict(state)
-            action = ([dice1_action, dice2_action, dice3_action, dice4_action, dice5_action], category)
+        for step in range(13):
+            if evaluation_config.render:
+                s = env.render()
+                print s.getvalue()
+                print "Press enter to continue:"
+                sys.stdin.read(1)
+
+            #Roll Dice Three times
+            for dice_step in range(3):
+                dice1_action, _ = dice1.predict(state)
+                dice2_action, _ = dice2.predict(state)
+                dice3_action, _ = dice3.predict(state)
+                dice4_action, _ = dice4.predict(state)
+                dice5_action, _ = dice5.predict(state)
+
+                action  = ([dice1_action, dice2_action, dice3_action, dice4_action, dice5_action], None)
+
+                if evaluation_config.render:
+                    print "Current Hand", env.env.current_hand
+                    print "Action(Hold = 1, Roll = 0)", action[0]
+                    print "Press enter to continue:"
+                    sys.stdin.read(1)
+
+                state, reward, done, info = env.step(action)
+
+            #Select Category
+            if evaluation_config.render:
+                print "Final Hand", env.env.current_hand
+
+            category, _ =  which_category.predict(state)
+
+            if evaluation_config.render:
+                print "Slecting Category", category + 1
+
+            action  = ([], category)
 
             state, reward, done, info = env.step(action)
 
             total_reward += reward
 
             if done:
+                if evaluation_config.render:
+                    s = env.render()
+                    print s.getvalue()
+                    print "End of episode"
                 episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
-                train_summary_writer.add_summary(episode_summary, episode + 1)
+                test_summary_writer.add_summary(episode_summary, episode + 1)
                 break
+    test_summary_writer.flush()
