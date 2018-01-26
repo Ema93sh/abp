@@ -44,7 +44,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
     test_summary_writer = tf.summary.FileWriter(test_summaries_path)
 
 
-    print "Training", evaluation_config.training_episodes
     #Training Episodes
     for episode in range(evaluation_config.training_episodes):
         state = env.reset()
@@ -121,7 +120,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     which_category.disable_learning()
 
-    print "Testing", evaluation_config.test_episodes
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
         state = env.reset()

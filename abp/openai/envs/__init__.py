@@ -28,3 +28,10 @@ register(
     max_episode_steps = 1000, #TODO
     reward_threshold = 1505  #https://blogs.msdn.microsoft.com/matthew_van_eerde/2011/11/30/what-is-a-perfect-score-in-yahtzee/
 )
+
+register(
+    id = 'WolfHunt-v0',
+    entry_point = 'abp.openai.envs.wolf_hunt:WolfHuntEnv',
+    max_episode_steps = 1000, #TODO
+    reward_threshold = 11  #TODO
+)
