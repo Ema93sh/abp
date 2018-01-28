@@ -6,7 +6,7 @@ import numpy as np
 
 from abp.adaptives.common.memory import Memory
 from abp.adaptives.common.experience import Experience
-from model import DQNModel
+from abp.models import DQNModel
 from abp.utils import clear_summary_path
 
 

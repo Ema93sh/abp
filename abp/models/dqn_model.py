@@ -6,7 +6,6 @@ import os
 import tensorflow as tf
 import numpy as np
 
-
 from abp.utils import clear_summary_path
 
 class DQNModel(object):

@@ -7,7 +7,7 @@ import numpy as np
 from abp.adaptives.common.memory import Memory
 from abp.adaptives.common.experience import Experience
 from abp.utils import clear_summary_path
-from model import HRAModel
+from abp.models import HRAModel
 
 #TODO Too many duplicate code. Need to refactor!
 
