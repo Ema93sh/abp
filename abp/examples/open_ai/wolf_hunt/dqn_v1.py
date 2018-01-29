@@ -1,4 +1,5 @@
 import copy
+import sys
 import logging
 
 import gym
@@ -27,8 +28,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
         total_reward = 0
         episode_summary = tf.Summary()
         for step in range(max_episode_steps):
-            wolf1_action = wolf1.predict(state)
-            wolf2_action = wolf2.predict(state)
+            wolf1_action, _ = wolf1.predict(state)
+            wolf2_action, _ = wolf2.predict(state)
 
             action  = (wolf1_action, wolf2_action)
 
@@ -66,9 +67,14 @@ def run_task(evaluation_config, network_config, reinforce_config):
         total_reward = 0
         episode_summary = tf.Summary()
         for step in range(max_episode_steps):
+            if evaluation_config.render:
+                s = env.render()
+                print s.getvalue()
+                print "Press enter to continue:"
+                sys.stdin.read(1)
 
-            wolf1_action = wolf1.predict(state)
-            wolf2_action = wolf2.predict(state)
+            wolf1_action, _ = wolf1.predict(state)
+            wolf2_action, _ = wolf2.predict(state)
 
             action  = (wolf1_action, wolf2_action)
 
