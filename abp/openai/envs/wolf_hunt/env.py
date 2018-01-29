@@ -20,7 +20,7 @@ class WolfHuntEnv(gym.Env):
         super(WolfHuntEnv, self).__init__()
 
         if env_map_path is None:
-            env_map_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "maps/10x10_simple.map")
+            env_map_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "maps/5x5_simple.map")
 
         self.env_map = EnvMap(env_map_path)
         self.rabbit = Rabbit()

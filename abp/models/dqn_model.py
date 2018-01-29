@@ -13,7 +13,7 @@ class DQNModel(object):
 
     def __init__(self, name, network_config, learning_rate = 0.001):
         super(DQNModel, self).__init__()
-        self.name = name
+        self.name = name.replace(" ", "_")
         self.network_config = network_config
         self.collections = []
         self.graph = tf.Graph()
