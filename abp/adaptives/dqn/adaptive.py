@@ -39,6 +39,8 @@ class DQNAdaptive(object):
         # * Option to diable summary?
         clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
 
+        #TODO
+        # Should write graph somewhere
         self.summaries_writer = tf.summary.FileWriter(self.reinforce_config.summaries_path + "/" + self.name)
 
         self.episode = 0

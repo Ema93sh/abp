@@ -37,7 +37,7 @@ class DQNModel(object):
 
         self.summaries_writer = tf.summary.FileWriter(self.network_config.summaries_path + "/" + self.name)
 
-        print "Created network for...", self.name
+        logger.info("Created network for %s " % self.name)
 
         self.restore_network()
 
@@ -63,6 +63,7 @@ class DQNModel(object):
             if not tf.gfile.Exists(dirname):
                 logger.error("Can not restore model. Reason: The network path (%s) does not exists" % self.network_config.network_path)
                 return
+            logger.info("Restoring network for %s " % self.name)
             self.saver.restore(self.session, self.network_config.network_path + "/" + self.name)
 
 

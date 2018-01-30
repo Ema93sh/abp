@@ -13,6 +13,13 @@ class WolfHuntEnv(gym.Env):
     metadata = {'render.modes': ['human', 'ansi']}
     WOLF_1, WOLF_2, RABBIT  = [0, 1, 2]
     UP, DOWN, LEFT, RIGHT, NOOP = [0, 1, 2, 3, 4]
+    action_map = {
+        UP: "UP",
+        DOWN: "DOWN",
+        LEFT: "LEFT",
+        RIGHT: "RIGHT",
+        NOOP: "NOOP",
+    }
 
     "Two wolves hunting a rabbit."
 
@@ -60,15 +67,19 @@ class WolfHuntEnv(gym.Env):
         return list(chain.from_iterable(map(flatten, [rabbit_grid, wolf1_grid, wolf2_grid])))
 
 
-    def is_done(self):
+    def caught_rabbit(self):
         if self.current_location[self.RABBIT] == self.current_location[self.WOLF_1]:
-            return True, 10
+            return True
 
         if self.current_location[self.RABBIT] == self.current_location[self.WOLF_2]:
-            return True, 10
+            return True
 
-        return False, 0
+        return False
 
+    def step_reward(self):
+        if self.caught_rabbit():
+            return 10
+        return 0
 
     def next_location(self, current_location, direction):
         row, col = current_location
@@ -105,6 +116,25 @@ class WolfHuntEnv(gym.Env):
 
         self.current_location[piece] = updated_location
 
+    def move_rabbit(self, action):
+        if action == self.NOOP:
+            return
+
+        location = self.current_location[self.RABBIT]
+        updated_location = self.next_location(location, action)
+
+        if self.env_map.has_wall(*updated_location):
+            return
+
+        if updated_location == self.current_location[self.WOLF_1]:
+            return
+
+        if updated_location == self.current_location[self.WOLF_2]:
+            return
+
+        self.current_location[self.RABBIT] = updated_location
+
+
 
     def _step(self, action):
         info  = {}
@@ -113,13 +143,16 @@ class WolfHuntEnv(gym.Env):
 
         self.move(self.WOLF_1, wolf1_move)
 
-        self.move(self.WOLF_2, wolf2_move)
+        if not self.caught_rabbit():
+            self.move(self.WOLF_2, wolf2_move)
 
-        rabbit_move = self.rabbit.random_move()
+        if not self.caught_rabbit():
+            rabbit_move = self.rabbit.random_move()
+            self.move_rabbit(rabbit_move)
 
-        self.move(self.RABBIT, rabbit_move)
+        done = self.caught_rabbit()
 
-        done, reward = self.is_done()
+        reward = self.step_reward()
 
         return self.generate_state(), reward, done, info
 

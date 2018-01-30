@@ -33,7 +33,7 @@ def main():
     )
 
     parser.add_argument(
-    '-d', '--debug',
+        '-d', '--debug',
         help="Print lots of debugging statements",
         action="store_const", dest="loglevel", const=logging.DEBUG,
         default=logging.WARNING,
@@ -45,11 +45,21 @@ def main():
         action="store_const", dest="loglevel", const=logging.INFO,
     )
 
+    parser.add_argument(
+        '--eval',
+        help="Run only evaluation task",
+        dest='eval',
+        action="store_true"
+    )
+
     args = parser.parse_args()
 
     logger.setLevel(args.loglevel)
 
     evaluation_config = EvaluationConfig.load_from_yaml(os.path.join(args.folder, "evaluation.yml"))
+
+    if args.eval:
+        evaluation_config.training_episodes = 0
 
     network_config = NetworkConfig.load_from_yaml(os.path.join(args.folder, "network.yml"))
 

@@ -69,6 +69,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         state = env.reset()
         total_reward = 0
         episode_summary = tf.Summary()
+        action = None
         for step in range(max_episode_steps):
             if evaluation_config.render:
                 v = steps_to_catch_rabbit.predict(state)
@@ -87,7 +88,18 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             total_reward += reward
 
+            if evaluation_config.render:
+                w1, w2 = action
+                print "Wolf1 Action", env.env.action_map[w1]
+                print "Wolf2 Action", env.env.action_map[w2]
+                print "Reward", reward
+
             if done:
+                if evaluation_config.render:
+                    s = env.render()
+                    print s.getvalue()
+                    print "Total Reward", total_reward
+                    print "********** END OF EPISODE *********"
                 episode_summary.value.add(tag = "Reward", simple_value = total_reward)
                 episode_summary.value.add(tag = "Steps", simple_value = step + 1)
                 test_summary_writer.add_summary(episode_summary, episode + 1)
