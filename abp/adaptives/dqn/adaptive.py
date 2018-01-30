@@ -19,6 +19,7 @@ class DQNAdaptive(object):
         self.choices = choices
         self.network_config = network_config
         self.reinforce_config = reinforce_config
+        self.update_frequency = 1000 #TODO Move to reinforce_config
 
         self.replay_memory = Memory(self.reinforce_config.memory_size)
         self.learning = True
@@ -28,9 +29,10 @@ class DQNAdaptive(object):
         self.previous_action = None
         self.current_reward = 0
         self.total_reward = 0
+        self.session = tf.Session()
 
-        # self.target_model = DQNModel(size_features, self.network_config.input_shape, "target_model", trainable = False)
-        self.eval_model = DQNModel(self.name, self.network_config)
+        self.target_model = DQNModel(self.name + "_target", self.network_config, self.session)
+        self.eval_model = DQNModel(self.name + "_eval", self.network_config, self.session)
 
         #TODO:
         # * Add more information/summaries related to reinforcement learning
@@ -42,7 +44,10 @@ class DQNAdaptive(object):
         self.episode = 0
 
     def __del__(self):
+        self.eval_model.save_network()
+        self.target_model.save_network()
         self.summaries_writer.close()
+        self.session.close()
 
     def should_explore(self):
         epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
@@ -69,6 +74,11 @@ class DQNAdaptive(object):
             action, q_values = self.eval_model.predict(state)
             choice = self.choices[action]
 
+        if self.learning and self.steps % self.update_frequency == 0:
+            logger.info("Replacing target model for %s" % self.name)
+            self.target_model.replace(self.eval_model)
+
+
         self.update()
 
         self.current_reward = 0
@@ -80,7 +90,6 @@ class DQNAdaptive(object):
 
     def disable_learning(self):
         logger.info("Disabled Learning for %s agent" % self.name)
-        self.eval_model.save_network()
         self.learning = False
         self.episode = 0
 
@@ -130,7 +139,7 @@ class DQNAdaptive(object):
 
         reward = [experience.reward for experience in batch]
 
-        q_next = self.eval_model.predict_batch(next_states)
+        q_next = self.target_model.predict_batch(next_states)
 
         q_max = np.max(q_next, axis = 1)
 

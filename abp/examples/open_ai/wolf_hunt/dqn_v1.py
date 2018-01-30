@@ -8,11 +8,21 @@ import tensorflow as tf
 from abp import DQNAdaptive
 from abp.utils import clear_summary_path
 
+
+
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
     max_episode_steps = 10000
     state = env.reset()
     UP, DOWN, LEFT, RIGHT, NOOP = [0, 1, 2, 3, 4]
+
+    action_map = {
+        UP: "UP",
+        DOWN: "RIGHT",
+        LEFT: "LEFT",
+        RIGHT: "RIGHT",
+        NOOP: "NOOP",
+    }
 
     wolf1 = DQNAdaptive(name = "wolf1", choices = [UP, DOWN, LEFT, RIGHT, NOOP], network_config = network_config, reinforce_config = reinforce_config)
     wolf2 = DQNAdaptive(name = "wolf2", choices = [UP, DOWN, LEFT, RIGHT, NOOP], network_config = network_config, reinforce_config = reinforce_config)
@@ -66,8 +76,12 @@ def run_task(evaluation_config, network_config, reinforce_config):
         state = env.reset()
         total_reward = 0
         episode_summary = tf.Summary()
+        action = None
         for step in range(max_episode_steps):
             if evaluation_config.render:
+                if action:
+                    print "Wolf1 Action", action_map[action[0]]
+                    print "Wolf2 Action", action_map[action[1]]
                 s = env.render()
                 print s.getvalue()
                 print "Press enter to continue:"

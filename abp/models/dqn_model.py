@@ -11,40 +11,31 @@ from abp.utils import clear_summary_path
 class DQNModel(object):
     """Neural Network for the DQN algorithm """
 
-    def __init__(self, name, network_config, learning_rate = 0.001):
+    def __init__(self, name, network_config, session, learning_rate = 0.001):
         super(DQNModel, self).__init__()
         self.name = name.replace(" ", "_")
         self.network_config = network_config
         self.collections = []
-        self.graph = tf.Graph()
 
         # TODO add ability to configure learning rate for network!
         self.learning_rate = learning_rate
 
         self.summaries = []
 
-        with self.graph.as_default():
-            self.build_network()
+        self.session = session
 
-            self.session = tf.Session()
+        self.build_network()
 
-            self.saver = tf.train.Saver()
+        self.saver = tf.train.Saver()
 
-            #TODO:
-            # * This session should be independent. Use current model collection instead
-
-            self.session.run(tf.global_variables_initializer())
-            # map(lambda v: v.initializer, tf.get_collection(self.name + "_Collection")
-            # self.session.run(map(lambda v: v.initializer, tf.get_collection(self.name + "_Collection")))
-
+        self.session.run(tf.global_variables_initializer())
 
         # TODO
         # * Option to disable summaries
 
         clear_summary_path(self.network_config.summaries_path + "/" + self.name)
 
-        self.summaries_writer = tf.summary.FileWriter(self.network_config.summaries_path + "/" + self.name, graph = self.graph)
-
+        self.summaries_writer = tf.summary.FileWriter(self.network_config.summaries_path + "/" + self.name)
 
         print "Created network for...", self.name
 
@@ -52,8 +43,6 @@ class DQNModel(object):
 
 
     def __del__(self):
-        self.save_network()
-        self.session.close()
         self.summaries_writer.close()
 
 
@@ -84,8 +73,6 @@ class DQNModel(object):
         w_initializer = tf.random_normal_initializer(0., 0.1)
         b_initializer = tf.constant_initializer(0.1)
 
-        self.collections = [tf.GraphKeys.GLOBAL_VARIABLES, self.name + "_Collection"]
-
         L = []
 
         with tf.variable_scope(self.name): #TODO. Create a valid scope name
@@ -94,12 +81,10 @@ class DQNModel(object):
                 first_layer_size = self.network_config.layers[0]
 
                 w = tf.get_variable("w1", shape = (self.network_config.input_shape[0], first_layer_size),
-                                     initializer = w_initializer,
-                                     collections = self.collections)
+                                     initializer = w_initializer)
 
                 b = tf.get_variable("b1", shape = (1, first_layer_size),
-                                     initializer = b_initializer,
-                                     collections = self.collections)
+                                     initializer = b_initializer)
 
                 L.append(tf.nn.relu(tf.matmul(self.state, w) + b))
 
@@ -111,13 +96,11 @@ class DQNModel(object):
 
                     w = tf.get_variable("w" + str(i+1),
                                     shape = (previous_layer_size, current_layer_size),
-                                    initializer = w_initializer,
-                                    collections = self.collections)
+                                    initializer = w_initializer)
 
                     b = tf.get_variable("b" + str(i+1),
                                     shape = (1, current_layer_size),
-                                    initializer = b_initializer,
-                                    collections = self.collections)
+                                    initializer = b_initializer)
 
                     l = tf.nn.relu(tf.matmul(L[i-1], w) + b)
                     L.append(l)
@@ -125,13 +108,11 @@ class DQNModel(object):
             with tf.variable_scope("Output_Layer"):
                 w = tf.get_variable("w_output",
                                 shape = (self.network_config.layers[-1], self.network_config.output_shape[0]),
-                                initializer = w_initializer,
-                                collections = self.collections)
+                                initializer = w_initializer)
 
                 b = tf.get_variable("b_output",
                                 shape = (1, self.network_config.output_shape[0]),
-                                initializer = b_initializer,
-                                collections = self.collections)
+                                initializer = b_initializer)
 
                 self.q_current = tf.matmul(L[-1], w) + b
 
@@ -179,3 +160,12 @@ class DQNModel(object):
                                                         self.state: states,
                                                         self.q_target: q_target
                                                       })
+
+    def get_params(self):
+        params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
+        return params
+
+    def replace(self, from_model):
+        t_params = self.get_params()
+        f_params = from_model.get_params()
+        self.session.run([ tf.assign(t, f) for t, f in zip(t_params, f_params) ])
