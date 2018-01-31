@@ -1,0 +1,6 @@
+name: "Wolf Hunt"
+env: "WolfHunt-v0"
+summaries_path: "./tensorflow_summaries/WolfHunt/dqn/with_gvf_v2/evaluation_summary"
+test_episodes: 100
+training_episodes: 3000
+render: True

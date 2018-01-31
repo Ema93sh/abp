@@ -1,0 +1,15 @@
+input_shape:
+    - 147
+
+layers:
+    - 100
+    - 100
+
+output_shape:
+    - 5
+
+network_path: "./saved_models/WolfHunt/dqn/with_gvf_v2/network"
+summaries_path: "./tensorflow_summaries/WolfHunt/dqn/with_gvf_v2/network_summary"
+summaries_step: 150
+restore_network: False
+save_network: True

@@ -11,4 +11,5 @@ output_shape:
 network_path: "./saved_models/WolfHunt/dqn/with_gvf/network"
 summaries_path: "./tensorflow_summaries/WolfHunt/dqn/with_gvf/network_summary"
 summaries_step: 150
-restore_network: True
+restore_network: False
+save_network: True

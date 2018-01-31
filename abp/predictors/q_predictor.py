@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger('root')
+
 import tensorflow as tf
 import numpy as np
 
@@ -15,14 +18,16 @@ class QPredictor(object):
 
     def __init__(self, name, network_config, discount_factor = 0.99, batch_size = 32):
         super(QPredictor, self).__init__()
+        self.name = name
         self.session = tf.Session()
 
         self.eval_model = DQNModel(name + "_eval", network_config, self.session)
         self.target_model = DQNModel(name + "_target", network_config, self.session)
 
         self.previous_state = None
-        self.replay_memory = Memory(10000)
+        self.replay_memory = Memory(5000)
         self.discount_factor = discount_factor
+        self.update_frequency = 1000
         self.batch_size = batch_size
         self.steps = 0
 
@@ -40,6 +45,10 @@ class QPredictor(object):
         if self.previous_state is not None:
             experience = Experience(self.previous_state, action, reward, current_state, terminal)
             self.replay_memory.add(experience)
+
+        if self.steps % self.update_frequency == 0:
+            logger.info("Predictor -- Replacing target model for %s" % self.name)
+            self.target_model.replace(self.eval_model)
 
         self.previous_state = current_state
 
