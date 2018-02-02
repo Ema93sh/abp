@@ -8,3 +8,10 @@ saved_models
 run_all_yahtzee.sh
 cloud_saves
 log
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
