@@ -20,7 +20,6 @@
   morekeywords={lambda, self, assert, as},
   numbers=none,
   numberstyle=\scriptsize\color{light-gray}\textsf,
-  stringstyle=\color{mauve},
   frame=single
 }
 
@@ -523,7 +522,10 @@ The traveller has four actions (North, South, East, West) to choose from at ever
 \todo[inline]{Should the reward be from the environment? or add if statements showing how the reward is assigned?}
 
 
-\begin{lstlisting}[language=Python]
+\begin{lstlisting}[language = Python,
+                   label = {lst:abp_traveller},
+                   caption = {Adaptive Program for traveller problem},
+                   captionpos = b]
 
 traveller = Adaptive(choices = [NORTH, SOUTH, EAST, WEST])
 
@@ -567,10 +569,11 @@ to use reward decomposition and using predictors
 \todo[inline]{Need a better way to say this! Should it be called predictors?}
 
 
-\subsection{Explaining using Q value}
+\subsection{Explanation using Q value}
 \todo[inline]{
 1. So far we havent talked about how the adaptive variable choose its value. Is it needed? Or should it be a reference to another paper? \\
-2. Need a better title
+2. Need a better title \\
+The goal of this sections is to make the reader understand that Q value function is a knowledge representation and has semantics
 }
 
 The adaptive variable uses reinforcement learning techniques to choose the correct value \cite{bauer2011adaptation}.
@@ -583,8 +586,86 @@ destination in 8 days and collect as much treasure as possible.
 
 \missingfigure{Show an example of traveller step with its corresponding Q value as histogram}
 
-From the figure it is clear that the traveller has to move south inorder to maximize his reward of achieving the goal.
+From the Figure it is clear that the traveller has to move south in order to maximize the reward.
 
+However having a single Q value does not give us a sufficient explanation. It compresses the entire knowledege
+of the problem into a single value. One way of getting better explanations is to decompose the Q values into
+smaller Q values each representing knowledge of a particular subdomain of the problem. We propose a way of decomposing
+the Q value based on the reward signals in order to generate a better explanation.
+
+\subsection{Types for reward}
+\todo[inline] {
+1. Need a better title!
+2. Is it reward signals or reward? Prefer reward but previous paper regard it as reward signals
+Goal of this section is explain what are reward types!
+}
+
+In the traveller example described above, the reward signal could be of different types. For example, the reward
+for reaching home is clearly different from the reward for finding a treasure. These reward signal have different
+semantics associated with them. The traveller problem can then be decomposed into sub problems based on these reward
+types. For example we can decompose the reward into 3 types for the traveller problem:
+\begin{itemize}
+  \item Type 1: Reward for reaching home
+  \item Type 2: Reward for finding treasure
+  \item Type 3: Reward related to effort of crossing terrain
+\end{itemize}
+
+Type 1 would describes the subproblem of the traveller reaching home. Type 2 would define the subproblem of traveller finding treasure.
+and Type 3 is the subproblem of the traveller avoiding terrains as much of problem.
+
+\subsection{Adaptive Program using reward decomposition}
+
+The adaptive program in Listing \ref{lst:abp_traveller} can be refactored to use reward types.
+
+\begin{lstlisting}[language = Python,
+                   label = {lst:abp_reward_decomposition},
+                   caption = {Adaptive Program using reward decomposition for traveller problem},
+                   captionpos = b]
+
+traveller = Adaptive(choices = [NORTH, SOUTH, EAST, WEST])
+
+state = env.reset()
+
+for days in range(8):
+  direction_to_move = traveller.predict(state)
+
+  state, reward, done, info = env.step(direction_to_move)
+
+  #reward for reaching home
+  traveller.reward(reward["Home"], HOME_TYPE)
+
+  #reward for finding a treasure
+  traveller.reward(reward["Treasure"], TREASURE_TYPE)
+
+  #reward related to terrain
+  traveller.reward(reward["Terrain"], TERRAIN_TYPE)
+
+  if done:
+     break
+
+\end{lstlisting}
+
+With the refactored reward types and using Q-decomposition \cite{russell2003q} to train the
+adaptive variable we have three types of Q values each containing the domain knowledge of
+its own subproblem.
+\todo[inline]{Should explain how reinforcement learning works for decomposed rewards?}
+
+\subsection{Explanation using decomposed reward}
+With the adaptive variable having information about the three subdomains and making its decision
+based on the decomposed Q values, we can get a better explanation than before. The programmer
+has more information regarding the decision of the adaptive variable.
+
+\missingfigure{Show figure for decomposed reward}
+
+
+\subsection{Example explanation}
+\todo[inline]{Give an example explaining the decision of the traveller at a particular state}
+
+\subsection{Scope of explanation}
+\todo[inline]{
+1.What can we explain using this method? \\
+2.What are the drawbacks? w.r.t RL (discount factor), w.r.t Explanation
+}
 
 
 % needed in second column of first page if using \IEEEpubid
