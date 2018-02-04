@@ -46,6 +46,7 @@ class TravellerEnv(gym.Env):
 
     """
     metadata = {'render.modes': ['human', 'ansi']} #TODO render to RGB
+    HOME_TYPE, TREASURE_TYPE, TERRAIN_TYPE = [0, 1, 2]
 
     def __init__(self):
         super(TravellerEnv, self).__init__()
@@ -75,16 +76,23 @@ class TravellerEnv(gym.Env):
         self.days_remaining = 8
         return self.generate_state()
 
+    def one_shot_encode(self, locations):
+        grid = [0] * 10
+        for loc in locations:
+            grid[loc] = 1
+        return grid
+
+
     def generate_state(self):
-        self.state = np.array([])
-        self.state = np.append(self.state, self.traveller_location)
-        self.state = np.append(self.state, self.house_location)
-        self.state = np.append(self.state, self.hill_locations)
-        self.state = np.append(self.state, self.mountain_locations)
-        self.state = np.append(self.state, self.river_locations)
-        self.state = np.append(self.state, self.gold_locations)
-        self.state = np.append(self.state, self.diamond_locations)
-        return self.state
+        traveller = self.one_shot_encode([self.traveller_location])
+        home = self.one_shot_encode([self.house_location])
+        mountain = self.one_shot_encode(self.mountain_locations)
+        river = self.one_shot_encode(self.river_locations)
+        hill = self.one_shot_encode(self.hill_locations)
+        gold = self.one_shot_encode(self.current_gold_locations)
+        daimond = self.one_shot_encode(self.current_diamond_locations)
+
+        return traveller + home + mountain + river + hill + gold + daimond + [self.days_remaining]
 
     def next_location(self, action):
         if action == 0: #LEFT
@@ -118,15 +126,12 @@ class TravellerEnv(gym.Env):
     def _step(self, action):
         done = False
         reward = 0
-        info = {
-                "traveller_location": self.traveller_location,
-                "mountain_locations": self.mountain_locations,
-                "river_locations": self.river_locations,
-                "hill_locations": self.hill_locations,
-                "house_location": self.house_location,
-                "gold_locations": self.current_gold_locations,
-                "diamond_locations": self.current_diamond_locations
-                }
+        decomposed_reward = {
+          self.HOME_TYPE : 0,
+          self.TREASURE_TYPE: 0,
+          self.TERRAIN_TYPE: 0
+        }
+        info = {}
 
         updated_location =  self.next_location(action)
 
@@ -134,27 +139,29 @@ class TravellerEnv(gym.Env):
             self.traveller_location = updated_location
 
             if updated_location in self.mountain_locations:
-                reward -= self.days['mountain']
+                decomposed_reward[self.TERRAIN_TYPE] -= self.days['mountain']
                 self.days_remaining -= self.days['mountain']
             elif updated_location in self.river_locations:
-                reward -= self.days['river']
+                decomposed_reward[self.TERRAIN_TYPE] -= self.days['river']
                 self.days_remaining -= self.days['river']
             elif updated_location in self.hill_locations:
-                reward -= self.days['hill']
+                decomposed_reward[self.TERRAIN_TYPE] -= self.days['hill']
                 self.days_remaining -= self.days['hill']
             elif updated_location in self.current_gold_locations:
-                reward += self.treasure['gold']
+                decomposed_reward[self.TREASURE_TYPE] += self.treasure['gold']
                 self.days_remaining -= 1
-                self.current_gold_locations = np.delete(self.current_gold_locations, np.where(self.gold_locations==updated_location))
+                index = np.argwhere(self.current_gold_locations == updated_location)
+                self.current_gold_locations = np.delete(self.current_gold_locations, index)
             elif updated_location in self.current_diamond_locations:
-                reward += self.treasure['diamond']
-                self.current_diamond_locations = np.delete(self.current_diamond_locations, np.where(self.current_diamond_locations==updated_location))
+                decomposed_reward[self.TREASURE_TYPE] += self.treasure['diamond']
+                index = np.argwhere(self.current_diamond_locations == updated_location)
+                self.current_diamond_locations = np.delete(self.current_diamond_locations, index)
                 self.days_remaining -= 1
             elif updated_location == self.house_location:
-                reward += 10
+                decomposed_reward[self.HOME_TYPE] += 10
                 self.days_remaining -= 1
             else:
-                reward -= 1
+                reward = 0
                 self.days_remaining -= 1
 
 
@@ -168,14 +175,13 @@ class TravellerEnv(gym.Env):
 
         if self.days_remaining <= 0 and self.traveller_location != self.house_location:
             reward -= 10
+            decomposed_reward[self.HOME_TYPE] -= 10
 
 
         info["days_remaining"] = self.days_remaining
-        info["traveller_location"] = self.traveller_location
-        info["gold_locations"] =  self.current_gold_locations
-        info["diamond_locations"] =  self.current_diamond_locations
+        info["decomposed_reward"] = decomposed_reward
 
-        return self.generate_state(), reward, done, info
+        return self.generate_state(), sum(decomposed_reward.values()), done, info
 
     def render_human(self):
         from gym.envs.classic_control import rendering

@@ -24,6 +24,8 @@ class DQNModel(object):
 
         self.session = session
 
+        logger.info("Building network for %s" % self.name)
+
         self.build_network()
 
         self.saver = tf.train.Saver()

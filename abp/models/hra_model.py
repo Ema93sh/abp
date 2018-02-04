@@ -13,50 +13,40 @@ from abp.utils import clear_summary_path
 
 class HRAModel(object):
     """Neural Network with the HRA architecture  """
-    def __init__(self, name, network_config, learning_rate = 0.001):
+    def __init__(self, name, network_config, session, learning_rate = 0.001):
         super(HRAModel, self).__init__()
         self.name = name
         self.network_config = network_config
         self.collections = []
         self.reward_types = len(self.network_config.networks)
-        self.graph = tf.Graph()
 
         # TODO add ability to configure learning rate for network!
         self.learning_rate = learning_rate
 
         self.summeries = []
 
-        with self.graph.as_default():
-            self.build_network()
+        self.session = session
 
-            self.session = tf.Session()
+        logger.info("Building network for %s" % self.name)
 
-            self.saver = tf.train.Saver()
+        self.build_network()
 
-            #TODO:
-            # * This session should be independent. Use current model collection instead
+        self.saver = tf.train.Saver()
 
-            self.session.run(tf.global_variables_initializer())
-            # map(lambda v: v.initializer, tf.get_collection(self.name + "_Collection")
-            # self.session.run(map(lambda v: v.initializer, tf.get_collection(self.name + "_Collection")))
-
-
+        self.session.run(tf.global_variables_initializer())
 
         # TODO
         # * Option to disable summeries
 
         clear_summary_path(self.network_config.summaries_path + "/" + self.name)
 
-        self.summaries_writer = tf.summary.FileWriter(self.network_config.summaries_path + "/" + self.name, graph = self.graph)
+        self.summaries_writer = tf.summary.FileWriter(self.network_config.summaries_path + "/" + self.name)
 
-
-        logger.info("Created network for..." + self.name)
+        logger.info("Created network for %s" % self.name)
 
         self.restore_network()
 
     def __del__(self):
-        self.save_network()
-        self.session.close()
         self.summaries_writer.close()
 
 
@@ -90,13 +80,16 @@ class HRAModel(object):
         #TODO
         # * common input state. Option to have separate for each network
         # * generate shared hidden layer
-        self.q_target = tf.placeholder(tf.float32, [None, len(self.network_config.networks), self.network_config.output_shape[0]])
+        self.q_target = tf.placeholder(tf.float32, [len(self.network_config.networks), None, self.network_config.output_shape[0]])
         self.state = tf.placeholder(tf.float32,
                                      shape = [None, self.network_config.input_shape[0]],
                                      name = self.name + "_input_state")
+        self.loss_ops = []
+        self.train_ops = []
 
         with tf.variable_scope(self.name):
-            for i, network in enumerate(self.network_config.networks):
+            #TODO Common shared layers!
+            for network_id, network in enumerate(self.network_config.networks):
                 L = []
                 with tf.variable_scope(network["name"]):
 
@@ -115,21 +108,21 @@ class HRAModel(object):
                         L.append(tf.nn.relu(tf.matmul(self.state, w) + b))
 
                         # Generate other Hidden Layers
-                        for i in range(1, len(self.network_config.layers)):
-                            previous_layer_size = self.network_config.layers[i-1]
-                            current_layer_size = self.network_config.layers[i]
+                        for layer_id in range(1, len(network["layers"])):
+                            previous_layer_size = network["layers"][layer_id-1]
+                            current_layer_size  = network["layers"][layer_id]
 
-                            w = tf.get_variable("w" + str(i+1),
+                            w = tf.get_variable("w" + str(layer_id+1),
                                             shape = (previous_layer_size, current_layer_size),
                                             initializer = w_initializer,
                                             collections = self.collections)
 
-                            b = tf.get_variable("b" + str(i+1),
+                            b = tf.get_variable("b" + str(layer_id+1),
                                             shape = (1, current_layer_size),
                                             initializer = b_initializer,
                                             collections = self.collections)
 
-                            l = tf.nn.relu(tf.matmul(L[i-1], w) + b)
+                            l = tf.nn.relu(tf.matmul(L[layer_id-1], w) + b)
                             L.append(l)
 
                         with tf.variable_scope("Output_Layer"): #TODO the output layer should be the same for all networks?
@@ -146,21 +139,24 @@ class HRAModel(object):
                             self.summeries.append(tf.summary.histogram("%s_Q" % network["name"], q))
                             q_rewards.append(q)
 
-            self.q_current = tf.stack(q_rewards, axis = 1)
+                        with tf.variable_scope('loss'):
+                            loss = tf.reduce_mean(tf.squared_difference(self.q_target[network_id], q))
+                            self.loss_ops.append(loss)
+                            self.summeries.append(tf.summary.scalar('%s_loss' % network["name"], loss))
 
-            with tf.variable_scope('loss'):
-                self.loss = tf.reduce_mean(tf.squared_difference(self.q_target, self.q_current))
-                self.summeries.append(tf.summary.scalar('loss', self.loss))
+                        with tf.variable_scope('train'):
+                            train_op = tf.train.RMSPropOptimizer(self.learning_rate).minimize(loss)
+                            self.train_ops.append(train_op)
 
-            with tf.variable_scope('train'):
-                self.train_op = tf.train.RMSPropOptimizer(self.learning_rate).minimize(self.loss)
+            self.q_current = tf.stack(q_rewards, axis = 0)
 
             self.merged_summary = tf.summary.merge(self.summeries)
 
     def predict(self, state): # TODO multiple state for each network
         q_heads = self.predict_batch([state])
-        q_heads = q_heads[0]
-        merged = np.sum(q_heads * (1.0/self.reward_types), axis=0)
+        q_heads = np.stack(q_heads, axis=1)[0]
+        q_heads = np.stack(q_heads, axis=0)
+        merged = np.sum(q_heads, axis=0)
         action = np.argmax(merged)
         return action, q_heads
 
@@ -182,7 +178,16 @@ class HRAModel(object):
             self.generate_summaries(states, steps, q_target)
 
 
-        _  = self.session.run(self.train_op, feed_dict = {
+        _  = self.session.run(self.train_ops, feed_dict = {
                                                         self.state: states,
                                                         self.q_target: q_target
                                                       })
+
+    def get_params(self):
+        params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=self.name)
+        return params
+
+    def replace(self, from_model):
+        t_params = self.get_params()
+        f_params = from_model.get_params()
+        self.session.run([ tf.assign(t, f) for t, f in zip(t_params, f_params) ])

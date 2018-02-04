@@ -7,7 +7,8 @@ default_reinforce_config = {
     "discount_factor": 0.95,
     "batch_size": 35,
     "memory_size": 10000, # Total Memory size for the batch
-    "summaries_path": None # Path to store reinforcement related summaries
+    "summaries_path": None, # Path to store reinforcement related summaries
+    "update_frequency": 1000
 }
 
 class ReinforceConfig(BaseConfig):
@@ -32,3 +33,5 @@ class ReinforceConfig(BaseConfig):
     memory_size = property(BaseConfig.get_property("memory_size"), BaseConfig.set_property("memory_size"))
 
     summaries_path = property(BaseConfig.get_property("summaries_path"), BaseConfig.set_property("summaries_path"))
+
+    update_frequency = property(BaseConfig.get_property("update_frequency"), BaseConfig.set_property("update_frequency"))

@@ -19,7 +19,7 @@ class DQNAdaptive(object):
         self.choices = choices
         self.network_config = network_config
         self.reinforce_config = reinforce_config
-        self.update_frequency = 1000 #TODO Move to reinforce_config
+        self.update_frequency = reinforce_config.update_frequency
 
         self.replay_memory = Memory(self.reinforce_config.memory_size)
         self.learning = True
@@ -34,6 +34,8 @@ class DQNAdaptive(object):
         self.target_model = DQNModel(self.name + "_target", self.network_config, self.session)
         self.eval_model = DQNModel(self.name + "_eval", self.network_config, self.session)
 
+        self.target_model.replace(self.eval_model)
+
         #TODO:
         # * Add more information/summaries related to reinforcement learning
         # * Option to diable summary?
@@ -47,7 +49,6 @@ class DQNAdaptive(object):
 
     def __del__(self):
         self.eval_model.save_network()
-        self.target_model.save_network()
         self.summaries_writer.close()
         self.session.close()
 
@@ -77,7 +78,7 @@ class DQNAdaptive(object):
             choice = self.choices[action]
 
         if self.learning and self.steps % self.update_frequency == 0:
-            logger.info("Replacing target model for %s" % self.name)
+            logger.debug("Replacing target model for %s" % self.name)
             self.target_model.replace(self.eval_model)
 
 
@@ -92,12 +93,17 @@ class DQNAdaptive(object):
 
     def disable_learning(self):
         logger.info("Disabled Learning for %s agent" % self.name)
+        self.eval_model.save_network()
+
         self.learning = False
         self.episode = 0
 
     def end_episode(self, state):
         if not self.learning:
             return
+
+        if self.episode % 100 == 0:
+            logger.info("End of Episode %d with total reward %d" % (self.episode + 1, self.total_reward))
 
         self.episode += 1
 

@@ -1,0 +1,26 @@
+networks:
+  - name: "HOME_TYPE"
+    layers:
+        - 50
+        - 50
+
+  - name: "TREASURE_TYPE"
+    layers:
+         - 50
+         - 50
+
+  - name: "TERRAIN_TYPE"
+    layers:
+         - 50
+         - 50
+
+input_shape:
+    - 71
+
+output_shape:
+    - 4
+
+network_path: "./saved_models/traveller/hra/v1/network.ckpt"
+summaries_path: "./tensorflow_summaries/traveller/hra/v1/network_summary"
+summaries_step: 150
+restore_network: False

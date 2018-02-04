@@ -19,6 +19,7 @@ class HRAAdaptive(object):
         self.choices = choices
         self.network_config = network_config
         self.reinforce_config = reinforce_config
+        self.update_frequency = reinforce_config.update_frequency
 
         self.replay_memory = Memory(self.reinforce_config.memory_size)
         self.learning = True
@@ -28,23 +29,27 @@ class HRAAdaptive(object):
         self.previous_action = None
         self.reward_types = len(self.network_config.networks)
         self.current_reward = [0] * self.reward_types #TODO: change reward into dictionary
-
         self.total_reward = 0
-        self.reward_explanations = {}
+        self.session = tf.Session()
 
-        self.eval_model = HRAModel(self.name, self.network_config)
+        self.target_model = HRAModel(self.name + "_target", self.network_config, self.session)
+        self.eval_model = HRAModel(self.name + "_eval", self.network_config, self.session)
+
+        self.target_model.replace(self.eval_model)
 
         #TODO:
         # * Add more information/summaries related to reinforcement learning
         # * Option to diable summary?
         clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
 
-        self.summaries_writer = tf.summary.FileWriter(self.reinforce_config.summaries_path + "/" + self.name)
+        self.summaries_writer = tf.summary.FileWriter(self.reinforce_config.summaries_path + "/" + self.name, graph = self.session.graph)
 
         self.episode = 0
 
     def __del__(self):
+        self.eval_model.save_network()
         self.summaries_writer.close()
+        self.session.close()
 
     def should_explore(self):
         epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
@@ -72,8 +77,11 @@ class HRAAdaptive(object):
             action, q_values = self.eval_model.predict(state)
             choice = self.choices[action]
 
-        if self.learning and self.replay_memory.current_size > 32:
-            self.update()
+        if self.learning and self.steps % self.update_frequency == 0:
+            logger.debug("Replacing target model for %s" % self.name)
+            self.target_model.replace(self.eval_model)
+
+        self.update()
 
         self.current_reward = [0] * self.reward_types
 
@@ -85,6 +93,7 @@ class HRAAdaptive(object):
     def disable_learning(self):
         logger.info("Disabled Learning for %s agent" % self.name)
         self.eval_model.save_network()
+
         self.learning = False
         self.episode = 0
 
@@ -135,12 +144,13 @@ class HRAAdaptive(object):
 
         reward = np.array([experience.reward for experience in batch])
 
-        q_next = self.eval_model.predict_batch(next_states)
+        q_next = self.target_model.predict_batch(next_states)
 
-        # q_max = np.max(q_next, axis = 2) TODO should be configurable?
-        q_sarsa = np.mean(q_next, axis = 2)
+        #TODO should be configurable?
+        q_2 = np.max(q_next, axis = 2)
+        # q_2 = np.mean(q_next, axis = 2)
 
-        q_sarsa = np.array([ a * b if a == 0 else b for a,b in zip(is_terminal, q_sarsa)])
+        q_2 = is_terminal * q_2
 
         q_values = self.eval_model.predict_batch(states)
 
@@ -148,6 +158,6 @@ class HRAAdaptive(object):
 
         batch_index = np.arange(self.reinforce_config.batch_size, dtype=np.int32)
 
-        q_target[batch_index, :, actions] = reward + self.reinforce_config.discount_factor * q_sarsa
+        q_target[:, batch_index, actions] = np.transpose(reward) + self.reinforce_config.discount_factor * q_2
 
         self.eval_model.fit(states, q_target, self.steps)
