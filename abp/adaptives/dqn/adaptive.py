@@ -31,10 +31,9 @@ class DQNAdaptive(object):
         self.total_reward = 0
         self.session = tf.Session()
 
-        self.target_model = DQNModel(self.name + "_target", self.network_config, self.session)
         self.eval_model = DQNModel(self.name + "_eval", self.network_config, self.session)
+        self.target_model = DQNModel(self.name + "_target", self.network_config, self.session)
 
-        self.target_model.replace(self.eval_model)
 
         #TODO:
         # * Add more information/summaries related to reinforcement learning
@@ -48,7 +47,6 @@ class DQNAdaptive(object):
         self.episode = 0
 
     def __del__(self):
-        self.eval_model.save_network()
         self.summaries_writer.close()
         self.session.close()
 
@@ -94,6 +92,7 @@ class DQNAdaptive(object):
     def disable_learning(self):
         logger.info("Disabled Learning for %s agent" % self.name)
         self.eval_model.save_network()
+        self.target_model.save_network()
 
         self.learning = False
         self.episode = 0

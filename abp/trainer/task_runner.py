@@ -58,12 +58,14 @@ def main():
 
     evaluation_config = EvaluationConfig.load_from_yaml(os.path.join(args.folder, "evaluation.yml"))
 
-    if args.eval:
-        evaluation_config.training_episodes = 0
-
     network_config = NetworkConfig.load_from_yaml(os.path.join(args.folder, "network.yml"))
 
     reinforce_config = ReinforceConfig.load_from_yaml(os.path.join(args.folder, "reinforce.yml"))
+
+    if args.eval:
+        evaluation_config.training_episodes = 0
+        network_config.restore_network = True
+
 
     task_module = import_module(args.task)
 

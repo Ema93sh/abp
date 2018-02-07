@@ -5,10 +5,10 @@ import time
 plt.ion()
 plt.style.use('ggplot')
 
-class SingleQBarChart(object):
+class SingleQHistogram(object):
     """Bar chart for single q values"""
     def __init__(self, action_size, action_names, width = 0.25, y_lim = 10):
-        super(SingleQBarChart, self).__init__()
+        super(SingleQHistogram, self).__init__()
         self.action_size = action_size
         self.action_names = action_names
         self.width = width
@@ -38,10 +38,10 @@ class SingleQBarChart(object):
         pass
 
 
-class MultiQBarChart(object):
+class MultiQHistogram(object):
     """Bar chart for single q values"""
     def __init__(self, reward_size, action_size, action_names, width = 0.25, ylim = 10):
-        super(MultiQBarChart, self).__init__()
+        super(MultiQHistogram, self).__init__()
         self.reward_size = reward_size
         self.action_size = action_size
         self.action_names = action_names

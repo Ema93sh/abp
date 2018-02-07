@@ -33,7 +33,7 @@ class EnvMap(object):
 
     def render(self):
         for row in self.grid:
-            print row
+            print(row)
 
 
     def has_wall(self, row, col):

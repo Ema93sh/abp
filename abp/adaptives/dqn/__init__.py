@@ -1,1 +1,1 @@
-from adaptive import DQNAdaptive
+from .adaptive import DQNAdaptive

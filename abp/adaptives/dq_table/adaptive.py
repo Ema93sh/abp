@@ -5,7 +5,7 @@ import operator
 import os
 import logging
 
-from aggregate_qtable import AggregateQTable
+from .aggregate_qtable import AggregateQTable
 
 class DQAdaptive(object):
     """DQAdaptive using Q Learning algorithm with decomposed rewards"""

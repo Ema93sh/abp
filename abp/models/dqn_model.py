@@ -11,11 +11,12 @@ from abp.utils import clear_summary_path
 class DQNModel(object):
     """Neural Network for the DQN algorithm """
 
-    def __init__(self, name, network_config, session, learning_rate = 0.001):
+    def __init__(self, name, network_config, session, restore = True, learning_rate = 0.001):
         super(DQNModel, self).__init__()
         self.name = name.replace(" ", "_")
         self.network_config = network_config
         self.collections = []
+        self.restore = restore
 
         # TODO add ability to configure learning rate for network!
         self.learning_rate = learning_rate
@@ -60,7 +61,7 @@ class DQNModel(object):
 
 
     def restore_network(self):
-        if self.network_config.restore_network and self.network_config.network_path:
+        if self.restore and self.network_config.restore_network and self.network_config.network_path:
             dirname = os.path.dirname(self.network_config.network_path + "/" + self.name)
             if not tf.gfile.Exists(dirname):
                 logger.error("Can not restore model. Reason: The network path (%s) does not exists" % self.network_config.network_path)

@@ -72,11 +72,11 @@ def run_task(evaluation_config, network_config, reinforce_config):
         for step in range(max_episode_steps):
             if evaluation_config.render:
                 if action:
-                    print "Wolf1 Action", env.env.action_map[action[0]]
-                    print "Wolf2 Action", env.env.action_map[action[1]]
+                    print("Wolf1 Action", env.env.action_map[action[0]])
+                    print("Wolf2 Action", env.env.action_map[action[1]])
                 s = env.render()
-                print s.getvalue()
-                print "Press enter to continue:"
+                print(s.getvalue())
+                print("Press enter to continue:")
                 sys.stdin.read(1)
 
             wolf1_action, _ = wolf1.predict(state)
@@ -90,10 +90,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             if done:
                 if evaluation_config.render:
-                    print "END OF EPISODE"
+                    print("END OF EPISODE")
                     s = env.render()
-                    print s.getvalue()
-                    print "********** END OF EPISODE *********"
+                    print(s.getvalue())
+                    print("********** END OF EPISODE *********")
                 episode_summary.value.add(tag = "Reward", simple_value = total_reward)
                 episode_summary.value.add(tag = "Steps", simple_value = step + 1)
                 test_summary_writer.add_summary(episode_summary, episode + 1)

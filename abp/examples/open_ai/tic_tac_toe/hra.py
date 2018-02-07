@@ -128,15 +128,15 @@ def run_task(config):
             if done:
                 env_spec.render()
                 if info['illegal_move']:
-                    print "Ended cause of illegal move", action
+                    print("Ended cause of illegal move", action)
                 elif info['x_won']:
-                    print "You WIN"
+                    print("You WIN")
                 elif info['o_won']:
-                    print "You LOST"
+                    print("You LOST")
                 else:
-                    print "DRAW"
+                    print("DRAW")
 
-                print "END OF EPISODE"
+                print("END OF EPISODE")
                 agent.end_episode(state)
                 break
 

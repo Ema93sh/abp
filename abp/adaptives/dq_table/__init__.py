@@ -1,1 +1,1 @@
-from adaptive import DQAdaptive
+from .adaptive import DQAdaptive

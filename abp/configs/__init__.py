@@ -1,7 +1,7 @@
-from base_config import BaseConfig
-from evaluation import EvaluationConfig
-from network import NetworkConfig
-from reinforce import ReinforceConfig
+from .base_config import BaseConfig
+from .evaluation import EvaluationConfig
+from .network import NetworkConfig
+from .reinforce import ReinforceConfig
 
 
 

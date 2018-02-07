@@ -1,1 +1,1 @@
-from adaptive import QAdaptive
+from .adaptive import QAdaptive

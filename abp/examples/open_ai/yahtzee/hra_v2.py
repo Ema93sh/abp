@@ -93,10 +93,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             if done:
                 if episode % 20 == 0 or total_reward > 20:
-                    print episode + 1, total_reward
-                    print info["categories"]
-                    print info["category_score"]
-                    print "****************************"
+                    print(episode + 1, total_reward)
+                    print(info["categories"])
+                    print(info["category_score"])
+                    print("****************************")
 
                 dice1.end_episode(state)
                 dice2.end_episode(state)
@@ -129,9 +129,9 @@ def run_task(evaluation_config, network_config, reinforce_config):
         for step in range(13):
             if evaluation_config.render:
                 s = env.render()
-                print s.getvalue()
-                print "State:", state
-                print "Press enter to continue"
+                print(s.getvalue())
+                print("State:", state)
+                print("Press enter to continue")
                 sys.stdin.read(1)
 
             #Roll Dice Three times
@@ -145,22 +145,22 @@ def run_task(evaluation_config, network_config, reinforce_config):
                 action  = ([dice1_action, dice2_action, dice3_action, dice4_action, dice5_action], None)
 
                 if evaluation_config.render:
-                    print "Current Hand", env.env.current_hand
-                    print "Action(Hold = 1, Roll = 0)", action[0]
-                    print "State:", state
-                    print "Press enter to continue"
+                    print("Current Hand", env.env.current_hand)
+                    print("Action(Hold = 1, Roll = 0)", action[0])
+                    print("State:", state)
+                    print("Press enter to continue")
                     sys.stdin.read(1)
 
                 state, reward, done, info = env.step(action)
 
             #Select Category
             if evaluation_config.render:
-                print "Final Hand", env.env.current_hand
+                print("Final Hand", env.env.current_hand)
 
             category, _ =  which_category.predict(state)
 
             if evaluation_config.render:
-                print "Slecting Category", category + 1
+                print("Slecting Category", category + 1)
 
             action  = ([], category)
 
@@ -171,8 +171,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
             if done:
                 if evaluation_config.render:
                     s = env.render()
-                    print s.getvalue()
-                    print "End of episode"
+                    print(s.getvalue())
+                    print("End of episode")
                 episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
                 test_summary_writer.add_summary(episode_summary, episode + 1)
                 break

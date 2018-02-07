@@ -2,8 +2,8 @@ input_shape:
     - 71
 
 layers:
-    - 50
-    - 50
+    - 100
+    - 100
 
 output_shape:
     - 4
@@ -11,4 +11,4 @@ output_shape:
 network_path: "./saved_models/traveller/dqn/v1/network.ckpt"
 summaries_path: "./tensorflow_summaries/traveller/dqn/v1/network_summary"
 summaries_step: 150
-restore_network: False
+restore_network: True

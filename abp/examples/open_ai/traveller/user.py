@@ -69,7 +69,7 @@ for epoch in range(100):
         if info:
             screen.addstr("DReward: %s \n" % str(info["decomposed_reward"]))
             if reward != sum(info["decomposed_reward"].values()):
-                print "FACKKK!"
+                print("FACKKK!")
                 exit(0)
         screen.addstr("Total Reward: %d \n" % total_reward)
         screen.addstr("State: %s \n Len State: %d\n" % (str(state),len(state)))

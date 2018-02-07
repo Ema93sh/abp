@@ -1,1 +1,1 @@
-from adaptive import HRAAdaptive
+from .adaptive import HRAAdaptive

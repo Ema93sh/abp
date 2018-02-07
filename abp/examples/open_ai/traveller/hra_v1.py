@@ -48,7 +48,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
             reward = info["decomposed_reward"]
 
             #TODO check if reward.values() always gives the same order
-            traveller.reward(reward.values())
+            traveller.reward(list(reward.values()))
 
             # TODO add option for type annotation instead of list of rewards
             # traveller.reward(HOME_TYPE, reward["HOME"])
@@ -75,14 +75,14 @@ def run_task(evaluation_config, network_config, reinforce_config):
         episode_summary = tf.Summary()
 
         for steps in range(max_episode_steps):
+            action, q_values = traveller.predict(state)
+
             if evaluation_config.render:
                 s = env.render(mode="ansi")
-                print s.getvalue()
-                print "Press enter to continue:"
+                print(s.getvalue())
+                print("Press enter to continue:")
                 sys.stdin.read(1)
                 # chart.render(q_values) TODO
-
-            action, q_values = traveller.predict(state)
 
             state, reward, done, info = env.step(action)
             total_reward += reward
@@ -90,8 +90,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
             if done:
                 if evaluation_config.render:
                     s = env.render(mode="ansi")
-                    print s.getvalue()
-                    print "********** END OF EPISODE *********"
+                    print(s.getvalue())
+                    print("********** END OF EPISODE *********")
                 episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
                 test_summary_writer.add_summary(episode_summary, episode + 1)
                 break
