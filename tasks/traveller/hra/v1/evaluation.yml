@@ -2,5 +2,5 @@ name: "Traveller"
 env: "Traveller-v0"
 summaries_path: "./tensorflow_summaries/traveller/hra/v1/evaluation_summary"
 test_episodes: 100
-training_episodes: 2000
+training_episodes: 2500
 render: True

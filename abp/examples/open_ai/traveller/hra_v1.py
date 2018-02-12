@@ -7,7 +7,7 @@ from abp import HRAAdaptive
 from abp.utils import clear_summary_path
 
 # TODO chart
-# from abp.utils.bar_chart import MultiQBarChart
+from abp.utils.histogram import MultiQHistogram
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
@@ -32,7 +32,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
     test_summaries_path = evaluation_config.summaries_path + "/test"
     clear_summary_path(test_summaries_path)
     test_summary_writer = tf.summary.FileWriter(test_summaries_path)
-
 
     #Training Episodes
     for episode in range(evaluation_config.training_episodes):
@@ -65,8 +64,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
 
     # TODO chart
-    # chart = MultiQBarChart(config.size_rewards, env.action_space.n, ("Left", "Right", "Up", "Down"), ylim = 5)
-
+    chart = MultiQHistogram(traveller.reward_types, len(traveller.choices), ("Left", "Right", "Up", "Down"), ylim = 5)
+    q_labels = ["Home", "Treasure", "Terrain"]
     # Test Episodes
     for episode in range(evaluation_config.test_episodes):
         action = None
@@ -82,7 +81,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
                 print(s.getvalue())
                 print("Press enter to continue:")
                 sys.stdin.read(1)
-                # chart.render(q_values) TODO
+                chart.render(q_values, q_labels)
+                # import pdb; pdb.set_trace()
 
             state, reward, done, info = env.step(action)
             total_reward += reward

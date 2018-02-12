@@ -45,7 +45,7 @@ class MultiQHistogram(object):
         self.reward_size = reward_size
         self.action_size = action_size
         self.action_names = action_names
-        self.fig, self.ax = plt.subplots(figsize = (10, 7))
+        self.fig, self.ax = plt.subplots()
         self.width = width
         self.ylim = ylim
         self.bars = []
@@ -67,7 +67,7 @@ class MultiQHistogram(object):
             self.ax.spines['right'].set_visible(False)
             self.ax.spines['top'].set_visible(False)
             self.ax.legend(self.bars, q_labels, bbox_to_anchor=(1, 1), bbox_transform=plt.gcf().transFigure)
-            # self.ax.set_ylim([-self.ylim, self.ylim])
+            # self.ax.set_ylim[-self.ylim, self.ylim])
             plt.show()
             plt.pause(0.001)
         else:
@@ -76,7 +76,11 @@ class MultiQHistogram(object):
                     height = q_values[reward_type][i]
                     bar.set_height(height)
 
-            self.ax.autoscale_view()
+            plt.autoscale(enable=True, axis='y')
+            max_q_value = np.max(q_values)
+            min_q_value = np.min(q_values)
+            self.ax.set_ylim([min_q_value - 2, max_q_value + 2])
+            # self.ax.autoscale_view()
             self.fig.canvas.flush_events()
             plt.pause(0.001)
         pass
