@@ -2,7 +2,7 @@ import os
 import logging
 logger = logging.getLogger('root')
 
-import tensorflow as tf
+# import tensorflow as tf
 import numpy as np
 
 from abp.utils import clear_summary_path

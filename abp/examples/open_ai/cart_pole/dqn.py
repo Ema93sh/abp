@@ -1,8 +1,6 @@
 import gym
-import tensorflow as tf
-
 from abp import DQNAdaptive
-from abp.utils import clear_summary_path
+
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
@@ -13,40 +11,30 @@ def run_task(evaluation_config, network_config, reinforce_config):
     threshold_x = 1.5
     LEFT, RIGHT = [0, 1]
 
-    agent = DQNAdaptive(name = "cartpole",
-                        choices = [LEFT, RIGHT],
-                        network_config = network_config,
-                        reinforce_config = reinforce_config)
+    agent = DQNAdaptive(name="cartpole",
+                        choices=[LEFT, RIGHT],
+                        network_config=network_config,
+                        reinforce_config=reinforce_config)
 
-    training_summaries_path = evaluation_config.summaries_path + "/train"
-    clear_summary_path(training_summaries_path)
-    train_summary_writer = tf.summary.FileWriter(training_summaries_path)
-
-    test_summaries_path = evaluation_config.summaries_path + "/test"
-    clear_summary_path(test_summaries_path)
-    test_summary_writer = tf.summary.FileWriter(test_summaries_path)
-
-
-    #Training Episodes
+    # Training Episodes
     for episode in range(evaluation_config.training_episodes):
         state = env.reset()
         total_reward = 0
-        episode_summary = tf.Summary()
         for steps in range(max_episode_steps):
             action, q_values = agent.predict(state)
             state, reward, done, info = env.step(action)
             cart_position, cart_velocity, pole_angle, pole_velocity = state
 
-            agent.reward(reward) # Reward for every step
+            agent.reward(reward)  # Reward for every step
 
             # Reward for pole angle increase or decrease
-            if  -threshold_angle < pole_angle < threshold_angle:
+            if -threshold_angle < pole_angle < threshold_angle:
                 agent.reward(1)
             else:
                 agent.reward(-1)
 
             if steps < max_episode_steps and done:
-                agent.reward(-40) # Reward for terminal state
+                agent.reward(-40)  # Reward for terminal state
 
             if -threshold_x < cart_position < threshold_x:
                 agent.reward(1)
@@ -57,19 +45,15 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             if done:
                 agent.end_episode(state)
-                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
-                train_summary_writer.add_summary(episode_summary, episode + 1)
                 break
 
-    train_summary_writer.flush()
+    # train_summary_writer.flush()
 
     agent.disable_learning()
-
 
     for episode in range(evaluation_config.test_episodes):
         state = env.reset()
         total_reward = 0
-        episode_summary = tf.Summary()
         for step in range(max_episode_steps):
             if evaluation_config.render:
                 env.render()
@@ -81,11 +65,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
             total_reward += reward
 
             if done:
-                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
-                test_summary_writer.add_summary(episode_summary, episode + 1)
+                print('Episode Reward:', total_reward)
                 break
-
-    test_summary_writer.flush()
 
     env.close()
     pass

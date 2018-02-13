@@ -8,7 +8,7 @@ layers:
 output_shape:
     - 2
 
-network_path: "./saved_models/cart_pole/dqn/v1/network.ckpt"
+network_path: "./saved_models/cart_pole/dqn/v1/network"
 summaries_path: "./tensorflow_summaries/cart_pole/dqn/v1/network_summary"
 summaries_step: 100
 restore_network: False

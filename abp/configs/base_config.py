@@ -1,13 +1,13 @@
 import yaml
 
-import tensorflow as tf
+# import tensorflow as tf
 from functools import partial
 
 class BaseConfig(object):
     """ Extend this object if you want to create config """
 
     def load_from_yaml(cls, file_path):
-        with tf.gfile.Open(file_path, 'r') as stream:
+        with open(file_path, 'r') as stream:
             config = yaml.load(stream)
             rslt = cls(config = config)
             return rslt
