@@ -71,8 +71,8 @@ class DQNModel(object):
 
 
     def build_network(self):
-        self.state = tf.placeholder(tf.float32, shape = [None, self.network_config.input_shape[0]], name = self.name + "_state")
-        self.q_target = tf.placeholder(tf.float32, shape = [None, self.network_config.output_shape[0]], name = self.name + "_qvalues")
+        self.state = tf.placeholder(tf.float32, shape = [None] + self.network_config.input_shape, name = self.name + "_state")
+        self.q_target = tf.placeholder(tf.float32, shape = [None] + self.network_config.output_shape, name = self.name + "_qvalues")
 
         w_initializer = tf.random_normal_initializer(0., 0.1)
         b_initializer = tf.constant_initializer(0.1)
@@ -81,16 +81,20 @@ class DQNModel(object):
 
         with tf.variable_scope(self.name): #TODO. Create a valid scope name
 
+            shape = self.state.get_shape().as_list()        # a list: [None, 9, 2]
+            input_layer_size = np.prod(shape[1:])                       # input_layer_size = prod(9,2) = 18
+            input_layer = tf.reshape(self.state, [-1, input_layer_size])
+
             with tf.variable_scope("Hidden_Layer"):
                 first_layer_size = self.network_config.layers[0]
 
-                w = tf.get_variable("w1", shape = (self.network_config.input_shape[0], first_layer_size),
+                w = tf.get_variable("w1", shape = (input_layer_size, first_layer_size),
                                      initializer = w_initializer)
 
                 b = tf.get_variable("b1", shape = (1, first_layer_size),
                                      initializer = b_initializer)
 
-                L.append(tf.nn.relu(tf.matmul(self.state, w) + b))
+                L.append(tf.nn.relu(tf.matmul(input_layer, w) + b))
 
 
                 # Generate other Hidden Layers
