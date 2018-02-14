@@ -3,6 +3,7 @@ logger = logging.getLogger('root')
 
 import tensorflow as tf
 import numpy as np
+import time
 
 from abp.adaptives.common.memory import Memory
 from abp.adaptives.common.experience import Experience
@@ -80,7 +81,10 @@ class DQNAdaptive(object):
             self.target_model.replace(self.eval_model)
 
 
+        update_start_time = time.time()
         self.update()
+        update_end_time = time.time()
+        logger.debug("Update Time: %.2f" % (update_end_time - update_start_time))
 
         self.current_reward = 0
 
@@ -121,7 +125,10 @@ class DQNAdaptive(object):
         self.previous_action = None
 
         if self.replay_memory.current_size > 30:
+            update_start_time = time.time()
             self.update()
+            update_end_time = time.time()
+            logger.debug("Update Time: %.2f" % (update_end_time - update_start_time))
 
 
     def reward(self, r):

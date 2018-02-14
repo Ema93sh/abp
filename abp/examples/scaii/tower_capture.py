@@ -3,6 +3,7 @@ import sys
 import logging
 logger = logging.getLogger('root')
 
+import time
 from scaii.env.sky_rts.env.scenarios.tower_example import TowerExample
 import tensorflow as tf
 import numpy as np
@@ -20,6 +21,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     state = env.reset()
 
+
     TOWER_BR, TOWER_BL, TOWER_TR, TOWER_TL = [1, 2, 3, 4]
 
     choose_tower = DQNAdaptive(name = "tower", choices = [TOWER_BR, TOWER_BL, TOWER_TR, TOWER_TL], network_config = network_config, reinforce_config = reinforce_config)
@@ -36,26 +38,24 @@ def run_task(evaluation_config, network_config, reinforce_config):
         episode_summary = tf.Summary()
 
 
+        start_time = time.time()
         tower_to_kill, _ = choose_tower.predict(state.state)
+        end_time = time.time()
 
         action = env.new_action()
 
+        env_start_time = time.time()
         action.attack_quadrant(tower_to_kill)
 
         state = env.act(action)
 
-        while not state.is_terminal():
-            noop = env.new_action()
+        counter = 0
 
-            state = env.act(noop)
+        env_end_time = time.time()
 
-            choose_tower.reward(state.reward)
-
-            total_reward += state.reward
-
-            if state.is_terminal():
-                logger.info("End Episode of episode %d!" % (episode + 1))
-
+        logger.debug("Counter: %d" % counter)
+        logger.debug("Neural Network Time: %.2f" % (end_time - start_time))
+        logger.debug("Env Time: %.2f" % (env_end_time - env_start_time))
 
         choose_tower.end_episode(state.state)
 
@@ -72,23 +72,16 @@ def run_task(evaluation_config, network_config, reinforce_config):
     test_summary_writer = tf.summary.FileWriter(test_summaries_path)
 
     #Test Episodes
-    if evaluation_config.render:
-        env.load_rpc_module("viz")
-
     for episode in range(evaluation_config.test_episodes):
-        state = env.reset()
+        state = env.reset(visualize=True)
         total_reward = 0
         episode_summary = tf.Summary()
 
         tower_to_kill, _ = choose_tower.predict(state.state)
 
-        logger.info("Attacking Tower...%d" % tower_to_kill)
-
-
         action = env.new_action()
 
         action.attack_quadrant(tower_to_kill)
-
 
         state = env.act(action)
 
