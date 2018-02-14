@@ -21,7 +21,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     state = env.reset()
 
-
     TOWER_BR, TOWER_BL, TOWER_TR, TOWER_TL = [1, 2, 3, 4]
 
     choose_tower = DQNAdaptive(name = "tower", choices = [TOWER_BR, TOWER_BL, TOWER_TR, TOWER_TL], network_config = network_config, reinforce_config = reinforce_config)
@@ -50,6 +49,20 @@ def run_task(evaluation_config, network_config, reinforce_config):
         state = env.act(action)
 
         counter = 0
+
+        while not state.is_terminal():
+            counter += 1
+            noop = env.new_action()
+
+            state = env.act(noop)
+
+            choose_tower.reward(state.reward)
+
+            total_reward += state.reward
+
+            if state.is_terminal():
+                logger.info("End Episode of episode %d!" % (episode + 1))
+                logger.info("Total Reward %d!" % (total_reward))
 
         env_end_time = time.time()
 
