@@ -1,3 +1,3 @@
-from decomposed_reward_wrapper import RewardWrapper
+from .reward_wrapper import RewardWrapper
 
-__all__ = ["RewardWrapper"]
+__all__ = [RewardWrapper]

@@ -62,7 +62,7 @@ class TravellerEnv(gym.Env):
                          }
         self.gold_locations = np.array([1, 2, 5])
         self.diamond_locations = np.array([8])
-
+        self._seed = 0
         self._reset()
 
     def _reset(self):

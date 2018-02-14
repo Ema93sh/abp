@@ -1,8 +1,10 @@
 import logging
 logger = logging.getLogger('root')
 
-import tensorflow as tf
+# import tensorflow as tf
 import numpy as np
+import torch
+from torch.autograd import Variable
 
 from abp.adaptives.common.memory import Memory
 from abp.adaptives.common.experience import Experience
@@ -30,30 +32,31 @@ class HRAAdaptive(object):
         self.reward_types = len(self.network_config.networks)
         self.current_reward = [0] * self.reward_types #TODO: change reward into dictionary
         self.total_reward = 0
-        self.session = tf.Session()
+        # self.session = tf.Session()
 
-        self.eval_model = HRAModel(self.name + "_eval", self.network_config, self.session)
-        self.target_model = HRAModel(self.name + "_target", self.network_config, self.session)
+        self.eval_model = HRAModel(self.name + "_eval", self.network_config)
+        self.target_model = HRAModel(self.name + "_target", self.network_config)
 
         #TODO:
         # * Add more information/summaries related to reinforcement learning
         # * Option to diable summary?
-        clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
-
-        self.summaries_writer = tf.summary.FileWriter(self.reinforce_config.summaries_path + "/" + self.name, graph = self.session.graph)
+        # clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
+        #
+        # self.summaries_writer = tf.summary.FileWriter(self.reinforce_config.summaries_path + "/" + self.name, graph = self.session.graph)
 
         self.episode = 0
 
     def __del__(self):
-        self.summaries_writer.close()
-        self.session.close()
+        pass
+        # self.summaries_writer.close()
+        # self.session.close()
 
     def should_explore(self):
         epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
 
-        epsilon_summary = tf.Summary()
-        epsilon_summary.value.add(tag='epsilon', simple_value = epsilon)
-        self.summaries_writer.add_summary(epsilon_summary, self.steps)
+        # epsilon_summary = tf.Summary()
+        # epsilon_summary.value.add(tag='epsilon', simple_value = epsilon)
+        # self.summaries_writer.add_summary(epsilon_summary, self.steps)
 
         return np.random.choice([True, False],  p = [epsilon, 1 - epsilon])
 
@@ -71,7 +74,9 @@ class HRAAdaptive(object):
             q_values = [None] * len(self.choices) #TODO should it be output shape or from choices?
             choice = self.choices[action]
         else:
-            action, q_values = self.eval_model.predict(state)
+            _state = Variable(torch.Tensor(state))
+            action, q_values = self.eval_model.predict(_state)
+
             choice = self.choices[action]
 
         if self.learning and self.steps % self.update_frequency == 0:
@@ -103,10 +108,11 @@ class HRAAdaptive(object):
             logger.info("End of Episode %d with total reward %d" % (self.episode + 1, self.total_reward))
 
         self.episode += 1
-
-        reward_summary = tf.Summary()
-        reward_summary.value.add(tag='%s agent reward' % self.name, simple_value = self.total_reward)
-        self.summaries_writer.add_summary(reward_summary, self.episode)
+        print('episode:',self.episode)
+        # reward_summary = tf.Summary()
+        # reward_summary.value.add(tag='%s agent reward' % self.name, simple_value = self.total_reward)
+        # self.summaries_writer.add_summary(reward_summary, self.episode)
+        print('agent reward:',self.total_reward)
 
         experience = Experience(self.previous_state, self.previous_action, self.current_reward, state, is_terminal = True)
         self.replay_memory.add(experience)
@@ -135,6 +141,8 @@ class HRAAdaptive(object):
         states = [experience.state for experience in batch]
 
         next_states = [experience.next_state for experience in batch]
+        states = Variable(torch.Tensor(states))
+        next_states = Variable(torch.Tensor(next_states))
 
         is_terminal = [ 0 if experience.is_terminal else 1 for experience in batch]
 
@@ -142,11 +150,12 @@ class HRAAdaptive(object):
 
         reward = np.array([experience.reward for experience in batch])
 
+
         q_next = self.target_model.predict_batch(next_states)
 
         #TODO should be configurable?
-        q_2 = np.max(q_next, axis = 2)
-        # q_2 = np.mean(q_next, axis = 2)
+        # q_2 = np.max(q_next, axis = 2)
+        q_2 = np.mean(q_next, axis = 2)
 
         q_2 = is_terminal * q_2
 

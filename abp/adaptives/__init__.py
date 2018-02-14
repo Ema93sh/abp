@@ -7,4 +7,5 @@
 
 # from abp.adaptives.dq_table import DQAdaptive
 from abp.adaptives.dqn import DQNAdaptive
-__all__ = [DQNAdaptive]
+from abp.adaptives.hra import HRAAdaptive
+__all__ = [DQNAdaptive,HRAAdaptive]

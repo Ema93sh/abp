@@ -5,6 +5,7 @@ from six import StringIO
 import gym
 from gym import spaces
 
+
 class FruitCollectionEnv(gym.Env):
     """A simple gridworld problem. The objective of the agent to collect all
     the randomly placed fruit in the grid.
@@ -16,25 +17,24 @@ class FruitCollectionEnv(gym.Env):
     3 - DOWN
 
     """
-    metadata = {'render.modes': ['human', 'ansi']} #TODO render to RGB
+    metadata = {'render.modes': ['human', 'ansi']}  # TODO render to RGB
 
     def __init__(self):
         super(FruitCollectionEnv, self).__init__()
         self.action_space = spaces.Discrete(4)
-
 
         self.number_of_fruits = 5
         self.possible_fruit_locations = [0, 4, 9, 49, 54, 59, 64, 89, 94, 99]
         self.current_fruit_locations = []
         self.agent_location = None
         self.collected_fruit = 0
-        self.action_map = { 0: "Left", 1: "Right", 2: "Up", 3: "Down"}
+        self.action_map = {0: "Left", 1: "Right", 2: "Up", 3: "Down"}
 
         self.shape = (10, 10)
         self.current_step = 0
-        self.viewer  = None
+        self.viewer = None
+        self._seed = 0
         self._reset()
-
 
     def _reset(self):
         self.current_step = 0
@@ -46,7 +46,8 @@ class FruitCollectionEnv(gym.Env):
 
         self.grid[self.agent_location] = 1
 
-        self.current_fruit_locations = np.random.choice(self.possible_fruit_locations, self.number_of_fruits, replace = False)
+        self.current_fruit_locations = np.random.choice(self.possible_fruit_locations, self.number_of_fruits,
+                                                        replace=False)
 
         return self.generate_state()
 
@@ -57,35 +58,34 @@ class FruitCollectionEnv(gym.Env):
         return np.concatenate((self.grid, state_fruit))
 
     def next_location(self, action):
-        if action == 0: #LEFT
+        if action == 0:  # LEFT
             next_location = self.agent_location - 1
-        elif action == 1: #RIGHT
+        elif action == 1:  # RIGHT
             next_location = self.agent_location + 1
-        elif action == 2: #UP
+        elif action == 2:  # UP
             next_location = self.agent_location - self.shape[0]
-        elif action == 3: #DOWN
+        elif action == 3:  # DOWN
             next_location = self.agent_location + self.shape[0]
         else:
             raise "Invalid Action"
         return next_location
 
     def is_valid_next_location(self, next_location):
-        if next_location < 0: #TOP Border
+        if next_location < 0:  # TOP Border
             return False
 
-        if next_location >= 100: #Bottom
+        if next_location >= 100:  # Bottom
             return False
 
-        if self.agent_location % self.shape[0] == 0 and next_location + 1 == self.agent_location: #LEFT Border
+        if self.agent_location % self.shape[0] == 0 and next_location + 1 == self.agent_location:  # LEFT Border
             return False
 
-        if (self.agent_location + 1) % self.shape[0] == 0 and next_location - 1 == self.agent_location: #RIGHT Border
+        if (self.agent_location + 1) % self.shape[0] == 0 and next_location - 1 == self.agent_location:  # RIGHT Border
             return False
 
         return True
 
-
-    def _step(self, action, decompose_reward = True): #TODO clear this mess!
+    def _step(self, action, decompose_reward=True):  # TODO clear this mess!
         self.current_step += 1
         done = False
         reward = 0
@@ -94,9 +94,8 @@ class FruitCollectionEnv(gym.Env):
                 "agent_location": self.agent_location,
                 "collected_fruit": None,
                 "possible_fruit_locations": self.possible_fruit_locations}
-        updated_agent_location =  self.next_location(action)
+        updated_agent_location = self.next_location(action)
         valid_action = self.is_valid_next_location(updated_agent_location)
-
 
         if valid_action:
             self.grid[self.agent_location] = 0
@@ -122,63 +121,61 @@ class FruitCollectionEnv(gym.Env):
         screen_width = 600
         screen_height = 600
         world_width = 200
-        scale = screen_width/world_width
+        scale = screen_width / world_width
         grid_size = 300
         cell_size = 30
         origin_x = screen_width / 2
-        origin_y = screen_height /2
-
+        origin_y = screen_height / 2
 
         if self.viewer is None:
             self.viewer = rendering.Viewer(screen_width, screen_height)
 
             # Draw grid
-            l = origin_x  - grid_size / 2
+            l = origin_x - grid_size / 2
             r = l + grid_size
             t = origin_y + grid_size / 2
             b = t - grid_size
-            grid_background = rendering.FilledPolygon([(l,b), (l,t), (r,t), (r,b)])
-            grid_background.set_color(239/255.0,239/255.0,239/255.0)
+            grid_background = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
+            grid_background.set_color(239 / 255.0, 239 / 255.0, 239 / 255.0)
 
             self.viewer.add_geom(grid_background)
 
-
             for x in range(10):
                 for y in range(1, 11):
-                    l = origin_x  - (cell_size * 5) + (x * cell_size)
+                    l = origin_x - (cell_size * 5) + (x * cell_size)
                     r = l + cell_size
                     t = origin_y - (cell_size * 5) + (y * cell_size)
                     b = t - cell_size
-                    cell = rendering.PolyLine([(l,b), (l,t), (r,t), (r,b)], True)
+                    cell = rendering.PolyLine([(l, b), (l, t), (r, t), (r, b)], True)
                     self.viewer.add_geom(cell)
 
         # Draw Fruits
         self.rendered_fruits = []
         for loc in self.current_fruit_locations:
-            fruit = self.viewer.draw_circle((cell_size/2) -  4)
+            fruit = self.viewer.draw_circle((cell_size / 2) - 4)
             x = loc / 10
             y = loc % 10
             x = origin_x - (cell_size * 5) + (x * cell_size) + cell_size / 2
             y = origin_y - (cell_size * 5) + (y * cell_size) + cell_size / 2
             fruit_trans = rendering.Transform(translation=(x, y))
             fruit.add_attr(fruit_trans)
-            fruit.set_color(21/255.0, 212/255.0, 78/255.0)
+            fruit.set_color(21 / 255.0, 212 / 255.0, 78 / 255.0)
             self.viewer.add_onetime(fruit)
             self.rendered_fruits.append(fruit)
 
         # Draw Agent
         x, y = self.agent_location / 10, (self.agent_location % 10 + 1)
-        l = origin_x  - (cell_size * 5) + (x * cell_size)
+        l = origin_x - (cell_size * 5) + (x * cell_size)
         r = l + cell_size
         t = origin_y - (cell_size * 5) + (y * cell_size)
         b = t - cell_size
         x = origin_x - (cell_size * 5) + (x * cell_size) + cell_size / 2
         y = origin_y - (cell_size * 5) + (y * cell_size) + cell_size / 2
-        self.rendered_agent = rendering.FilledPolygon([(l,b), (l,t), (r,t), (r,b)])
+        self.rendered_agent = rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
         self.rendered_agent.set_color(1, 0, 0)
         self.viewer.add_onetime(self.rendered_agent)
 
-        return self.viewer.render(return_rgb_array = False)
+        return self.viewer.render(return_rgb_array=False)
 
     def render_ansi(self):
         reshaped_board = np.reshape(self.grid, self.shape)
@@ -204,8 +201,7 @@ class FruitCollectionEnv(gym.Env):
 
         return outfile
 
-
-    def _render(self, mode = 'human', close = False):
+    def _render(self, mode='human', close=False):
         if close:
             return None
 

@@ -22,6 +22,7 @@ class TicTacToeEnv(gym.Env):
 
         self.player_1 = 1
         self.player_2 = -1
+        # self._seed = 0
 
         #TODO convert state to different representation
         self.board = np.array([0]*9)
@@ -34,7 +35,7 @@ class TicTacToeEnv(gym.Env):
         p2_idxs = p2_idxs + 9
         self.state[p1_idxs] = 1
         self.state[p2_idxs] = 1
-        return self.state
+        return self.state.astype(float)
 
 
     def _step(self, action):

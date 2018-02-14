@@ -1,7 +1,7 @@
 import os
 import torch
 import logging
-
+import numpy as np
 logger = logging.getLogger('root')
 
 
@@ -32,8 +32,11 @@ class Model(object):
             logger.info("Restoring network for %s " % self.name)
             self.model.load_state_dict(torch.load(self.model_path))
 
+    def predict_batch(self, input):
+        return np.array([x.data.numpy() for x in self.model(input)])
+
     def predict(self, input):
-        return self.model(input)
+        raise NotImplementedError('Needs to be implemented!')
 
     def fit(self):
         raise NotImplementedError('Needs to be implemented!')

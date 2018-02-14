@@ -29,7 +29,6 @@ class _DQNModel(nn.Module):
 
 
 class DQNModel(Model):
-    """Neural Network for the DQN Network"""
 
     def __init__(self, name, network_config, restore=True, learning_rate=0.001):
         logger.info("Building network for %s" % name)
@@ -46,3 +45,6 @@ class DQNModel(Model):
         loss = self.loss_fn(predict, target)
         loss.backward()
         self.optimizer.step()
+
+    def predict(self, input):
+        return self.model(input)
