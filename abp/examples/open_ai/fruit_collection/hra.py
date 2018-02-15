@@ -5,12 +5,13 @@ import numpy as np
 from abp import HRAAdaptive
 from abp.utils import clear_summary_path
 from abp.openai.wrappers import RewardWrapper
+from tensorboardX import SummaryWriter
 
 
 # TODO
 # *reward wrapper
 
-def run_task(evaluation_config, network_config, reinforce_config):
+def run_task(evaluation_config, network_config, reinforce_config, log=True):
     env = gym.make(evaluation_config.env)
     max_episode_steps = env._max_episode_steps
     # env = RewardWrapper(env)
@@ -22,13 +23,14 @@ def run_task(evaluation_config, network_config, reinforce_config):
                         network_config=network_config,
                         reinforce_config=reinforce_config)
 
-    # training_summaries_path = evaluation_config.summaries_path + "/train"
-    # clear_summary_path(training_summaries_path)
-    # train_summary_writer = tf.summary.FileWriter(training_summaries_path)
-    #
-    # test_summaries_path = evaluation_config.summaries_path + "/test"
-    # clear_summary_path(test_summaries_path)
-    # test_summary_writer = tf.summary.FileWriter(test_summaries_path)
+    if log:
+        training_summaries_path = evaluation_config.summaries_path + "/train"
+        clear_summary_path(training_summaries_path)
+        train_summary_writer = SummaryWriter(training_summaries_path)
+
+        test_summaries_path = evaluation_config.summaries_path + "/test"
+        clear_summary_path(test_summaries_path)
+        test_summary_writer = SummaryWriter(test_summaries_path)
 
     # Training Episodes
     for episode in range(evaluation_config.training_episodes):
@@ -45,11 +47,13 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             if done or steps == (max_episode_steps - 1):
                 agent.end_episode(state)
-                # episode_summary.value.add(tag="Episode Reward", simple_value=total_reward)
-                # episode_summary.value.add(tag="Steps to collect all fruits", simple_value=steps + 1)
-                # train_summary_writer.add_summary(episode_summary, episode + 1)
-                print('Epidose Reward:', total_reward)
-                print('Steps to collect all fruits:', steps + 1)
+                if log:
+                    train_summary_writer.add_scalar(tag="Episode Reward", scalar_value=total_reward,
+                                                    global_step=episode + 1)
+                    train_summary_writer.add_scalar(tag="Steps to collect all Fruits", scalar_value=steps + 1,
+                                                    global_step=episode + 1)
+                    print('Episode Reward:', total_reward)
+                    print('Steps to collect all fruits:', steps + 1)
                 break
 
     # train_summary_writer.flush()
@@ -67,15 +71,17 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             state, reward, done, info = env.step(action)
 
-            total_reward += reward
+            total_reward += sum(reward)
 
             if done:
                 agent.end_episode(state)
-                # episode_summary.value.add(tag="Episode Reward", simple_value=total_reward)
-                # episode_summary.value.add(tag="Steps to collect all fruits", simple_value=steps + 1)
-                # test_summary_writer.add_summary(episode_summary, episode + 1)
-                print('Epidose Reward:', total_reward)
-                print('Steps to collect all fruits:', steps + 1)
+                if log:
+                    test_summary_writer.add_scalar(tag="Episode Reward", scalar_value=total_reward,
+                                                   global_step=episode + 1)
+                    test_summary_writer.add_scalar(tag="Steps to collect all Fruits", scalar_value=steps + 1,
+                                                   global_step=episode + 1)
+                    print('Episode Reward:', total_reward)
+                    print('Steps to collect all fruits:', steps + 1)
 
                 break
 

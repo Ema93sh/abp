@@ -22,7 +22,7 @@ class TicTacToeEnv(gym.Env):
 
         self.player_1 = 1
         self.player_2 = -1
-        # self._seed = 0
+        self._seed = 0
 
         #TODO convert state to different representation
         self.board = np.array([0]*9)

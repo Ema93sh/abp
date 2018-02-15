@@ -5,6 +5,7 @@ from torch.autograd import Variable
 from abp.adaptives.common.memory import Memory
 from abp.adaptives.common.experience import Experience
 from abp.models import DQNModel
+from tensorboardX import SummaryWriter
 
 logger = logging.getLogger('root')
 
@@ -12,7 +13,7 @@ logger = logging.getLogger('root')
 class DQNAdaptive(object):
     """Adaptive which uses the  DQN algorithm"""
 
-    def __init__(self, name, choices, network_config, reinforce_config):
+    def __init__(self, name, choices, network_config, reinforce_config, log=True):
         super(DQNAdaptive, self).__init__()
         self.name = name
         self.choices = choices
@@ -28,6 +29,9 @@ class DQNAdaptive(object):
         self.previous_action = None
         self.current_reward = 0
         self.total_reward = 0
+        self.log = log
+        if self.log:
+            self.summary = SummaryWriter()
 
         self.target_model = DQNModel(self.name + "_target", self.network_config)
         self.eval_model = DQNModel(self.name + "_eval", self.network_config)
@@ -40,7 +44,8 @@ class DQNAdaptive(object):
     def should_explore(self):
         epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (
                 self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
-
+        if self.log:
+            self.summary.add_scalar(tag='epsilon', scalar_value=epsilon, global_step=self.steps)
         return np.random.choice([True, False], p=[epsilon, 1 - epsilon])
 
     def predict(self, state):
@@ -91,6 +96,8 @@ class DQNAdaptive(object):
             logger.info("End of Episode %d with total reward %d" % (self.episode + 1, self.total_reward))
 
         self.episode += 1
+        if self.log:
+            self.summary.add_scalar(tag='%s agent reward' % self.name,scalar_value=self.total_reward, global_step=self.episode)
         experience = Experience(self.previous_state, self.previous_action, self.current_reward, state, True)
         self.replay_memory.add(experience)
 
