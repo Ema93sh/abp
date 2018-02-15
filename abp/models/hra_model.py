@@ -81,15 +81,19 @@ class HRAModel(object):
         #TODO
         # * common input state. Option to have separate for each network
         # * generate shared hidden layer
-        self.q_target = tf.placeholder(tf.float32, [len(self.network_config.networks), None, self.network_config.output_shape[0]])
+        self.q_target = tf.placeholder(tf.float32, [len(self.network_config.networks), None] + self.network_config.output_shape)
         self.state = tf.placeholder(tf.float32,
-                                     shape = [None, self.network_config.input_shape[0]],
+                                     shape = [None] + self.network_config.input_shape,
                                      name = self.name + "_input_state")
         self.loss_ops = []
         self.train_ops = []
 
         with tf.variable_scope(self.name):
             #TODO Common shared layers!
+            shape = self.state.get_shape().as_list()        # a list: [None, 9, 2]
+            input_layer_size = np.prod(shape[1:])                       # input_layer_size = prod(9,2) = 18
+            input_layer = tf.reshape(self.state, [-1, input_layer_size])
+
             for network_id, network in enumerate(self.network_config.networks):
                 L = []
                 with tf.variable_scope(network["name"]):
@@ -98,7 +102,7 @@ class HRAModel(object):
                         # First Hidden Layer
                         first_layer_size = network["layers"][0]
 
-                        w = tf.get_variable("w1", shape = (self.network_config.input_shape[0], first_layer_size),
+                        w = tf.get_variable("w1", shape = (input_layer_size, first_layer_size),
                                              initializer = w_initializer,
                                              collections = self.collections)
 
@@ -106,7 +110,7 @@ class HRAModel(object):
                                              initializer = b_initializer,
                                              collections = self.collections)
 
-                        L.append(tf.nn.relu(tf.matmul(self.state, w) + b))
+                        L.append(tf.nn.relu(tf.matmul(input_layer, w) + b))
 
                         # Generate other Hidden Layers
                         for layer_id in range(1, len(network["layers"])):
