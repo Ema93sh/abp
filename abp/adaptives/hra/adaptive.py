@@ -85,7 +85,7 @@ class HRAAdaptive(object):
         self.previous_state = state
         self.previous_action = action
 
-        return action, q_values
+        return choice, q_values
 
     def disable_learning(self):
         logger.info("Disabled Learning for %s agent" % self.name)
