@@ -1,0 +1,42 @@
+networks:
+  - name: "SmallEnemyTower"
+    layers:
+        - 50
+        - 50
+
+  - name: "BigEnemyTower"
+    layers:
+        - 50
+        - 50
+
+  - name: "SmallFriendlyTower"
+    layers:
+        - 50
+        - 50
+
+  - name: "BigFriendlyTower"
+    layers:
+         - 50
+         - 50
+
+  - name: "Death"
+    layers:
+         - 50
+         - 50
+
+
+input_shape:
+    - 40
+    - 40
+    - 6
+
+layers:
+    - 100
+
+output_shape:
+    - 4
+
+network_path: "./saved_models/SkyRTS/hra/v1/network.ckpt"
+summaries_path: "./tensorflow_summaries/SkyRTS/hra/v1/network_summary"
+summaries_step: 150
+restore_network: False
