@@ -103,10 +103,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         tower_to_kill, q_values = choose_tower.predict(state.state)
 
-        # if evaluation_config.render:
-        chart.render(q_values, q_labels)
-        print("Press enter to continue:")
-        sys.stdin.read(1)
+        if evaluation_config.render:
+            chart.render(q_values, q_labels)
+            print("Press enter to continue:")
+            sys.stdin.read(1)
 
         action = env.new_action()
 
@@ -119,5 +119,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
         if state.is_terminal():
             logger.info("End Episode of episode %d!" % (episode + 1))
             logger.info("Total Reward %d!" % (total_reward))
+
+        episode_summary.value.add(tag = "Reward", simple_value = total_reward)
+        test_summary_writer.add_summary(episode_summary, episode + 1)
 
     test_summary_writer.flush()

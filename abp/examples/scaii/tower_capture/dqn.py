@@ -68,7 +68,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         choose_tower.end_episode(state.state)
 
-        logger.info("Episode %d : %d" % (episode + 1, total_reward))
         episode_summary.value.add(tag = "Reward", simple_value = total_reward)
         train_summary_writer.add_summary(episode_summary, episode + 1)
 
@@ -94,8 +93,13 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         state = env.act(action)
 
+        total_reward += state.reward
+
         if state.is_terminal():
             logger.info("End Episode of episode %d!" % (episode + 1))
             logger.info("Total Reward %d!" % (total_reward))
+
+        episode_summary.value.add(tag = "Reward", simple_value = total_reward)
+        test_summary_writer.add_summary(episode_summary, episode + 1)
 
     test_summary_writer.flush()
