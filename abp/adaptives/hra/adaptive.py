@@ -145,8 +145,8 @@ class HRAAdaptive(object):
         q_next = self.target_model.predict_batch(next_states)
 
         #TODO should be configurable?
-        q_2 = np.max(q_next, axis = 2)
-        # q_2 = np.mean(q_next, axis = 2)
+        # q_2 = np.max(q_next, axis = 2)
+        q_2 = np.mean(q_next, axis = 2)
 
         q_2 = is_terminal * q_2
 
