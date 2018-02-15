@@ -50,6 +50,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         counter = 0
 
+        choose_tower.reward(state.reward)
+
+        total_reward += state.reward
+
         while not state.is_terminal():
             counter += 1
             noop = env.new_action()
@@ -72,7 +76,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         choose_tower.end_episode(state.state)
 
-        logging.info("Episode %d : %d" % (episode + 1, total_reward))
+        logger.info("Episode %d : %d" % (episode + 1, total_reward))
         episode_summary.value.add(tag = "Reward", simple_value = total_reward)
         train_summary_writer.add_summary(episode_summary, episode + 1)
 
@@ -86,7 +90,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
-        state = env.reset(visualize=True)
+        state = env.reset(visualize=evaluation_config.render)
         total_reward = 0
         episode_summary = tf.Summary()
 

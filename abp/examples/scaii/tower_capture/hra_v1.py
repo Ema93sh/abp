@@ -63,26 +63,30 @@ def run_task(evaluation_config, network_config, reinforce_config):
         action = env.new_action()
 
         env_start_time = time.time()
-        action.attack_quadrant(tower_to_kill)
 
+        action.attack_quadrant(tower_to_kill)
         state = env.act(action)
 
         counter = 0
 
+        d_reward = decompose_reward(state.reward)
+
+        choose_tower.reward(d_reward)
+        total_reward += state.reward
+
         while not state.is_terminal():
+            print("NOOP")
             counter += 1
             noop = env.new_action()
 
             state = env.act(noop)
-
             d_reward = decompose_reward(state.reward)
 
             choose_tower.reward(d_reward)
             total_reward += state.reward
 
-            if state.is_terminal():
-                logger.info("End Episode of episode %d!" % (episode + 1))
-                logger.info("Total Reward %d!" % (total_reward))
+        logger.info("End Episode of episode %d!" % (episode + 1))
+        logger.info("Total Reward %d!" % (total_reward))
 
         env_end_time = time.time()
 
@@ -92,12 +96,13 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         choose_tower.end_episode(state.state)
 
-        logging.info("Episode %d : %d" % (episode + 1, total_reward))
+        logger.info("Episode %d : %d" % (episode + 1, total_reward))
         episode_summary.value.add(tag = "Reward", simple_value = total_reward)
         train_summary_writer.add_summary(episode_summary, episode + 1)
 
     train_summary_writer.flush()
 
+    logger.info("Disabled Learning..")
     choose_tower.disable_learning()
 
     test_summaries_path = evaluation_config.summaries_path + "/test"
@@ -106,7 +111,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
-        state = env.reset(visualize=True)
+        state = env.reset(visualize=evaluation_config.render)
         total_reward = 0
         episode_summary = tf.Summary()
 
