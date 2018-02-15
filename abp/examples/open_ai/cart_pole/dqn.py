@@ -54,6 +54,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
     for episode in range(evaluation_config.test_episodes):
         state = env.reset()
         total_reward = 0
+        
         for step in range(max_episode_steps):
             if evaluation_config.render:
                 env.render()

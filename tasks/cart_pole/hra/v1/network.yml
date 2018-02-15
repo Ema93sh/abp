@@ -1,14 +1,28 @@
 input_shape:
     - 4
 
-layers:
-    - 250
-    - 250
+networks:
+  - name: "PoleAngle"
+    layers:
+        - 50
+        - 50
+
+  - name: "CartPosition"
+    layers:
+        - 50
+        - 50
+
+  - name: "Terminal"
+    layers:
+        - 50
+        - 50
+
+
 
 output_shape:
     - 2
 
-network_path: "./saved_models/cart_pole/dqn/v1/network"
-summaries_path: "./tensorflow_summaries/cart_pole/dqn/v1/network_summary"
+network_path: "./saved_models/cart_pole/hra/v1/network.ckpt"
+summaries_path: "./tensorflow_summaries/cart_pole/hra/v1/network_summary"
 summaries_step: 100
 restore_network: False
