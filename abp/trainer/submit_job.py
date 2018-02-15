@@ -8,7 +8,7 @@ training_inputs = {'scaleTier': 'CUSTOM',
     'workerCount': 9,
     'parameterServerCount': 3,
     'packageUris': ['gs://my/trainer/path/package-0.0.0.tar.gz'],
-    'pythonModule': 'trainer.task'
+    'pythonModule': 'trainer.task',
     'args': ['--arg1', 'value1', '--arg2', 'value2'],
     'region': 'us-central1',
     'jobDir': 'gs://my/training/job/directory',
