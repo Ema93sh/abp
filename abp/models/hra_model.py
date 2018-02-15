@@ -68,6 +68,7 @@ class HRAModel(object):
             if not tf.gfile.Exists(dirname):
                 logger.error("Can not restore model. Reason: The network path (%s) does not exists" % self.network_config.network_path)
                 return
+            logger.info("Restoring model from (%s)" % self.network_config.network_path)
             self.saver.restore(self.session, self.network_config.network_path + "/" + self.name)
 
     def build_network(self):

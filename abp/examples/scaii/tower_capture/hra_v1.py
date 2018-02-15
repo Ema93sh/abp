@@ -11,15 +11,16 @@ import numpy as np
 from abp import HRAAdaptive
 from abp.utils import clear_summary_path
 
+from abp.utils.histogram import MultiQHistogram
 
 # Size State: 100x100x6
 def decompose_reward(reward):
     r_type = {
-         -150 : 0,
-         -100 : 1,
-         -1000 : 2,
-         150 : 3,
-         1000 : 4
+          150 : 0,
+          1000 : 1,
+         -150 : 2,
+         -1000 : 3,
+         -100 : 4
     }
 
     d_reward = [0, 0, 0, 0, 0]
@@ -37,7 +38,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     state = env.reset()
 
-    TOWER_BR, TOWER_BL, TOWER_TR, TOWER_TL = [1, 2, 3, 4]
+    TOWER_BR, TOWER_TR, TOWER_BL, TOWER_TL = [1, 2, 3, 4]
 
     choose_tower = HRAAdaptive(name = "tower",
                                choices = [TOWER_BR, TOWER_BL, TOWER_TR, TOWER_TL],
@@ -57,7 +58,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
 
         start_time = time.time()
-        tower_to_kill, _ = choose_tower.predict(state.state)
+        tower_to_kill, q_values = choose_tower.predict(state.state)
         end_time = time.time()
 
         action = env.new_action()
@@ -66,31 +67,11 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         action.attack_quadrant(tower_to_kill)
         state = env.act(action)
-
-        counter = 0
-
         d_reward = decompose_reward(state.reward)
-
         choose_tower.reward(d_reward)
         total_reward += state.reward
-
-        while not state.is_terminal():
-            print("NOOP")
-            counter += 1
-            noop = env.new_action()
-
-            state = env.act(noop)
-            d_reward = decompose_reward(state.reward)
-
-            choose_tower.reward(d_reward)
-            total_reward += state.reward
-
-        logger.info("End Episode of episode %d!" % (episode + 1))
-        logger.info("Total Reward %d!" % (total_reward))
-
         env_end_time = time.time()
 
-        logger.debug("Counter: %d" % counter)
         logger.debug("Neural Network Time: %.2f" % (end_time - start_time))
         logger.debug("Env Time: %.2f" % (env_end_time - env_start_time))
 
@@ -109,13 +90,23 @@ def run_task(evaluation_config, network_config, reinforce_config):
     clear_summary_path(test_summaries_path)
     test_summary_writer = tf.summary.FileWriter(test_summaries_path)
 
+
+    chart = MultiQHistogram(choose_tower.reward_types, len(choose_tower.choices), ("Bottom Right","Top Right","Bottom Left","Top Left"), ylim = 5)
+
+    q_labels = ["SmallEnemyTower", "BigEnemyTower", "SmallFriendlyTower", "BigFriendlyTower", "Death"]
+
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
         state = env.reset(visualize=evaluation_config.render)
         total_reward = 0
         episode_summary = tf.Summary()
 
-        tower_to_kill, _ = choose_tower.predict(state.state)
+        tower_to_kill, q_values = choose_tower.predict(state.state)
+
+        # if evaluation_config.render:
+        chart.render(q_values, q_labels)
+        print("Press enter to continue:")
+        sys.stdin.read(1)
 
         action = env.new_action()
 
@@ -123,13 +114,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         state = env.act(action)
 
-        while not state.is_terminal():
-            noop = env.new_action()
-            state = env.act(noop)
-            total_reward += state.reward
+        total_reward += state.reward
 
-            if state.is_terminal():
-                logger.info("End Episode of episode %d!" % (episode + 1))
-                logger.info("Total Reward %d!" % (total_reward))
+        if state.is_terminal():
+            logger.info("End Episode of episode %d!" % (episode + 1))
+            logger.info("Total Reward %d!" % (total_reward))
 
     test_summary_writer.flush()

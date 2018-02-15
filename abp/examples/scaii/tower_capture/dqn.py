@@ -23,7 +23,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     TOWER_BR, TOWER_BL, TOWER_TR, TOWER_TL = [1, 2, 3, 4]
 
-    choose_tower = DQNAdaptive(name = "tower", choices = [TOWER_BR, TOWER_BL, TOWER_TR, TOWER_TL], network_config = network_config, reinforce_config = reinforce_config)
+    choose_tower = DQNAdaptive(name = "tower",
+                               choices = [TOWER_BR, TOWER_BL, TOWER_TR, TOWER_TL],
+                               network_config = network_config,
+                               reinforce_config = reinforce_config)
 
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
@@ -35,7 +38,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
         state = env.reset()
         total_reward = 0
         episode_summary = tf.Summary()
-
 
         start_time = time.time()
         tower_to_kill, _ = choose_tower.predict(state.state)
@@ -54,19 +56,9 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         total_reward += state.reward
 
-        while not state.is_terminal():
-            counter += 1
-            noop = env.new_action()
-
-            state = env.act(noop)
-
-            choose_tower.reward(state.reward)
-
-            total_reward += state.reward
-
-            if state.is_terminal():
-                logger.info("End Episode of episode %d!" % (episode + 1))
-                logger.info("Total Reward %d!" % (total_reward))
+        if state.is_terminal():
+            logger.info("End Episode of episode %d!" % (episode + 1))
+            logger.info("Total Reward %d!" % (total_reward))
 
         env_end_time = time.time()
 
@@ -102,13 +94,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         state = env.act(action)
 
-        while not state.is_terminal():
-            noop = env.new_action()
-            state = env.act(noop)
-            total_reward += state.reward
-
-            if state.is_terminal():
-                logger.info("End Episode of episode %d!" % (episode + 1))
-                logger.info("Total Reward %d!" % (total_reward))
+        if state.is_terminal():
+            logger.info("End Episode of episode %d!" % (episode + 1))
+            logger.info("Total Reward %d!" % (total_reward))
 
     test_summary_writer.flush()
