@@ -67,7 +67,7 @@ class FruitCollectionEnv(gym.Env):
         elif action == 3:  # DOWN
             next_location = self.agent_location + self.shape[0]
         else:
-            raise "Invalid Action"
+            raise Exception("Invalid Action")
         return next_location
 
     def is_valid_next_location(self, next_location):

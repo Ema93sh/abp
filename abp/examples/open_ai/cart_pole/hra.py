@@ -3,47 +3,46 @@ from gym import wrappers
 from abp import HRAAdaptive
 
 
-def run_task(evaluation_config, network_config, reinforce_config):
-    env = gym.make(evaluation_config.env)
-    max_episode_steps = env._max_episode_steps
-    state = env.reset()
+def run_task(config):
+    config.name = "CartPole-v0"
+
+    env_spec = gym.make(config.name)
+    state = env_spec.reset()
+    max_episode_steps = env_spec._max_episode_steps
+
+    config.size_rewards = 4
+    config.size_features = len(state)
+    config.action_size = env_spec.action_space.n
 
     threshold_angle = 0.087266463
     threshold_x = 1.5
 
-    LEFT, RIGHT = [0,1]
-
-    agent = HRAAdaptive(name="cartpole",
-                        choices=[LEFT, RIGHT],
-                        network_config=network_config,
-                        reinforce_config=reinforce_config)
+    agent = HRAAdaptive(config)
 
     #Episodes
-    for epoch in range(evaluation_config.training_episodes):
-        state = env.reset()
+    for epoch in range(config.training_episode):
+        state = env_spec.reset()
         for steps in range(max_episode_steps):
-            action, q_values = agent.predict(state)
-            state, reward, done, info = env.step(action)
+            action = agent.predict(state)
+            state, reward, done, info = env_spec.step(action)
             cart_position, cart_velocity, pole_angle, pole_velocity = state
+            agent.reward(0, reward) # Reward for every step
 
-            d_reward = [0]*3
-
-            
             # Reward for pole angle increase or decrease
             if  -threshold_angle < pole_angle < threshold_angle:
-                d_reward[0] = 1
+                agent.reward(1, 1)
             else:
-                d_reward[0] = -1
+                agent.reward(1, -1)
 
             if steps < max_episode_steps and done:
-                d_reward[1] = -40
+                agent.reward(2, -40) # Reward for terminal state
 
             if -threshold_x < cart_position < threshold_x:
-                d_reward[2] = 1
+                agent.reward(3, 1)
             else:
-                d_reward[2] = -1
+                agent.reward(3, -1)
 
-            agent.reward(d_reward)
+            agent.actual_reward(reward)
 
             if done:
                 agent.end_episode(state)
@@ -53,21 +52,17 @@ def run_task(evaluation_config, network_config, reinforce_config):
     agent.disable_learning()
 
     # After learning Episodes
-    for epoch in range(evaluation_config.test_episodes):
-        state = env.reset()
-        total_reward = 0
-
-        for steps in range(max_episode_steps):
-            if evaluation_config.render:
-                env.render()
-
-            action, q_values = agent.predict(state)
-
-            state, reward, done, info = env.step(action)
-
-            total_reward += reward
+    for epoch in range(config.test_episodes):
+        state = env_spec.reset()
+        for t in range(max_episode_steps):
+            if config.render:
+                env_spec.render()
+            action = agent.predict(state)
+            state, reward, done, info = env_spec.step(action)
+            agent.test_reward(reward)
 
             if done:
+                agent.end_episode(state)
                 break
 
-    env.close()
+    env_spec.close()
