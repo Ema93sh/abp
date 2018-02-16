@@ -2,7 +2,7 @@ import logging
 import torch.nn as nn
 from torch.optim import RMSprop
 from .model import Model
-
+import numpy as np
 logger = logging.getLogger('root')
 
 
@@ -12,7 +12,7 @@ class _DQNModel(nn.Module):
     def __init__(self, network_config):
         super(_DQNModel, self).__init__()
         self.num_layers = len(network_config.layers)
-        in_features = network_config.input_shape[0]
+        in_features = np.prod(network_config.input_shape)
         for i, out_features in enumerate(network_config.layers):
             layer = nn.Sequential(
                 nn.Linear(in_features, out_features),
