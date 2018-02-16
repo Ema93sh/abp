@@ -6,6 +6,7 @@ from torch.optim import RMSprop
 import numpy as np
 from .model import Model
 from torch.autograd import Variable
+import numpy as np
 logger = logging.getLogger('root')
 
 
@@ -14,7 +15,7 @@ class _HRAModel(nn.Module):
         super(_HRAModel, self).__init__()
         self.network_config = network_config
         for network_i, network in enumerate(network_config.networks):
-            in_features = network_config.input_shape[0]
+            in_features = np.prod(network_config.input_shape)
             for i, out_features in enumerate(network['layers']):
                 layer = nn.Sequential(
                     nn.Linear(in_features, out_features),
