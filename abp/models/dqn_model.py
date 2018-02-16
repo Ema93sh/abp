@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.optim import RMSprop
 from .model import Model
 import numpy as np
+
 logger = logging.getLogger('root')
 
 
@@ -22,7 +23,7 @@ class _DQNModel(nn.Module):
         self.q_linear = nn.Linear(in_features, network_config.output_shape[0])
 
     def forward(self, input):
-        out = input
+        out = input.view((input.shape[0], np.prod(input.shape[1:])))
         for i in range(self.num_layers):
             out = getattr(self, 'layer_{}'.format(i))(out)
         return self.q_linear(out)

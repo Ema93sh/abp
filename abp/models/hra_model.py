@@ -7,6 +7,7 @@ import numpy as np
 from .model import Model
 from torch.autograd import Variable
 import numpy as np
+
 logger = logging.getLogger('root')
 
 
@@ -27,6 +28,7 @@ class _HRAModel(nn.Module):
 
     def forward(self, input):
         q_values = []
+        input = input.view((input.shape[0], np.prod(input.shape[1:])))
         for network_i, network in enumerate(self.network_config.networks):
             out = input
             for i in range(len(network['layers'])):
@@ -51,7 +53,7 @@ class HRAModel(Model):
         self.optimizer.zero_grad()
         predict = self.model(states)
         loss = 0
-        for i,p in enumerate(predict):
+        for i, p in enumerate(predict):
             loss += self.loss_fn(p, Variable(torch.Tensor(target[i])))
         loss.backward()
         self.optimizer.step()
@@ -59,5 +61,5 @@ class HRAModel(Model):
     def predict(self, input):
         q_values = self.predict_batch(input.unsqueeze(0)).squeeze(axis=1)
 
-        q_actions = np.sum(q_values,axis=0)
+        q_actions = np.sum(q_values, axis=0)
         return np.argmax(q_actions), q_values
