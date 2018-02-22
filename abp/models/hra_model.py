@@ -16,7 +16,7 @@ class _HRAModel(nn.Module):
         super(_HRAModel, self).__init__()
         self.network_config = network_config
         for network_i, network in enumerate(network_config.networks):
-            in_features = np.prod(network_config.input_shape)
+            in_features = int(np.prod(network_config.input_shape))
             for i, out_features in enumerate(network['layers']):
                 layer = nn.Sequential(
                     nn.Linear(in_features, out_features),
@@ -28,7 +28,7 @@ class _HRAModel(nn.Module):
 
     def forward(self, input):
         q_values = []
-        input = input.view((input.shape[0], np.prod(input.shape[1:])))
+        input = input.view((input.shape[0], int(np.prod(input.shape[1:]))))
         for network_i, network in enumerate(self.network_config.networks):
             out = input
             for i in range(len(network['layers'])):
