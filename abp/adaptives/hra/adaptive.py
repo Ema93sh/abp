@@ -99,8 +99,7 @@ class HRAAdaptive(object):
         if not self.learning:
             return
 
-        if self.episode % 100 == 0:
-            logger.info("End of Episode %d with total reward %d" % (self.episode + 1, self.total_reward))
+        logger.info("End of Episode %d with total reward %d" % (self.episode + 1, self.total_reward))
 
         self.episode += 1
 

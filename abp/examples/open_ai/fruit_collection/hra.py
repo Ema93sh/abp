@@ -4,7 +4,6 @@ import tensorflow as tf
 
 from abp import HRAAdaptive
 from abp.utils import clear_summary_path
-from abp.openai.wrappers import RewardWrapper
 
 #TODO
 # *reward wrapper
@@ -12,7 +11,6 @@ from abp.openai.wrappers import RewardWrapper
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
     max_episode_steps = env._max_episode_steps
-    # env = RewardWrapper(env)
     state = env.reset()
     LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
 

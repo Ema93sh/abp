@@ -1,6 +1,7 @@
-decay_steps: 250
+decay_steps: 1000
 starting_epsilon: 1
 discount_factor: 0.99
 batch_size: 35
 memory_size: 10000
 summaries_path: "./tensorflow_summaries/fruit_collection/hra/v1/reinforce_summary"
+update_frequency: 50

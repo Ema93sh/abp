@@ -15,3 +15,4 @@ log
 *.fls
 *.log
 *.synctex.gz
+runs/
