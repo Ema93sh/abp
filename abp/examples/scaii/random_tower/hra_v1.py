@@ -4,7 +4,7 @@ import logging
 logger = logging.getLogger('root')
 
 import time
-from scaii.env.sky_rts.env.scenarios.tower_example import TowerExample
+from scaii.env.sky_rts.env.scenarios.random_towers import RandomTowers
 import tensorflow as tf
 import numpy as np
 
@@ -14,34 +14,39 @@ from abp.utils import clear_summary_path
 from abp.utils.histogram import MultiQHistogram
 
 # Size State: 100x100x6
-def decompose_reward(reward):
+def decompose_reward(state):
+    #TODO This should go inside adaptive
+
+    reward = state.typed_reward
+
     r_type = {
-          150 : 0,
-          1000 : 1,
-         -150 : 2,
-         -1000 : 3,
-         -100 : 4
-    }
+        'dealt_damage' : 0,
+        'agent_death' : 1,
+        'bonus' : 2,
+        'took_damage': 3
+        }
 
     d_reward = [0, 0, 0, 0, 0]
-    if reward == 0:
-        return d_reward
 
-    d_reward[r_type[reward]] = reward
+    for r, v in reward.items():
+        d_reward[r_type[r]] = v
+
     return d_reward
 
 
 def run_task(evaluation_config, network_config, reinforce_config):
-    env = TowerExample()
+    env = RandomTowers()
 
     max_episode_steps = 10000
 
     state = env.reset()
 
-    TOWER_BR, TOWER_TR, TOWER_BL, TOWER_TL = [1, 2, 3, 4]
+    #TODO generate network config from reward types
+
+    TOWER_LEFT, TOWER_RIGHT = [1, 2]
 
     choose_tower = HRAAdaptive(name = "tower",
-                               choices = [TOWER_BR, TOWER_BL, TOWER_TR, TOWER_TL],
+                               choices = [TOWER_LEFT, TOWER_RIGHT],
                                network_config = network_config,
                                reinforce_config = reinforce_config)
 
@@ -65,10 +70,14 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         env_start_time = time.time()
 
-        action.attack_quadrant(tower_to_kill)
+        action.attack_tower(tower_to_kill)
+
         state = env.act(action)
-        d_reward = decompose_reward(state.reward)
+
+        d_reward = decompose_reward(state)
+
         choose_tower.reward(d_reward)
+
         total_reward += state.reward
         env_end_time = time.time()
 
@@ -91,9 +100,9 @@ def run_task(evaluation_config, network_config, reinforce_config):
     test_summary_writer = tf.summary.FileWriter(test_summaries_path)
 
 
-    chart = MultiQHistogram(choose_tower.reward_types, len(choose_tower.choices), ("Bottom Right","Top Right","Bottom Left","Top Left"), ylim = 5)
+    chart = MultiQHistogram(choose_tower.reward_types, len(choose_tower.choices), ("Left Tower","Right Tower"), ylim = 5)
 
-    q_labels = ["SmallEnemyTower", "BigEnemyTower", "SmallFriendlyTower", "BigFriendlyTower", "Death"]
+    q_labels = ["Damage Dealth", "Agent Died", "Bonus", "Damage Received"]
 
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
@@ -107,12 +116,16 @@ def run_task(evaluation_config, network_config, reinforce_config):
             chart.render(q_values, q_labels)
 
         action = env.new_action()
-        action.attack_quadrant(tower_to_kill)
+        action.attack_tower(tower_to_kill)
         action.skip = False
 
         state = env.act(action)
 
-        time.sleep(5)
+        while not state.is_terminal():
+            time.sleep(0.1)
+            action = env.new_action()
+            action.skip = False
+            state = env.act(action)
 
         total_reward += state.reward
 

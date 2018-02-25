@@ -36,7 +36,7 @@ layers:
 output_shape:
     - 4
 
-network_path: "./saved_models/SkyRTS/hra/v1/network.ckpt"
-summaries_path: "./tensorflow_summaries/SkyRTS/hra/v1/network_summary"
+network_path: "./saved_models/SkyRTS/tower_capture/hra/v1/network.ckpt"
+summaries_path: "./tensorflow_summaries/SkyRTS/tower_capture/hra/v1/network_summary"
 summaries_step: 150
 restore_network: False

@@ -13,7 +13,7 @@ layers:
 output_shape:
     - 4
 
-network_path: "./saved_models/SkyRTS/dqn/v1"
-summaries_path: "./tensorflow_summaries/SkyRTS/dqn/v1/network_summary"
+network_path: "./saved_models/SkyRTS/tower_capture/dqn/v1"
+summaries_path: "./tensorflow_summaries/SkyRTS/tower_capture/dqn/v1/network_summary"
 summaries_step: 1
 restore_network: False

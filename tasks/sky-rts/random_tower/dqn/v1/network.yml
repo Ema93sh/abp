@@ -1,0 +1,19 @@
+input_shape:
+    - 40
+    - 40
+    - 6
+
+kernal_size:
+    - 100
+
+layers:
+    - 100
+    - 100
+
+output_shape:
+    - 2
+
+network_path: "./saved_models/SkyRTS/random_towers/dqn/v1"
+summaries_path: "./tensorflow_summaries/SkyRTS/random_towers/dqn/v1/network_summary"
+summaries_step: 1
+restore_network: False

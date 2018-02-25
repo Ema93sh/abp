@@ -1,0 +1,37 @@
+networks:
+  - name: "DamageDealth"
+    layers:
+        - 50
+        - 50
+
+  - name: "AgentDied"
+    layers:
+        - 50
+        - 50
+
+  - name: "Bonus"
+    layers:
+        - 50
+        - 50
+
+  - name: "DamageRecieved"
+    layers:
+        - 50
+        - 50
+
+
+input_shape:
+    - 40
+    - 40
+    - 6
+
+layers:
+    - 100
+
+output_shape:
+    - 2
+
+network_path: "./saved_models/SkyRTS/random_towers/hra/v1/network.ckpt"
+summaries_path: "./tensorflow_summaries/SkyRTS/random_towers/hra/v1/network_summary"
+summaries_step: 150
+restore_network: False

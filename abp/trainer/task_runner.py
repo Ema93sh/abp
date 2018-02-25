@@ -52,6 +52,13 @@ def main():
         action="store_true"
     )
 
+    parser.add_argument(
+        '--render',
+        help="Render task",
+        dest='render',
+        action="store_true"
+    )
+
     args = parser.parse_args()
 
     logger.setLevel(args.loglevel)
@@ -65,6 +72,9 @@ def main():
     if args.eval:
         evaluation_config.training_episodes = 0
         network_config.restore_network = True
+
+    if args.render:
+        evaluation_config.render = True
 
 
     task_module = import_module(args.task)
