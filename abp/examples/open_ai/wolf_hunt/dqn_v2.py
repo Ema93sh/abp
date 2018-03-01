@@ -12,9 +12,9 @@ from abp.utils import clear_summary_path
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
-    max_episode_steps = 300
+    max_episode_steps = 100
 
-    state = env.reset("5x5_default")
+    state = env.reset()
 
     LEFT, RIGHT, UP, DOWN, NOOP = [0, 1, 2, 3, 4]
 
@@ -28,7 +28,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     #Training Episodes
     for episode in range(evaluation_config.training_episodes):
-        state = env.reset("5x5_default")
+        state = env.reset()
         total_reward = 0
         episode_summary = tf.Summary()
         for step in range(max_episode_steps):
@@ -65,7 +65,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
-        state = env.reset("5x5_default")
+        state = env.reset()
         total_reward = 0
         episode_summary = tf.Summary()
         action = None
