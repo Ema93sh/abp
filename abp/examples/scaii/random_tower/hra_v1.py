@@ -122,6 +122,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         state = env.act(action)
 
         while not state.is_terminal():
+            time.sleep(0.3)
             action = env.new_action()
             action.skip = False
             state = env.act(action)

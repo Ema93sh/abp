@@ -14,13 +14,13 @@ curses.curs_set(0)
 screen.keypad(1)
 
 env_spec = gym.make("WolfHunt-v0")
-max_episode_steps = env_spec._max_episode_steps
+max_episode_steps = 1000
 
 state = env_spec.reset()
-
+predators = env_spec.predators
 
 def get_arrow_key():
-        UP, DOWN, LEFT, RIGHT, NOOP = [0, 1, 2, 3, 4]
+        LEFT, RIGHT, UP, DOWN, NOOP = [0, 1, 2, 3, 4]
         k = screen.getch()
 
         if k == curses.KEY_UP:
@@ -35,25 +35,23 @@ def get_arrow_key():
         return get_arrow_key()
 
 for epoch in range(10):
-    state = env_spec.reset()
+    state = env_spec.reset(map_name = "5x5_default")
     reward = 0
     for steps in range(100):
         screen.clear()
         s = env_spec.render(mode='ansi')
-        screen.addstr("State\n")
-        # screen.addstr(str(state))
         screen.addstr(s.getvalue())
-        screen.addstr("Direction for Wolf 1:\n")
-        screen.refresh()
+        screen.addstr("State\n")
+        screen.addstr(str(state))
+        actions = {}
 
-        wolf1 = get_arrow_key()
-        screen.addstr("Direction for Wolf 2:\n")
-        screen.refresh()
+        for predator in predators:
+            screen.addstr("Direction for %s:\n" % predator)
+            screen.refresh()
+            action = get_arrow_key()
+            actions[predator] = action
 
-        wolf2 = get_arrow_key()
-
-        action = (wolf1, wolf2)
-        state, reward, done, info = env_spec.step(action)
+        state, reward, done, info = env_spec.step(actions)
 
 
         if done:

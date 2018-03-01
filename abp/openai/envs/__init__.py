@@ -11,7 +11,6 @@ register(
 register(
     id='FruitCollection-v0',
     entry_point='abp.openai.envs.fruit_collection:FruitCollectionEnv',
-    max_episode_steps=300, #TODO
     reward_threshold=5 #TODO
 )
 
@@ -31,7 +30,5 @@ register(
 
 register(
     id = 'WolfHunt-v0',
-    entry_point = 'abp.openai.envs.wolf_hunt:WolfHuntEnv',
-    max_episode_steps = 1000, #TODO
-    reward_threshold = 11  #TODO
+    entry_point = 'abp.openai.envs.wolf_hunt:WolfHuntEnv'
 )

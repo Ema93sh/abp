@@ -1,1 +1,1 @@
-from env import WolfHuntEnv
+from .env import WolfHuntEnv
