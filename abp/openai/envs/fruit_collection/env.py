@@ -4,6 +4,9 @@ from six import StringIO
 
 import gym
 from gym import spaces
+from .env_map import EnvMap
+import os
+
 
 class FruitCollectionEnv(gym.Env):
     """A simple gridworld problem. The objective of the agent to collect all
@@ -16,200 +19,157 @@ class FruitCollectionEnv(gym.Env):
     3 - DOWN
 
     """
-    metadata = {'render.modes': ['human', 'ansi']} #TODO render to RGB
+    metadata = {'render.modes': ['ansi'], 'state.modes': ['linear', 'grid', 'channels']} #TODO render to RGB
+    LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
 
-    def __init__(self):
+    def __init__(self, map_name = "10x10_default"):
         super(FruitCollectionEnv, self).__init__()
         self.action_space = spaces.Discrete(4)
+        self.current_dir = os.path.dirname(os.path.realpath(__file__))
 
+        self.reset(map_name)
 
-        self.number_of_fruits = 5
-        self.possible_fruit_locations = [0, 4, 9, 49, 54, 59, 64, 89, 94, 99]
+    def reset(self, map_name = "10x10_default", number_of_fruits = 5, state_mode = "linear"):
+        self.number_of_fruits = number_of_fruits
+        self.state_mode = state_mode
+
+        self.map = EnvMap(os.path.join(self.current_dir, "maps", map_name + ".map"))
+
+        self.possible_fruit_locations = self.map.get_possible_fruit_locations()
+        self.agent_location           = self.map.agent_location()
+
+        selected_index = np.random.choice(len(self.possible_fruit_locations), self.number_of_fruits, replace = False)
         self.current_fruit_locations = []
-        self.agent_location = None
-        self.collected_fruit = 0
-        self.action_map = { 0: "Left", 1: "Right", 2: "Up", 3: "Down"}
 
-        self.shape = (10, 10)
-        self.current_step = 0
-        self.viewer  = None
-        self._reset()
-
-
-    def _reset(self):
-        self.current_step = 0
-        self.collected_fruit = 0
-
-        self.grid = np.ravel(np.zeros(self.shape))
-
-        self.agent_location = np.random.choice(np.setdiff1d(range(100), self.possible_fruit_locations))
-
-        self.grid[self.agent_location] = 1
-
-        self.current_fruit_locations = np.random.choice(self.possible_fruit_locations, self.number_of_fruits, replace = False)
+        for i in selected_index:
+            self.current_fruit_locations.append(self.possible_fruit_locations[i])
 
         return self.generate_state()
 
     def generate_state(self):
-        state_fruit = np.array([0] * 10)
-        fruit_idx = np.where(np.isin(self.possible_fruit_locations, self.current_fruit_locations))
-        state_fruit[fruit_idx] = 1
-        return np.concatenate((self.grid, state_fruit))
+        generate = {
+            "linear": self.generate_linear_state,
+            "grid": self.generate_grid_state,
+            "channels": self.generate_channels_state
+        }
+        return generate[self.state_mode]()
 
-    def next_location(self, action):
-        if action == 0: #LEFT
-            next_location = self.agent_location - 1
-        elif action == 1: #RIGHT
-            next_location = self.agent_location + 1
-        elif action == 2: #UP
-            next_location = self.agent_location - self.shape[0]
-        elif action == 3: #DOWN
-            next_location = self.agent_location + self.shape[0]
+    def generate_linear_state(self):
+        shape = self.map.shape()
+        agent_state = np.zeros(shape)
+        agent_state[self.agent_location] = 1
+
+        fruit_state = np.zeros(len(self.possible_fruit_locations))
+
+        for i in range(len(self.possible_fruit_locations)):
+            location = self.possible_fruit_locations[i]
+            if location in self.current_fruit_locations:
+                fruit_state[i] = 1
+
+        return np.concatenate((agent_state.reshape(np.prod(shape)), fruit_state))
+
+    def generate_grid_state(self):
+        # (2, 10, 10) grid
+        # one for fruit locations
+        # one for agent location
+        shape = self.map.shape()
+        agent_state = np.zeros(shape)
+        agent_state[self.agent_location] = 1
+
+        fruit_state = np.zeros(shape)
+
+        for location in self.possible_fruit_locations:
+            if location in self.current_fruit_locations:
+                fruit_state[location] = 1
+
+        return np.stack((agent_state, fruit_state))
+
+    def generate_channels_state(self):
+        # (n, 10, 10) grid
+        # on channel for each fruit
+
+        shape = self.map.shape()
+        agent_state = np.zeros(shape)
+        agent_state[self.agent_location] = 1
+
+        channels = [agent_state]
+
+        for location in self.possible_fruit_locations:
+            fruit_state = np.zeros(shape)
+
+            if location in self.current_fruit_locations:
+                fruit_state[location] = 1
+
+            channels.append(fruit_state)
+
+        return np.stack(channels)
+
+
+    def update_agent_location(self, action):
+        x, y = self.agent_location
+
+        if action == self.LEFT: #LEFT
+            y = y - 1
+        elif action == self.RIGHT: #RIGHT
+            y = y + 1
+        elif action == self.UP: #UP
+            x = x - 1
+        elif action == self.DOWN: #DOWN
+            x = x + 1
         else:
             raise "Invalid Action"
-        return next_location
 
-    def is_valid_next_location(self, next_location):
-        if next_location < 0: #TOP Border
-            return False
-
-        if next_location >= 100: #Bottom
-            return False
-
-        if self.agent_location % self.shape[0] == 0 and next_location + 1 == self.agent_location: #LEFT Border
-            return False
-
-        if (self.agent_location + 1) % self.shape[0] == 0 and next_location - 1 == self.agent_location: #RIGHT Border
-            return False
-
-        return True
+        if self.map.has_wall(x, y):
+            return self.agent_location
+        else:
+            self.agent_location = (x, y)
+            return self.agent_location
 
 
-    def _step(self, action, decompose_reward = True): #TODO clear this mess!
-        self.current_step += 1
+    def step(self, action, decompose_reward = False): #TODO clear this mess!
         done = False
-        reward = 0
-        d_reward = np.array([0] * len(self.possible_fruit_locations))
-        info = {"current_fruit_locations": self.current_fruit_locations,
-                "agent_location": self.agent_location,
-                "collected_fruit": None,
-                "possible_fruit_locations": self.possible_fruit_locations}
-        updated_agent_location =  self.next_location(action)
-        valid_action = self.is_valid_next_location(updated_agent_location)
+
+        reward = [0] * len(self.possible_fruit_locations)
+
+        info = {}
 
 
-        if valid_action:
-            self.grid[self.agent_location] = 0
+        self.update_agent_location(action)
 
-            if updated_agent_location in self.current_fruit_locations:
-                reward = 1
-                info["collected_fruit"] = updated_agent_location
-                self.collected_fruit += 1
-                idx = np.where(self.current_fruit_locations == updated_agent_location)
-                d_reward[idx] = reward
-                self.current_fruit_locations = np.delete(self.current_fruit_locations, idx)
+        if self.agent_location in self.current_fruit_locations:
+            idx = self.current_fruit_locations.index(self.agent_location)
+            r_idx = self.possible_fruit_locations.index(self.agent_location)
+            reward[r_idx] = 1
+            del self.current_fruit_locations[idx]
 
-            self.grid[updated_agent_location] = 1
-            self.agent_location = updated_agent_location
+        done = len(self.current_fruit_locations) == 0
 
-        done = (self.collected_fruit == self.number_of_fruits or self.current_step >= 300)
+        reward = reward if decompose_reward else sum(reward)
 
-        reward = d_reward if decompose_reward else reward
         return self.generate_state(), reward, done, info
 
-    def render_human(self):
-        from gym.envs.classic_control import rendering
-        screen_width = 600
-        screen_height = 600
-        world_width = 200
-        scale = screen_width/world_width
-        grid_size = 300
-        cell_size = 30
-        origin_x = screen_width / 2
-        origin_y = screen_height /2
-
-
-        if self.viewer is None:
-            self.viewer = rendering.Viewer(screen_width, screen_height)
-
-            # Draw grid
-            l = origin_x  - grid_size / 2
-            r = l + grid_size
-            t = origin_y + grid_size / 2
-            b = t - grid_size
-            grid_background = rendering.FilledPolygon([(l,b), (l,t), (r,t), (r,b)])
-            grid_background.set_color(239/255.0,239/255.0,239/255.0)
-
-            self.viewer.add_geom(grid_background)
-
-
-            for x in range(10):
-                for y in range(1, 11):
-                    l = origin_x  - (cell_size * 5) + (x * cell_size)
-                    r = l + cell_size
-                    t = origin_y - (cell_size * 5) + (y * cell_size)
-                    b = t - cell_size
-                    cell = rendering.PolyLine([(l,b), (l,t), (r,t), (r,b)], True)
-                    self.viewer.add_geom(cell)
-
-        # Draw Fruits
-        self.rendered_fruits = []
-        for loc in self.current_fruit_locations:
-            fruit = self.viewer.draw_circle((cell_size/2) -  4)
-            x = loc / 10
-            y = loc % 10
-            x = origin_x - (cell_size * 5) + (x * cell_size) + cell_size / 2
-            y = origin_y - (cell_size * 5) + (y * cell_size) + cell_size / 2
-            fruit_trans = rendering.Transform(translation=(x, y))
-            fruit.add_attr(fruit_trans)
-            fruit.set_color(21/255.0, 212/255.0, 78/255.0)
-            self.viewer.add_onetime(fruit)
-            self.rendered_fruits.append(fruit)
-
-        # Draw Agent
-        x, y = self.agent_location / 10, (self.agent_location % 10 + 1)
-        l = origin_x  - (cell_size * 5) + (x * cell_size)
-        r = l + cell_size
-        t = origin_y - (cell_size * 5) + (y * cell_size)
-        b = t - cell_size
-        x = origin_x - (cell_size * 5) + (x * cell_size) + cell_size / 2
-        y = origin_y - (cell_size * 5) + (y * cell_size) + cell_size / 2
-        self.rendered_agent = rendering.FilledPolygon([(l,b), (l,t), (r,t), (r,b)])
-        self.rendered_agent.set_color(1, 0, 0)
-        self.viewer.add_onetime(self.rendered_agent)
-
-        return self.viewer.render(return_rgb_array = False)
-
     def render_ansi(self):
-        reshaped_board = np.reshape(self.grid, self.shape)
+        shape = self.map.shape()
 
         outfile = StringIO()
-        outfile.write("    ")
-
-        for i in range(10):
-            outfile.write("{:3}".format((i + 1)))
-
-        for i in range(len(self.grid)):
-            if i % 10 == 0:
-                outfile.write("\n{:3}  ".format((i + 1) / 10 + 1))
-
-            if self.grid[i] == 1:
-                outfile.write(" X ")
-            elif i in self.current_fruit_locations:
-                outfile.write(" F ")
-            else:
-                outfile.write(" - ")
-
-        outfile.write('\n')
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                location = (i, j)
+                if self.map.has_wall(i, j) == 1:
+                    outfile.write(" * ")
+                elif location == self.agent_location:
+                    outfile.write(" X ")
+                elif location in self.current_fruit_locations:
+                    outfile.write(" F ")
+                else:
+                    outfile.write(" - ")
+            outfile.write('\n')
 
         return outfile
 
 
-    def _render(self, mode = 'human', close = False):
+    def render(self, mode = 'ansi', close = False):
         if close:
             return None
 
-        if mode == 'human':
-            return self.render_human()
-        else:
-            return self.render_ansi()
+        return self.render_ansi()

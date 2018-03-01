@@ -10,7 +10,7 @@ from abp.utils import clear_summary_path
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
-    max_episode_steps = env._max_episode_steps
+    max_episode_steps = 300
     state = env.reset()
     LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
 
@@ -34,7 +34,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         episode_summary = tf.Summary()
         for steps in range(max_episode_steps):
             action, q_values = agent.predict(state)
-            state, reward, done, info = env.step(action)
+            state, reward, done, info = env.step(action, decompose_reward = True)
 
             agent.reward(reward)
 

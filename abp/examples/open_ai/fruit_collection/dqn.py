@@ -9,7 +9,7 @@ from abp.utils import clear_summary_path
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env_spec = gym.make(evaluation_config.env)
-    max_episode_steps = env_spec._max_episode_steps
+    max_episode_steps = 300
     state = env_spec.reset()
     LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
 
@@ -35,15 +35,9 @@ def run_task(evaluation_config, network_config, reinforce_config):
             action, _ = agent.predict(state)
             state, reward, done, info = env_spec.step(action)
 
+            agent.reward(reward)
+
             total_reward += reward
-
-            possible_fruit_locations = info["possible_fruit_locations"]
-            collected_fruit = info["collected_fruit"]
-            current_fruit_locations = info["current_fruit_locations"]
-
-            r = None
-            if collected_fruit is not None:
-                agent.reward(1)
 
             if done or steps == (max_episode_steps - 1):
                 agent.end_episode(state)
@@ -64,6 +58,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         for steps in range(max_episode_steps):
             action, q_values = agent.predict(state)
             if evaluation_config.render:
+                #TODO
                 env_spec.render()
                 time.sleep(0.5)
 

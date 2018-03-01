@@ -12,7 +12,7 @@ def run_task(config):
 
     env_spec = gym.make(config.name)
     state = env_spec.reset()
-    max_episode_steps = env_spec._max_episode_steps
+    max_episode_steps = 300
 
     config.size_rewards = 10
     config.size_features = len(state)
