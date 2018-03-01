@@ -85,13 +85,22 @@ def run_task(evaluation_config, network_config, reinforce_config):
         total_reward = 0
         episode_summary = tf.Summary()
 
-        tower_to_kill, _ = choose_tower.predict(state.state)
+        tower_to_kill, q_values = choose_tower.predict(state.state)
 
         action = env.new_action()
+
+        action.skip = False
 
         action.attack_tower(tower_to_kill)
 
         state = env.act(action)
+
+        while not state.is_terminal():
+            time.sleep(0.3)
+            action = env.new_action()
+            action.skip = False
+            state = env.act(action)
+
 
         total_reward += state.reward
 
