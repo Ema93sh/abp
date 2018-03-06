@@ -53,7 +53,7 @@ def main():
     )
 
     parser.add_argument(
-        '--render',
+        '-r', '--render',
         help="Render task",
         dest='render',
         action="store_true"

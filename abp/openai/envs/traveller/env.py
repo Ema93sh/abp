@@ -63,9 +63,9 @@ class TravellerEnv(gym.Env):
         self.gold_locations = np.array([1, 2, 5])
         self.diamond_locations = np.array([8])
 
-        self._reset()
+        self.reset()
 
-    def _reset(self):
+    def reset(self):
         self.traveller_location = 0
         self.house_location = 9
         self.hill_locations = np.array([3])
@@ -123,7 +123,7 @@ class TravellerEnv(gym.Env):
         return True
 
 
-    def _step(self, action):
+    def step(self, action):
         done = False
         reward = 0
         decomposed_reward = {
@@ -263,7 +263,7 @@ class TravellerEnv(gym.Env):
         return outfile
 
 
-    def _render(self, mode = 'human', close = False):
+    def render(self, mode = 'human', close = False):
         if close:
             return None
 
