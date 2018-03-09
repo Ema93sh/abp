@@ -11,10 +11,11 @@ from abp.utils.histogram import MultiQHistogram
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
-    max_episode_steps = env._max_episode_steps
+    max_episode_steps = 1000
     state = env.reset()
 
     LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
+    LEFT, RIGHT, UP, DOWN, NOOP = [0, 1, 2, 3, 4]
 
     HOME_TYPE, TREASURE_TYPE, TERRAIN_TYPE = [0, 1, 2]
 
@@ -40,14 +41,11 @@ def run_task(evaluation_config, network_config, reinforce_config):
         episode_summary = tf.Summary()
         for steps in range(max_episode_steps):
             action, _ = traveller.predict(state)
-            state, reward, done, info = env.step(action)
-            total_reward += reward
-
-
-            reward = info["decomposed_reward"]
+            state, reward, done, info = env.step(action, decompose_level = 1)
+            total_reward += sum(reward)
 
             #TODO check if reward.values() always gives the same order
-            traveller.reward(list(reward.values()))
+            traveller.reward(reward)
 
             # TODO add option for type annotation instead of list of rewards
             # traveller.reward(HOME_TYPE, reward["HOME"])
@@ -65,7 +63,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     # TODO chart
     chart = MultiQHistogram(traveller.reward_types, len(traveller.choices), ("Left", "Right", "Up", "Down"), ylim = 5)
-    q_labels = ["Home", "Treasure", "Terrain"]
+    q_labels = ["Terrain", "Treasure", "Home", "Death"]
     # Test Episodes
     for episode in range(evaluation_config.test_episodes):
         action = None

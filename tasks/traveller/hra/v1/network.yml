@@ -1,21 +1,21 @@
 networks:
-  - name: "HOME_TYPE"
+  - name: "TERRAIN_TYPE"
     layers:
-        - 100
-        - 100
+         - 100
+         - 100
 
   - name: "TREASURE_TYPE"
     layers:
          - 100
          - 100
 
-  - name: "TERRAIN_TYPE"
+  - name: "HOME_TYPE"
     layers:
-         - 100
-         - 100
+        - 100
+        - 100
 
 input_shape:
-    - 71
+    - 197
 
 output_shape:
     - 4

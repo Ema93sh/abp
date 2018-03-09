@@ -1,11 +1,14 @@
-import sys
-import numpy as np
+import os
 from six import StringIO
+from copy import deepcopy
 
+import numpy as np
 import gym
-from gym import spaces
 
-class TravellerEnv(gym.Env):
+from gym import spaces, Env
+from .env_map import EnvMap
+
+class TravellerEnv(Env):
     """
     A simple gridworld problem. The objective of the agent to collect rewards and
     reach the house.
@@ -16,27 +19,6 @@ class TravellerEnv(gym.Env):
     2 - UP
     3 - DOWN
 
-    MAP (5 x 2 Grid):
-    ----
-
-    Index
-    ---------
-    | 0 | 1 |
-    | 2 | 3 |
-    | 4 | 5 |
-    | 6 | 7 |
-    | 8 | 9 |
-    ---------
-
-    Locations
-    ---------
-    | T | G |
-    | G | H |
-    | M | G |
-    | 6 | R |
-    | D | 9 |
-    ---------
-
     Terrains Costs:
     --------------
 
@@ -45,47 +27,68 @@ class TravellerEnv(gym.Env):
     River - 2
 
     """
-    metadata = {'render.modes': ['human', 'ansi']} #TODO render to RGB
-    HOME_TYPE, TREASURE_TYPE, TERRAIN_TYPE = [0, 1, 2]
+    metadata = {'render.modes': ['ansi'], 'state.modes': ['linear', 'grid', 'channels']} #TODO render to RGB
+    LEFT, RIGHT, UP, DOWN, NOOP = [0, 1, 2, 3, 4]
 
     def __init__(self):
         super(TravellerEnv, self).__init__()
         self.action_space = spaces.Discrete(4)
-        self.shape = (5, 2)
-        self.viewer  = None
-        self.days = {'mountain': 4,
+        self.days = {
+                     'mountain': 4,
                      'hill': 3,
-                     'river': 2}
+                     'river': 2
+                    }
+
         self.treasure = {
                          'gold': 2,
                          'diamond': 3
                          }
-        self.gold_locations = np.array([1, 2, 5])
-        self.diamond_locations = np.array([8])
+
+        self.current_dir = os.path.dirname(os.path.realpath(__file__))
 
         self.reset()
 
-    def reset(self):
-        self.traveller_location = 0
-        self.house_location = 9
-        self.hill_locations = np.array([3])
-        self.mountain_locations = np.array([4])
-        self.river_locations = np.array([7])
-        self.current_gold_locations = self.gold_locations
-        self.current_diamond_locations = self.diamond_locations
-        self.days_remaining = 8
+    def reset(self, map_name = "5x2_default", state_mode = "linear", days_remaining = 8):
+        self.map = EnvMap(os.path.join(self.current_dir, "maps", map_name + ".map"))
+
+        self.gold_locations = self.map.get_gold_locations()
+        self.diamond_locations = self.map.get_diamond_locations()
+
+        self.hill_locations = self.map.get_hill_locations()
+        self.mountain_locations = self.map.get_mountain_locations()
+        self.river_locations = self.map.get_river_locations()
+
+        self.traveller_location = self.map.get_traveller_locations()[0]
+        self.house_locations = self.map.get_home_locations()
+
+        self.current_gold_locations = deepcopy(self.gold_locations)
+        self.current_diamond_locations = deepcopy(self.diamond_locations)
+
+        self.days_remaining = days_remaining
+        self.state_mode = state_mode
+
         return self.generate_state()
 
     def one_shot_encode(self, locations):
-        grid = [0] * 10
+        shape = self.map.shape()
+        grid = np.zeros(shape)
         for loc in locations:
             grid[loc] = 1
-        return grid
+        return grid.reshape(np.prod(shape)).tolist()
 
 
     def generate_state(self):
+        #TODO days remaining is not part of the state
+        generate = {
+            "linear": self.generate_linear_state,
+            "grid": self.generate_grid_state,
+            "channels": self.generate_channels_state
+        }
+        return generate[self.state_mode]()
+
+    def generate_linear_state(self):
         traveller = self.one_shot_encode([self.traveller_location])
-        home = self.one_shot_encode([self.house_location])
+        home = self.one_shot_encode(self.house_locations)
         mountain = self.one_shot_encode(self.mountain_locations)
         river = self.one_shot_encode(self.river_locations)
         hill = self.one_shot_encode(self.hill_locations)
@@ -94,180 +97,194 @@ class TravellerEnv(gym.Env):
 
         return traveller + home + mountain + river + hill + gold + daimond + [self.days_remaining]
 
+        # shape = self.map.shape()
+        #
+        # terrain_state = np.zeros(shape)
+        # for location in (self.hill_locations + self.mountain_locations + self.river_locations):
+        #     terrain_state[location] = 1
+        #
+        # treasure_state = np.zeros(shape)
+        # for location in (self.current_gold_locations + self.current_diamond_locations):
+        #     treasure_state[location] = 1
+        #
+        # home_state = np.zeros(shape)
+        # for location in self.house_locations:
+        #     home_state[location] = 1
+        #
+        # traveller_state = np.zeros(shape)
+        # traveller_state[self.traveller_location] = 1
+        #
+        # days_remaining = np.zeros(shape)
+        # days_remaining += self.days_remaining
+        #
+        # reshape = list(map(lambda x: x.reshape(np.prod(shape)), [terrain_state, treasure_state, home_state, traveller_state, days_remaining]))
+        # return np.concatenate(reshape)
+
+
+    def generate_grid_state(self):
+        shape = self.map.shape()
+
+        terrain_state = np.zeros(shape)
+        terrain_state[self.hill_locations] = 1
+        terrain_state[self.mountain_locations] = 1
+        terrain_state[self.river_locations] = 1
+
+        treasure_state = np.zeros(shape)
+        treasure_state[self.current_gold_locations] = 1
+        treasure_state[self.current_diamond_locations] = 1
+
+        home_state = np.zeros(shape)
+        home_state[self.house_locations] = 1
+
+        traveller_state = np.zeros(shape)
+        traveller_state[self.traveller_location] = 1
+
+        return np.stack((terrain_state, treasure_state, home_state, traveller_state))
+
+    def generate_channels_state(self):
+        shape = self.shape
+        channels = []
+
+        gold_state = np.zeros(shape)
+        gold_state[self.current_gold_locations] = 1
+
+        diamond_state = np.zeros(shape)
+        diamond_state[self.current_diamond_locations] = 1
+
+        hill_state = np.zeros(shape)
+        hill_state[self.hill_locations] = 1
+
+        mountain_state = np.zeros(shape)
+        mountain_state[self.mountain_locations] = 1
+
+        river_state = np.zeros(shape)
+        river_state[self.river_locations] = 1
+
+        home_state = np.zeros(shape)
+        home_state[self.home_locations] = 1
+
+        traveller_state = np.zeros(shape)
+        traveller_state[self.traveller_location] = 1
+
+        return np.stack((gold_state, diamond_state, hill_state, mountain_state, river_state, home_state, traveller_state))
+
     def next_location(self, action):
-        if action == 0: #LEFT
-            next_location = self.traveller_location - 1
-        elif action == 1: #RIGHT
-            next_location = self.traveller_location + 1
-        elif action == 2: #UP
-            next_location = self.traveller_location - self.shape[1]
-        elif action == 3: #DOWN
-            next_location = self.traveller_location + self.shape[1]
+        x, y = self.traveller_location
+
+        if action == self.NOOP:
+            return self.traveller_location
+        elif action == self.LEFT: #LEFT
+            y = y - 1
+        elif action == self.RIGHT: #RIGHT
+            y = y + 1
+        elif action == self.UP: #UP
+            x = x - 1
+        elif action == self.DOWN: #DOWN
+            x = x + 1
         else:
             raise "Invalid Action"
-        return next_location
 
-    def is_valid_location(self, next_location):
-        if next_location < 0: #TOP Border
-            return False
-
-        if next_location >= 10: #Bottom
-            return False
-
-        if self.traveller_location % self.shape[1] == 0 and next_location + 1 == self.traveller_location: #LEFT Border
-            return False
-
-        if (self.traveller_location + 1) % self.shape[1] == 0 and next_location - 1 == self.traveller_location: #RIGHT Border
-            return False
-
-        return True
+        return (x, y)
 
 
-    def step(self, action):
-        done = False
-        reward = 0
-        decomposed_reward = {
-          self.HOME_TYPE : 0,
-          self.TREASURE_TYPE: 0,
-          self.TERRAIN_TYPE: 0
-        }
+    def step(self, action, decompose_level = 0):
+        # level 0 : no decomposition
+        # level 1 : home, treasure, terrain
+        # level 2 : home, gold, diamond, hill, mountain, river
+
         info = {}
+        done = False
+        terrain_reward  = [0, 0, 0]
+        treasure_reward = [0, 0]
+        home_reward = 0
+        death_reward = 0
+        days_reward = 0
 
         updated_location =  self.next_location(action)
 
-        if self.is_valid_location(updated_location):
-            self.traveller_location = updated_location
-
-            if updated_location in self.mountain_locations:
-                decomposed_reward[self.TERRAIN_TYPE] -= self.days['mountain']
-                self.days_remaining -= self.days['mountain']
-            elif updated_location in self.river_locations:
-                decomposed_reward[self.TERRAIN_TYPE] -= self.days['river']
-                self.days_remaining -= self.days['river']
-            elif updated_location in self.hill_locations:
-                decomposed_reward[self.TERRAIN_TYPE] -= self.days['hill']
-                self.days_remaining -= self.days['hill']
-            elif updated_location in self.current_gold_locations:
-                decomposed_reward[self.TREASURE_TYPE] += self.treasure['gold']
-                self.days_remaining -= 1
-                index = np.argwhere(self.current_gold_locations == updated_location)
-                self.current_gold_locations = np.delete(self.current_gold_locations, index)
-            elif updated_location in self.current_diamond_locations:
-                decomposed_reward[self.TREASURE_TYPE] += self.treasure['diamond']
-                index = np.argwhere(self.current_diamond_locations == updated_location)
-                self.current_diamond_locations = np.delete(self.current_diamond_locations, index)
-                self.days_remaining -= 1
-            elif updated_location == self.house_location:
-                decomposed_reward[self.HOME_TYPE] += 10
-                self.days_remaining -= 1
-            else:
-                reward = 0
-                self.days_remaining -= 1
-
-
-            self.traveller_location = updated_location
+        if self.map.has_wall(*updated_location):
+            days_reward -= 1
         else:
-            reward -= 1
-            self.days_remaining -= 1
+            self.traveller_location = updated_location
 
+            if self.traveller_location in self.hill_locations:
+                terrain_reward[0] -= self.days['hill']
+                days_reward -= self.days['hill']
 
-        done = self.days_remaining <= 0 or self.traveller_location == self.house_location
+            elif self.traveller_location in self.mountain_locations:
+                terrain_reward[1] -= self.days['mountain']
+                days_reward -= self.days['mountain']
 
-        if self.days_remaining <= 0 and self.traveller_location != self.house_location:
-            reward -= 10
-            decomposed_reward[self.HOME_TYPE] -= 10
+            elif self.traveller_location in self.river_locations:
+                terrain_reward[2] -= self.days['river']
+                days_reward -= self.days['river']
+
+            elif self.traveller_location in self.current_gold_locations:
+                treasure_reward[0] += self.treasure['gold']
+                idx = self.current_gold_locations.index(self.traveller_location)
+                del self.current_gold_locations[idx]
+                days_reward -= 1
+            elif self.traveller_location in self.current_diamond_locations:
+                treasure_reward[1] += self.treasure['diamond']
+                idx = self.current_diamond_locations.index(self.traveller_location)
+                del self.current_diamond_locations[idx]
+                days_reward -= 1
+            elif self.traveller_location in self.house_locations:
+                home_reward += 10
+                days_reward -= 1
+            else:
+                days_reward -= 1
+
+        self.days_remaining += days_reward
+
+        done = self.days_remaining <= 0 or self.traveller_location in self.house_locations
+
+        if done and self.traveller_location not in self.house_locations:
+            home_reward -= 10
 
 
         info["days_remaining"] = self.days_remaining
-        info["decomposed_reward"] = decomposed_reward
 
-        return self.generate_state(), sum(decomposed_reward.values()), done, info
+        if decompose_level == 0:
+            reward = sum(terrain_reward) + sum(treasure_reward) + home_reward + death_reward
+        if decompose_level == 1:
+            reward = [sum(terrain_reward), sum(treasure_reward), home_reward, death_reward]
+        if decompose_level == 2:
+            reward = terrain_reward + treasure_reward + [home_reward] + [death_reward]
 
-    def render_human(self):
-        from gym.envs.classic_control import rendering
-
-        screen_width = 600
-        screen_height = 600
-        world_width = 200
-        scale = screen_width/world_width
-        grid_size = 10
-        cell_size = 50
-        origin_x = screen_width / 2
-        origin_y = screen_height /2
-
-
-        if self.viewer is None:
-            self.viewer = rendering.Viewer(screen_width, screen_height)
-
-            # Draw grid
-            l = origin_x  - grid_size / 2
-            r = l + grid_size
-            t = origin_y + grid_size / 2
-            b = t - grid_size
-            grid_background = rendering.FilledPolygon([(l,b), (l,t), (r,t), (r,b)])
-            grid_background.set_color(239/255.0,239/255.0,239/255.0)
-
-            self.viewer.add_geom(grid_background)
-
-
-            for x in range(2):
-                for y in range(5):
-                    l = origin_x  - (cell_size * 5) + (x * cell_size)
-                    r = l + cell_size
-                    t = origin_y - (cell_size * 5) + (y * cell_size)
-                    b = t - cell_size
-                    cell = rendering.PolyLine([(l,b), (l,t), (r,t), (r,b)], True)
-                    self.viewer.add_geom(cell)
-
-        # Draw Traveller
-        x, y = self.traveller_location / 2, (self.traveller_location % 5 + 1)
-        l = origin_x  - (cell_size * 5) + (x * cell_size)
-        r = l + cell_size
-        t = origin_y - (cell_size * 5) + (y * cell_size)
-        b = t - cell_size
-        x = origin_x - (cell_size * 5) + (x * cell_size) + cell_size / 2
-        y = origin_y - (cell_size * 5) + (y * cell_size) + cell_size / 2
-
-        self.rendered_agent = rendering.FilledPolygon([(l,b), (l,t), (r,t), (r,b)])
-        self.rendered_agent.set_color(1, 0, 0)
-        self.viewer.add_onetime(self.rendered_agent)
-
-        return self.viewer.render(return_rgb_array = False)
+        return self.generate_state(), reward, done, info
 
     def render_ansi(self):
+        shape = self.map.shape()
+
         outfile = StringIO()
-
-        for i in range(10):
-            if self.traveller_location == i:
-                outfile.write(" T ")
-            elif i == self.house_location:
-                outfile.write(" E ")
-            elif i in self.mountain_locations:
-                outfile.write(" M ")
-            elif i in self.hill_locations:
-                outfile.write(" H ")
-            elif i in self.river_locations:
-                outfile.write(" R ")
-            elif i in self.current_gold_locations:
-                outfile.write(" G ")
-            elif i in self.current_diamond_locations:
-                outfile.write(" D ")
-            else:
-                outfile.write(" - ")
-
-            if (i + 1) % 2 == 0:
-                outfile.write("\n")
-
-        outfile.write('\n')
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                location = (i, j)
+                if self.map.has_wall(i, j) == 1:
+                    outfile.write(" * ")
+                elif location == self.traveller_location:
+                    outfile.write(" T ")
+                elif location in self.current_gold_locations:
+                    outfile.write(" G ")
+                elif location in self.current_diamond_locations:
+                    outfile.write(" D ")
+                elif location in self.hill_locations:
+                    outfile.write(" H ")
+                elif location in self.mountain_locations:
+                    outfile.write(" M ")
+                elif location in self.river_locations:
+                    outfile.write(" R ")
+                elif location in self.house_locations:
+                    outfile.write(" F ")
+                else:
+                    outfile.write(" - ")
+            outfile.write('\n')
 
         return outfile
 
-
-    def render(self, mode = 'human', close = False):
+    def render(self, mode = 'ansi', close = False):
         if close:
             return None
 
-        if mode == 'human':
-            return self.render_human()
-        else:
-            return self.render_ansi()
+        return self.render_ansi()

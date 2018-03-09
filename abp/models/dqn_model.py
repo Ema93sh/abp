@@ -82,7 +82,7 @@ class DQNModel(object):
         with tf.variable_scope(self.name): #TODO. Create a valid scope name
 
             shape = self.state.get_shape().as_list()        # a list: [None, 9, 2]
-            input_layer_size = np.prod(shape[1:])                       # input_layer_size = prod(9,2) = 18
+            input_layer_size = np.prod(shape[1:])           # input_layer_size = prod(9,2) = 18
             input_layer = tf.reshape(self.state, [-1, input_layer_size])
 
             with tf.variable_scope("Hidden_Layer"):

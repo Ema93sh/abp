@@ -17,7 +17,6 @@ register(
 register(
     id='Traveller-v0',
     entry_point='abp.openai.envs.traveller:TravellerEnv',
-    max_episode_steps=8, #TODO
     reward_threshold=12 #TODO
 )
 
