@@ -1,12 +1,11 @@
 import gym
+import time
 import numpy as np
 import tensorflow as tf
 
 from abp import HRAAdaptive
 from abp.utils import clear_summary_path
 
-#TODO
-# *reward wrapper
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
@@ -59,6 +58,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         for steps in range(max_episode_steps):
             action, q_values = agent.predict(state)
+            if evaluation_config.render:
+                s = env.render(mode='ansi')
+                print(s.getvalue())
+                time.sleep(0.5)
 
             state, reward, done, info = env.step(action)
 

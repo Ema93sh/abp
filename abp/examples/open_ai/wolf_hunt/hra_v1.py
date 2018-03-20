@@ -5,21 +5,24 @@ import logging
 import gym
 import tensorflow as tf
 
-from abp import DQNAdaptive, QPredictor
+from abp import HRAAdaptive
 from abp.utils import clear_summary_path
+
+
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
-    max_episode_steps = 10000
+    max_episode_steps = 100
+
     state = env.reset()
-    UP, DOWN, LEFT, RIGHT, NOOP = [0, 1, 2, 3, 4]
 
-    wolf1 = DQNAdaptive(name = "wolf1", choices = [UP, DOWN, LEFT, RIGHT, NOOP], network_config = network_config, reinforce_config = reinforce_config)
-    wolf2 = DQNAdaptive(name = "wolf2", choices = [UP, DOWN, LEFT, RIGHT, NOOP], network_config = network_config, reinforce_config = reinforce_config)
+    LEFT, RIGHT, UP, DOWN, NOOP = [0, 1, 2, 3, 4]
 
-    predictor_network = copy.deepcopy(network_config)
-    predictor_network.output_shape = [1]
-    steps_predictor = QPredictor(name = "No Steps to catch rabbit", network_config = predictor_network)
+    wolf1 = HRAAdaptive(name = "wolf1", choices = [UP, DOWN, LEFT, RIGHT, NOOP], network_config = network_config, reinforce_config = reinforce_config)
+    wolf2 = HRAAdaptive(name = "wolf2", choices = [UP, DOWN, LEFT, RIGHT, NOOP], network_config = network_config, reinforce_config = reinforce_config)
+
+    steps_to_catch_rabbit = QPredictor(name = "No Steps to catch rabbit", network_config = network_config)
+
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
     clear_summary_path(training_summaries_path)
@@ -30,18 +33,12 @@ def run_task(evaluation_config, network_config, reinforce_config):
         state = env.reset()
         total_reward = 0
         episode_summary = tf.Summary()
-
         for step in range(max_episode_steps):
-            wolf1_action, _ = wolf1.predict(state)
-            wolf2_action, _ = wolf2.predict(state)
-
             actions = {}
-            actions["W1"] = wolf1_action
-            actions["W2"] = wolf2_action
+            actions["W1"], _ = wolf1.predict(state)
+            actions["W2"], _ = wolf2.predict(state)
 
             state, reward, done, info = env.step(actions)
-
-            steps_predictor.learn(state, None, 1, done, 0)
 
             wolf1.reward(reward)
             wolf2.reward(reward)
@@ -54,7 +51,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
                 logging.info("Episode %d : %d" % (episode + 1, total_reward))
                 episode_summary.value.add(tag = "Reward", simple_value = total_reward)
-                episode_summary.value.add(tag = "Steps", simple_value = step + 1)
+                episode_summary.value.add(tag = "Steps to catch wolf", simple_value = step + 1)
                 train_summary_writer.add_summary(episode_summary, episode + 1)
                 break
 
@@ -76,37 +73,27 @@ def run_task(evaluation_config, network_config, reinforce_config):
         action = None
         for step in range(max_episode_steps):
             if evaluation_config.render:
-                v = steps_predictor.predict(state)
                 s = env.render()
                 print(s.getvalue())
-                print("Steps to catch rabbit: ", v)
                 print("Press enter to continue:")
                 sys.stdin.read(1)
 
-            wolf1_action, _ = wolf1.predict(state)
-            wolf2_action, _ = wolf2.predict(state)
-
             actions = {}
-            actions["W1"] = wolf1_action
-            actions["W2"] = wolf2_action
+            actions["W1"], _ = wolf1.predict(state)
+            actions["W2"], _ = wolf2.predict(state)
 
             state, reward, done, info = env.step(actions)
 
             total_reward += reward
 
-            if evaluation_config.render:
-                print("Wolf1 Action", env.action_map[wolf1_action])
-                print("Wolf2 Action", env.action_map[wolf2_action])
-                print("Reward", reward)
-
             if done:
                 if evaluation_config.render:
+                    print("END OF EPISODE")
                     s = env.render()
                     print(s.getvalue())
-                    print("Total Reward", total_reward)
                     print("********** END OF EPISODE *********")
                 episode_summary.value.add(tag = "Reward", simple_value = total_reward)
-                episode_summary.value.add(tag = "Steps", simple_value = step + 1)
+                episode_summary.value.add(tag = "Steps to catch wolf", simple_value = step + 1)
                 test_summary_writer.add_summary(episode_summary, episode + 1)
                 break
 

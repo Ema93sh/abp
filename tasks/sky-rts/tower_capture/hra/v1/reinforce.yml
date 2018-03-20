@@ -1,4 +1,4 @@
-decay_steps: 10
+decay_steps: 5
 starting_epsilon: 1
 discount_factor: 0.99
 batch_size: 35

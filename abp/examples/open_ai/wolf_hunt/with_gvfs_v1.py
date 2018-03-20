@@ -33,9 +33,11 @@ def run_task(evaluation_config, network_config, reinforce_config):
             wolf1_action, _ = wolf1.predict(state)
             wolf2_action, _ = wolf2.predict(state)
 
-            action  = (wolf1_action, wolf2_action)
+            actions = {}
+            actions["W1"] = wolf1_action
+            actions["W2"] = wolf2_action
 
-            state, reward, done, info = env.step(action)
+            state, reward, done, info = env.step(actions)
 
             steps_to_catch_rabbit.learn(state, wolf1_action, 1, done, 0)
 
@@ -82,9 +84,11 @@ def run_task(evaluation_config, network_config, reinforce_config):
             wolf1_action, _ = wolf1.predict(state)
             wolf2_action, _ = wolf2.predict(state)
 
-            action  = (wolf1_action, wolf2_action)
+            actions = {}
+            actions["W1"] = wolf1_action
+            actions["W2"] = wolf2_action
 
-            state, reward, done, info = env.step(action)
+            state, reward, done, info = env.step(actions)
 
             total_reward += reward
 

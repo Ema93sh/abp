@@ -20,18 +20,20 @@ class FruitCollectionEnv(gym.Env):
 
     """
     metadata = {'render.modes': ['ansi'], 'state.modes': ['linear', 'grid', 'channels']} #TODO render to RGB
-    LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
+    LEFT, RIGHT, UP, DOWN, NOOP = [0, 1, 2, 3, 4]
 
     def __init__(self, map_name = "10x10_default"):
         super(FruitCollectionEnv, self).__init__()
         self.action_space = spaces.Discrete(4)
         self.current_dir = os.path.dirname(os.path.realpath(__file__))
-
+        self.max_step = 300
+        self.num_envs = 10
         self.reset(map_name)
 
-    def reset(self, map_name = "10x10_default", number_of_fruits = 5, state_mode = "linear"):
+    def reset(self, map_name = "10x10_default", number_of_fruits = 5, state_mode = "channels"):
         self.number_of_fruits = number_of_fruits
         self.state_mode = state_mode
+        self.current_step = 0
 
         self.map = EnvMap(os.path.join(self.current_dir, "maps", map_name + ".map"))
 
@@ -44,7 +46,9 @@ class FruitCollectionEnv(gym.Env):
         for i in selected_index:
             self.current_fruit_locations.append(self.possible_fruit_locations[i])
 
-        return self.generate_state()
+        state = self.generate_state()
+        self.observation_space = spaces.Box(low= 0, high = 1, shape = state.shape)
+        return state
 
     def generate_state(self):
         generate = {
@@ -116,7 +120,10 @@ class FruitCollectionEnv(gym.Env):
             x = x - 1
         elif action == self.DOWN: #DOWN
             x = x + 1
+        elif action == self.NOOP:
+            return self.agent_location
         else:
+            print(action)
             raise "Invalid Action"
 
         if self.map.has_wall(x, y):
@@ -128,6 +135,7 @@ class FruitCollectionEnv(gym.Env):
 
     def step(self, action, decompose_reward = False): #TODO clear this mess!
         done = False
+        self.current_step += 1
 
         reward = [0] * len(self.possible_fruit_locations)
 
@@ -142,7 +150,7 @@ class FruitCollectionEnv(gym.Env):
             reward[r_idx] = 1
             del self.current_fruit_locations[idx]
 
-        done = len(self.current_fruit_locations) == 0
+        done = len(self.current_fruit_locations) == 0 or self.current_step == self.max_step
 
         reward = reward if decompose_reward else sum(reward)
 
