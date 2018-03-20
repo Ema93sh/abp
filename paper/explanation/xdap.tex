@@ -569,7 +569,7 @@ to use reward decomposition and using predictors
 \todo[inline]{Need a better way to say this! Should it be called predictors?}
 
 
-\subsection{Explanation using Q value}
+\subsection{Explanation using ABP}
 \todo[inline]{
 1. So far we havent talked about how the adaptive variable choose its value. Is it needed? Or should it be a reference to another paper? \\
 2. Need a better title \\
@@ -582,7 +582,7 @@ that the adaptive variable holds is then based on the Q function. The Q function
 an explictic semantics \cite{sutton2011horde}. In the case of the traveller example it represents the knowledge of
 which action to take to maximize the reward or to be more explicit which action should the traveller take to reach the
 destination in 8 days and collect as much treasure as possible.
-\todo[inline]{Need to rewrite this in a better way! Important concept for the paper}
+\todo[inline]{Need to rewrite this in a better way! Important concept for the paper. Elaborate more!}
 
 \missingfigure{Show an example of traveller step with its corresponding Q value as histogram}
 
@@ -613,7 +613,7 @@ types. For example we can decompose the reward into 3 types for the traveller pr
 Type 1 would describes the subproblem of the traveller reaching home. Type 2 would define the subproblem of traveller finding treasure.
 and Type 3 is the subproblem of the traveller avoiding terrains as much of problem.
 
-\subsection{Adaptive Program using reward decomposition}
+\subsection{Adaptive Program using reward types}
 
 The adaptive program in Listing \ref{lst:abp_traveller} can be refactored to use reward types.
 
@@ -631,13 +631,10 @@ for days in range(8):
 
   state, reward, done, info = env.step(direction_to_move)
 
-  #reward for reaching home
   traveller.reward(reward["Home"], HOME_TYPE)
 
-  #reward for finding a treasure
   traveller.reward(reward["Treasure"], TREASURE_TYPE)
 
-  #reward related to terrain
   traveller.reward(reward["Terrain"], TERRAIN_TYPE)
 
   if done:
@@ -667,6 +664,87 @@ has more information regarding the decision of the adaptive variable.
 2.What are the drawbacks? w.r.t RL (discount factor), w.r.t Explanation
 }
 
+\section{Performance using reward types}
+
+
+\section{Wolf Hunting Problem}
+One of the issues with the approach mentioned above is that the environment may not have a single reward
+type. This makes it difficult to use the approach. In order to overcome the difficulty  we introduce a
+new kind of abstraction called predictors. To illustrate the use of predictors consider a simple girdworld problem consisting
+of two wolves and a rabbit. The objective is for the wolves to capture the rabbit as fast a possible.
+The optimal way of doing this would be for the wolves to coordinate with each other. In this case there is only one
+reward type which gives the value 1 when the wolves capture the rabbit and 0 otherwise. The corresponding ABP program is shown
+in the Listing \ref{lst:abp_wolf_hunt}.
+
+\missingfigure{Show figure for wolf hunting problem}
+
+
+\begin{lstlisting}[language = Python,
+                   label = {lst:abp_wolf_hunt},
+                   caption = {Adaptive Program for wolf hunt problem},
+                   captionpos = b]
+
+wolf1 = Adaptive(choices = [UP, DOWN, LEFT, RIGHT])
+wolf2 = Adaptive(choices = [UP, DOWN, LEFT, RIGHT])
+
+state = env.reset()
+
+for steps in range(env.max_episode_steps):
+  wolf1_action = wolf1.predict(state)
+  wolf2_action = wolf2.predict(state)
+
+  action = (wolf1_action, wolf2_action)
+
+  state, reward, done, info = env.step(action)
+
+  wolf1.reward(reward)
+  wolf2.reward(reward)
+
+  if done:
+     wolf1.end_episode(state)
+     wolf2.end_episode(state)
+     break
+
+\end{lstlisting}
+
+\section{Explanation using ABP}
+
+\missingfigure{Show figure for Q values for both the wolves}
+
+\section{XABP Program}
+
+
+\begin{lstlisting}[language = Python,
+                   label = {lst:abp_wolf_hunt},
+                   caption = {Adaptive Program for wolf hunt problem},
+                   captionpos = b]
+
+wolf1 = Adaptive(choices = [UP, DOWN, LEFT, RIGHT])
+wolf2 = Adaptive(choices = [UP, DOWN, LEFT, RIGHT])
+
+no_of_steps = Predictor()
+
+state = env.reset()
+
+for steps in range(env.max_episode_steps):
+  wolf1_action = wolf1.predict(state)
+  wolf2_action = wolf2.predict(state)
+
+  action = (wolf1_action, wolf2_action)
+
+  state, reward, done, info = env.step(action)
+
+  no_of_steps.learn(state, 1, done, 0)
+
+  wolf1.reward(reward)
+  wolf2.reward(reward)
+
+  if done:
+     wolf1.end_episode(state)
+     wolf2.end_episode(state)
+     break
+
+\end{lstlisting}
 
 % needed in second column of first page if using \IEEEpubid
 %\IEEEpubidadjcol

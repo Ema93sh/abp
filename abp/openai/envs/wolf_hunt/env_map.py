@@ -1,23 +1,30 @@
+import numpy as np
+
 class EnvMap(object):
     """EnvMap object used to load and render map from file"""
-    WALL, RABBIT, WOLF_1, WOLF_2 = [1, 2, 3, 4]
 
     def __init__(self, map_path):
         super(EnvMap, self).__init__()
         self.map_path = map_path
-        self.grid = []
         self.load_map()
-        self.wolf1_location = self.get_location(self.WOLF_1)
-        self.wolf2_location = self.get_location(self.WOLF_2)
-        self.rabbit_location = self.get_location(self.RABBIT)
 
 
-    def get_location(self, loc_type):
+    def get_predator_locations(self):
+        predator_locations = {}
         for row in range(len(self.grid)):
             for col in range(len(self.grid[row])):
-                if self.grid[row][col] == loc_type:
-                    return (row, col)
-        return None
+                if self.has_predator(row, col):
+                    predator_locations[self.grid[row][col]] = (row, col)
+        return predator_locations
+
+
+    def get_prey_locations(self):
+        prey_locations = {}
+        for row in range(len(self.grid)):
+            for col in range(len(self.grid[row])):
+                if self.has_prey(row, col):
+                    prey_locations[self.grid[row][col]] = (row, col)
+        return prey_locations
 
 
     def load_map(self):
@@ -26,7 +33,7 @@ class EnvMap(object):
         with open(self.map_path) as fp:
             line = fp.readline()
             while line:
-                row = map(int, line.strip().split(' '))
+                row = list(line.strip().split(' '))
                 self.grid.append(row)
                 line = fp.readline()
 
@@ -37,8 +44,16 @@ class EnvMap(object):
 
 
     def has_wall(self, row, col):
-        return self.grid[row][col] == self.WALL
+        return self.grid[row][col] == "1"
 
 
-    def size(self):
-        return len(self.grid), len(self.grid[0])
+    def has_predator(self, row, col):
+        return "W" in self.grid[row][col]
+
+
+    def has_prey(self, row, col):
+        return "R" in self.grid[row][col]
+
+
+    def shape(self):
+        return (len(self.grid), len(self.grid[0]))

@@ -1,4 +1,5 @@
 import gym
+import time
 import numpy as np
 # import tensorflow as tf
 
@@ -13,8 +14,7 @@ from tensorboardX import SummaryWriter
 
 def run_task(evaluation_config, network_config, reinforce_config, log=True):
     env = gym.make(evaluation_config.env)
-    max_episode_steps = env._max_episode_steps
-    # env = RewardWrapper(env)
+    max_episode_steps = 300
     state = env.reset()
     LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
 
@@ -39,7 +39,7 @@ def run_task(evaluation_config, network_config, reinforce_config, log=True):
         # episode_summary = tf.Summary()
         for steps in range(max_episode_steps):
             action, q_values = agent.predict(state)
-            state, reward, done, info = env.step(action)
+            state, reward, done, info = env.step(action, decompose_reward = True)
 
             agent.reward(reward)
 
@@ -68,6 +68,10 @@ def run_task(evaluation_config, network_config, reinforce_config, log=True):
 
         for steps in range(max_episode_steps):
             action, q_values = agent.predict(state)
+            if evaluation_config.render:
+                s = env.render(mode='ansi')
+                print(s.getvalue())
+                time.sleep(0.5)
 
             state, reward, done, info = env.step(action)
 

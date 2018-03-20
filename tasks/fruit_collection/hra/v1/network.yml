@@ -1,24 +1,47 @@
+# [0, 4, 9, 49, 54, 59, 64, 89, 94, 99]
 networks:
-  - name: "UP"
+  - name: "location0"
     layers:
-        - 100
+        - 110
 
-  - name: "DOWN"
+  - name: "location4"
     layers:
-         - 100
+        - 110
 
-  - name: "LEFT"
+  - name: "location9"
     layers:
-        - 100
+        - 110
 
-
-  - name: "RIGHT"
+  - name: "location49"
     layers:
-         - 100
+        - 110
 
+  - name: "location54"
+    layers:
+        - 110
+
+  - name: "location59"
+    layers:
+        - 110
+
+  - name: "location64"
+    layers:
+        - 110
+
+  - name: "location89"
+    layers:
+        - 110
+
+  - name: "location94"
+    layers:
+        - 110
+
+  - name: "location99"
+    layers:
+        - 110
 
 input_shape:
-    - 110
+    - 154
 
 output_shape:
      - 4

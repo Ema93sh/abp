@@ -19,7 +19,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     predictor_network = copy.deepcopy(network_config)
     predictor_network.output_shape = [1]
-    steps_to_catch_rabbit = QPredictor(name = "No Steps to catch rabbit", network_config = predictor_network)
+    steps_predictor = QPredictor(name = "No Steps to catch rabbit", network_config = predictor_network)
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
     clear_summary_path(training_summaries_path)
@@ -35,11 +35,13 @@ def run_task(evaluation_config, network_config, reinforce_config):
             wolf1_action, _ = wolf1.predict(state)
             wolf2_action, _ = wolf2.predict(state)
 
-            action  = (wolf1_action, wolf2_action)
+            actions = {}
+            actions["W1"] = wolf1_action
+            actions["W2"] = wolf2_action
 
-            state, reward, done, info = env.step(action)
+            state, reward, done, info = env.step(actions)
 
-            steps_to_catch_rabbit.learn(state, 0, 1, done, 0)
+            steps_predictor.learn(state, None, 1, done, 0)
 
             wolf1.reward(reward)
             wolf2.reward(reward)
@@ -74,7 +76,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         action = None
         for step in range(max_episode_steps):
             if evaluation_config.render:
-                v = steps_to_catch_rabbit.predict(state)
+                v = steps_predictor.predict(state)
                 s = env.render()
                 print(s.getvalue())
                 print("Steps to catch rabbit: ", v)
@@ -84,16 +86,17 @@ def run_task(evaluation_config, network_config, reinforce_config):
             wolf1_action, _ = wolf1.predict(state)
             wolf2_action, _ = wolf2.predict(state)
 
-            action  = (wolf1_action, wolf2_action)
+            actions = {}
+            actions["W1"] = wolf1_action
+            actions["W2"] = wolf2_action
 
-            state, reward, done, info = env.step(action)
+            state, reward, done, info = env.step(actions)
 
             total_reward += reward
 
             if evaluation_config.render:
-                w1, w2 = action
-                print("Wolf1 Action", env.env.action_map[w1])
-                print("Wolf2 Action", env.env.action_map[w2])
+                print("Wolf1 Action", env.action_map[wolf1_action])
+                print("Wolf2 Action", env.action_map[wolf2_action])
                 print("Reward", reward)
 
             if done:

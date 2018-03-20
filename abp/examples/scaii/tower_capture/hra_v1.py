@@ -97,7 +97,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
-        state = env.reset(visualize=evaluation_config.render)
+        state = env.reset(visualize=True)
         total_reward = 0
         episode_summary = tf.Summary()
 
@@ -105,14 +105,18 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         if evaluation_config.render:
             chart.render(q_values, q_labels)
-            print("Press enter to continue:")
-            sys.stdin.read(1)
 
         action = env.new_action()
-
         action.attack_quadrant(tower_to_kill)
+        action.skip = False if  evaluation_config.render else True
 
         state = env.act(action)
+
+        while not state.is_terminal():
+            time.sleep(0.5)
+            action = env.new_action()
+            action.skip = False
+            state = env.act(action)
 
         total_reward += state.reward
 

@@ -11,7 +11,7 @@ def run_task(config):
 
     env_spec = gym.make(config.name)
     state = env_spec.reset()
-    max_episode_steps = env_spec._max_episode_steps
+    max_episode_steps = 300
 
     config.action_size = env_spec.action_space.n
 

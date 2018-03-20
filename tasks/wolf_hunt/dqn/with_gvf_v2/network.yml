@@ -1,9 +1,9 @@
 input_shape:
-    - 147
+    - 288
 
 layers:
-    - 100
-    - 100
+    - 210
+    - 210
 
 output_shape:
     - 5

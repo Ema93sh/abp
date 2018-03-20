@@ -10,6 +10,12 @@ class Memory(object):
     def current_size(self):
         return len(self.memory)
 
+    def clear(self):
+        self.memory = []
+
+    def all(self):
+        return self.memory
+
     def add(self, item):
         if len(self.memory) > self.size:
             self.memory.pop()

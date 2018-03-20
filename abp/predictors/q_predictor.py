@@ -1,4 +1,4 @@
-import logging
+import  logging
 logger = logging.getLogger('root')
 
 import tensorflow as tf
@@ -15,6 +15,7 @@ class QPredictor(object):
     #TODO
     # * discount factor how to decide?
     # * batch size should it be the same?
+    # * save predictor
 
     def __init__(self, name, network_config, discount_factor = 0.99, batch_size = 32):
         super(QPredictor, self).__init__()
@@ -36,14 +37,17 @@ class QPredictor(object):
         self.target_model.save_network()
         self.session.close()
 
-    def learn(self, current_state, action, reward, terminal, terminal_reward):
+    def learn(self, current_state, action, reward, is_terminal, terminal_reward):
         self.steps += 1
 
-        if terminal:
+        if is_terminal:
             reward = terminal_reward
 
+        if action is None:
+            action = 0
+
         if self.previous_state is not None:
-            experience = Experience(self.previous_state, action, reward, current_state, terminal)
+            experience = Experience(self.previous_state, action, reward, current_state, is_terminal)
             self.replay_memory.add(experience)
 
         if self.steps % self.update_frequency == 0:
@@ -74,9 +78,9 @@ class QPredictor(object):
 
         q_next = self.target_model.predict_batch(next_states)
 
-        q_max = np.max(q_next, axis = 1)
+        q_mean = np.mean(q_next, axis = 1)
 
-        q_max = np.array([ a * b if a == 0 else b for a,b in zip(is_terminal, q_max)])
+        q_mean = np.array([ a * b if a == 0 else b for a,b in zip(is_terminal, q_mean)])
 
         q_values = self.eval_model.predict_batch(states)
 
@@ -84,7 +88,7 @@ class QPredictor(object):
 
         batch_index = np.arange(self.batch_size, dtype=np.int32)
 
-        q_target[batch_index, actions] = reward + self.discount_factor * q_max
+        q_target[batch_index, actions] = reward + self.discount_factor * q_mean
 
         self.eval_model.fit(states, q_target, self.steps)
 

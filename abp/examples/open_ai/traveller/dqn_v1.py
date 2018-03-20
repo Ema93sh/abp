@@ -10,10 +10,8 @@ from abp.utils.histogram import SingleQHistogram
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
-    max_episode_steps = env._max_episode_steps
-    state = env.reset()
-
-    LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
+    max_episode_steps = 1000
+    LEFT, RIGHT, UP, DOWN, NOOP = [0, 1, 2, 3, 4]
 
     traveller = DQNAdaptive(name="traveller",
                         choices = [LEFT, RIGHT, UP, DOWN],

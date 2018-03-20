@@ -1,5 +1,5 @@
 input_shape:
-    - 110
+    - 154
 
 layers:
     - 200
