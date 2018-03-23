@@ -1,6 +1,6 @@
 name: "SkyRTS"
 env: "SkyRTS-v0"
 summaries_path: "./tensorflow_summaries/SkyRTS/tower_capture/dqn/v1/evaluation_summary"
-test_episodes: 100
-training_episodes: 300
+test_episodes: 1
+training_episodes: 500
 render: False

@@ -5,7 +5,10 @@ from torch.autograd import Variable
 from abp.adaptives.common.memory import Memory
 from abp.adaptives.common.experience import Experience
 from abp.models import DQNModel
+
 from tensorboardX import SummaryWriter
+import excitationbp as eb
+
 
 logger = logging.getLogger('root')
 
@@ -50,6 +53,7 @@ class DQNAdaptive(object):
 
     def predict(self, state):
         self.steps += 1
+        saliencies = []
 
         # add to experience
         if self.previous_state is not None:
@@ -67,6 +71,17 @@ class DQNAdaptive(object):
             action = np.argmax(q_values)
             choice = self.choices[action]
 
+
+        if self.explanation:
+            eb.use_eb(True)
+            prob_outputs = Variable(torch.zeros((len(self.choices),)))
+            for action in range(len(self.choices)):
+                prob_outputs[action] = 1
+                saliency = eb.excitation_backprop(self.eval_model.model, _state, prob_outputs, contrastive=False)
+                saliency = np.squeeze(saliency.view(*_state.shape).data.numpy())
+                saliencies.append(saliency)
+
+
         if self.learning and self.steps % self.update_frequency == 0:
             logger.debug("Replacing target model for %s" % self.name)
             self.target_model.replace(self.eval_model)
@@ -78,7 +93,7 @@ class DQNAdaptive(object):
         self.previous_state = state
         self.previous_action = action
 
-        return choice, q_values
+        return choice, q_values, saliencies
 
     def disable_learning(self):
         logger.info("Disabled Learning for %s agent" % self.name)

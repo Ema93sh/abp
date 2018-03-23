@@ -1,0 +1,32 @@
+networks:
+  - name: "Agent_Death"
+    layers:
+        - 50
+        - 50
+
+  - name: "Enemy_Kill"
+    layers:
+        - 50
+        - 50
+
+  - name: "Friendly_Kill"
+    layers:
+        - 50
+        - 50
+
+
+input_shape:
+    - 40
+    - 40
+    - 6
+
+layers:
+    - 100
+
+output_shape:
+    - 4
+
+network_path: "./saved_models/SkyRTS/tower_capture/hra/v1/network.ckpt"
+summaries_path: "./tensorflow_summaries/SkyRTS/tower_capture/hra/v1/network_summary"
+summaries_step: 150
+restore_network: False

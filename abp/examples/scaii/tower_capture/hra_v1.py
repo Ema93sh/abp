@@ -5,6 +5,7 @@ logger = logging.getLogger('root')
 
 import time
 from scaii.env.sky_rts.env.scenarios.tower_example import TowerExample
+from scaii.env.explanation import Explanation, BarChart, BarGroup, Bar
 import tensorflow as tf
 import numpy as np
 
@@ -14,6 +15,14 @@ from abp.utils import clear_summary_path
 from abp.utils.histogram import MultiQHistogram
 
 # Size State: 100x100x6
+reward_types = {
+    0: "Killed Enemy Small",
+    1: "Killed Enemy Big",
+    2: "Killed Friendly Small",
+    3: "Killed Friendly Big",
+    4: "Agent Died"
+}
+
 def decompose_reward(reward):
     r_type = {
           150 : 0,
@@ -58,7 +67,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
 
         start_time = time.time()
-        tower_to_kill, q_values = choose_tower.predict(state.state)
+        tower_to_kill, q_values, _ = choose_tower.predict(state.state)
         end_time = time.time()
 
         action = env.new_action()
@@ -91,24 +100,45 @@ def run_task(evaluation_config, network_config, reinforce_config):
     test_summary_writer = tf.summary.FileWriter(test_summaries_path)
 
 
-    chart = MultiQHistogram(choose_tower.reward_types, len(choose_tower.choices), ("Bottom Right","Top Right","Bottom Left","Top Left"), ylim = 5)
+    # choose_tower.explanation = True
 
-    q_labels = ["SmallEnemyTower", "BigEnemyTower", "SmallFriendlyTower", "BigFriendlyTower", "Death"]
+    explanation = Explanation("Tower Capture", (40,40))
+    chart = BarChart("Move Explanation", "Actions", "QVal By Reward Type")
+    layer_names = ["HP", "Type 1", "Type 2", "Type 3", "Friend", "Enemy"]
+
 
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
-        state = env.reset(visualize=True)
+        state = env.reset(visualize=evaluation_config.render, record=True)
         total_reward = 0
         episode_summary = tf.Summary()
 
-        tower_to_kill, q_values = choose_tower.predict(state.state)
+        tower_to_kill, q_values, saliencies = choose_tower.predict(state.state)
+        choices = env.actions()['actions']
 
-        if evaluation_config.render:
-            chart.render(q_values, q_labels)
+        # for action_value, choice  in reward_types.items():
+        #     key = choice
+        #
+        #     explanation.add_layers(layer_names, saliencies[action_value - 1][0], key = key)
+        #     group = BarGroup("Attack {}".format(choice), saliency_key = key)
+        #
+        #     for index, r_type in enumerate(env.reward_types()):
+        #         key = "{}_{}".format(choice, r_type)
+        #         print(key, q_values[index][action_value-1])
+        #         bar = Bar(r_type, q_values[index][action_value-1], saliency_key = key)
+        #         explanation.add_layers(layer_names, saliencies[action_value-1][index], key=key)
+        #         group.add_bar(bar)
+        #
+        #     chart.add_bar_group(group)
+        #
+        # explanation.with_bar_chart(chart)
+
 
         action = env.new_action()
         action.attack_quadrant(tower_to_kill)
         action.skip = False if  evaluation_config.render else True
+
+        print(q_values)
 
         state = env.act(action)
 

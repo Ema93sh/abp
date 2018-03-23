@@ -12,7 +12,7 @@ from abp.adaptives.common.experience import Experience
 from abp.utils import clear_summary_path
 from abp.models import HRAModel
 from tensorboardX import SummaryWriter
-
+import excitationbp as eb
 
 # TODO Too many duplicate code. Need to refactor!
 
@@ -29,6 +29,7 @@ class HRAAdaptive(object):
 
         self.replay_memory = Memory(self.reinforce_config.memory_size)
         self.learning = True
+        self.explanation = False
 
         self.steps = 0
         self.previous_state = None
@@ -56,6 +57,7 @@ class HRAAdaptive(object):
 
     def predict(self, state):
         self.steps += 1
+        saliencies = []
 
         # add to experience
         if self.previous_state is not None and self.previous_action is not None:
@@ -67,7 +69,7 @@ class HRAAdaptive(object):
             q_values = [None] * len(self.choices)  # TODO should it be output shape or from choices?
             choice = self.choices[action]
         else:
-            _state = Variable(torch.Tensor(state))
+            _state = Variable(torch.Tensor(state)).unsqueeze(0)
             action, q_values = self.eval_model.predict(_state)
 
             choice = self.choices[action]
@@ -76,6 +78,27 @@ class HRAAdaptive(object):
             logger.debug("Replacing target model for %s" % self.name)
             self.target_model.replace(self.eval_model)
 
+        if self.explanation:
+            eb.use_eb(True)
+            prob_outputs = Variable(torch.zeros((4,)))
+            for choice in range(len(self.choices)):
+                action_saliencies = []
+                prob_outputs[action] = 1
+                for reward_type in range(self.reward_types):
+                    self.eval_model.clear_weights(reward_type)
+                    saliency = eb.excitation_backprop(self.eval_model.model, _state, prob_outputs, contrastive=True)
+                    self.eval_model.restore_weights()
+
+                    saliency = np.squeeze(saliency.view(*_state.shape).data.numpy())
+                    action_saliencies.append(saliency)
+
+                # for overall reward
+                saliency = eb.excitation_backprop(self.eval_model.model, _state, prob_outputs, contrastive=True)
+                saliency = np.squeeze(saliency.view(*_state.shape).data.numpy())
+                action_saliencies.append(saliency)
+
+                saliencies.append(action_saliencies)
+
         self.update()
 
         self.current_reward = [0] * self.reward_types
@@ -83,7 +106,7 @@ class HRAAdaptive(object):
         self.previous_state = state
         self.previous_action = action
 
-        return choice, q_values
+        return choice, q_values, saliencies
 
     def disable_learning(self):
         logger.info("Disabled Learning for %s agent" % self.name)

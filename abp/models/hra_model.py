@@ -10,11 +10,11 @@ import numpy as np
 
 logger = logging.getLogger('root')
 
-
 class _HRAModel(nn.Module):
     def __init__(self, network_config):
         super(_HRAModel, self).__init__()
         self.network_config = network_config
+        self.networks = len(network_config.networks)
         for network_i, network in enumerate(network_config.networks):
             in_features = int(np.prod(network_config.input_shape))
             for i, out_features in enumerate(network['layers']):
@@ -24,7 +24,7 @@ class _HRAModel(nn.Module):
                 in_features = out_features
                 setattr(self, '{}_layer_{}'.format(network_i, i), layer)
             q_linear = nn.Linear(in_features, network_config.output_shape[0])
-            setattr(self, '{}_layer_q'.format(network_i), q_linear)
+            setattr(self, 'layer_q_{}'.format(network_i), q_linear)
 
     def forward(self, input):
         q_values = []
@@ -33,7 +33,7 @@ class _HRAModel(nn.Module):
             out = input
             for i in range(len(network['layers'])):
                 out = getattr(self, '{}_layer_{}'.format(network_i, i))(out)
-            q_values.append(getattr(self, '{}_layer_q'.format(network_i))(out))
+            q_values.append(getattr(self, 'layer_q_{}'.format(network_i))(out))
         return q_values
 
 
@@ -48,6 +48,18 @@ class HRAModel(Model):
         logger.info("Created network for %s " % self.name)
         self.optimizer = RMSprop(self.model.parameters(), lr=learning_rate)
         self.loss_fn = nn.MSELoss()
+        self.weights = {}
+
+    def clear_weights(self, reward_type):
+        for type in range(self.model.networks):
+            if type != reward_type:
+                self.weights[reward_type] = getattr(self.model, 'layer_q_{}'.format(reward_type)).weight.data
+                getattr(self.model, 'layer_q_{}'.format(reward_type)).weight.data.fill_(0)
+
+    def restore_weights(self):
+        for reward_type, weights in self.weights.items():
+            getattr(self.model, 'layer_q_{}'.format(reward_type)).weight.data = weights
+        self.weights = {}
 
     def fit(self, states, target, steps):
         self.optimizer.zero_grad()
@@ -60,6 +72,5 @@ class HRAModel(Model):
 
     def predict(self, input):
         q_values = self.predict_batch(input.unsqueeze(0)).squeeze(axis=1)
-
         q_actions = np.sum(q_values, axis=0)
         return np.argmax(q_actions), q_values

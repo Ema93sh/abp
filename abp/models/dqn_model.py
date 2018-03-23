@@ -3,9 +3,9 @@ import torch.nn as nn
 from torch.optim import RMSprop
 from .model import Model
 import numpy as np
+import excitationbp as eb
 
 logger = logging.getLogger('root')
-
 
 class _DQNModel(nn.Module):
     """Neural Network for the DQN algorithm """
@@ -13,7 +13,7 @@ class _DQNModel(nn.Module):
     def __init__(self, network_config):
         super(_DQNModel, self).__init__()
         self.num_layers = len(network_config.layers)
-        in_features = np.prod(network_config.input_shape)
+        in_features = int(np.prod(network_config.input_shape))
         for i, out_features in enumerate(network_config.layers):
             layer = nn.Sequential(
                 nn.Linear(in_features, out_features),
@@ -23,7 +23,7 @@ class _DQNModel(nn.Module):
         self.q_linear = nn.Linear(in_features, network_config.output_shape[0])
 
     def forward(self, input):
-        out = input.view((input.shape[0], np.prod(input.shape[1:])))
+        out = input.view((input.shape[0], int(np.prod(input.shape[1:]))))
         for i in range(self.num_layers):
             out = getattr(self, 'layer_{}'.format(i))(out)
         return self.q_linear(out)
