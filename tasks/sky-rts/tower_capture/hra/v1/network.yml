@@ -1,28 +1,19 @@
 networks:
-  - name: "SmallEnemyTower"
+  - name: "enemy_kill"
     layers:
         - 50
         - 50
 
-  - name: "BigEnemyTower"
+  - name: "agent_death"
     layers:
         - 50
         - 50
 
-  - name: "SmallFriendlyTower"
+  - name: "friendly_kill"
     layers:
         - 50
         - 50
 
-  - name: "BigFriendlyTower"
-    layers:
-         - 50
-         - 50
-
-  - name: "Death"
-    layers:
-         - 50
-         - 50
 
 
 input_shape:

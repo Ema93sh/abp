@@ -1,6 +1,7 @@
 import os
 import logging
 import torch
+import copy
 import torch.nn as nn
 from torch.optim import RMSprop
 import numpy as np

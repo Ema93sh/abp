@@ -1,4 +1,5 @@
 import copy
+import operator
 import sys
 import logging
 logger = logging.getLogger('root')
@@ -14,43 +15,27 @@ from abp.utils import clear_summary_path
 
 from abp.utils.histogram import MultiQHistogram
 
-# Size State: 100x100x6
-reward_types = {
-    0: "Killed Enemy Small",
-    1: "Killed Enemy Big",
-    2: "Killed Friendly Small",
-    3: "Killed Friendly Big",
-    4: "Agent Died"
-}
-
-def decompose_reward(reward):
-    r_type = {
-          150 : 0,
-          1000 : 1,
-         -150 : 2,
-         -1000 : 3,
-         -100 : 4
-    }
-
-    d_reward = [0, 0, 0, 0, 0]
-    if reward == 0:
-        return d_reward
-
-    d_reward[r_type[reward]] = reward
-    return d_reward
-
-
 def run_task(evaluation_config, network_config, reinforce_config):
     env = TowerExample()
+
+    reward_types = sorted(env.reward_types())
+    decomposed_rewards = {}
+
+    for type in reward_types:
+        decomposed_rewards[type] = 0
 
     max_episode_steps = 10000
 
     state = env.reset()
 
-    TOWER_BR, TOWER_TR, TOWER_BL, TOWER_TL = [1, 2, 3, 4]
+    actions = env.actions()['actions']
+    actions = sorted(actions.items(), key=operator.itemgetter(1))
+    choice_descriptions = list(map(lambda x: x[0], actions))
+    choices = list(map(lambda x: x[1], actions))
 
     choose_tower = HRAAdaptive(name = "tower",
-                               choices = [TOWER_BR, TOWER_BL, TOWER_TR, TOWER_TL],
+                               choices = choices,
+                               reward_types = reward_types,
                                network_config = network_config,
                                reinforce_config = reinforce_config)
 
@@ -64,25 +49,17 @@ def run_task(evaluation_config, network_config, reinforce_config):
         state = env.reset()
         total_reward = 0
         episode_summary = tf.Summary()
-
-
-        start_time = time.time()
         tower_to_kill, q_values, _ = choose_tower.predict(state.state)
-        end_time = time.time()
 
         action = env.new_action()
 
-        env_start_time = time.time()
-
         action.attack_quadrant(tower_to_kill)
         state = env.act(action)
-        d_reward = decompose_reward(state.reward)
-        choose_tower.reward(d_reward)
-        total_reward += state.reward
-        env_end_time = time.time()
 
-        logger.debug("Neural Network Time: %.2f" % (end_time - start_time))
-        logger.debug("Env Time: %.2f" % (env_end_time - env_start_time))
+        for reward_type, reward in state.typed_reward.items():
+            choose_tower.reward(reward_type, reward)
+
+        total_reward += state.reward
 
         choose_tower.end_episode(state.state)
 
@@ -92,7 +69,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     train_summary_writer.flush()
 
-    logger.info("Disabled Learning..")
     choose_tower.disable_learning()
 
     test_summaries_path = evaluation_config.summaries_path + "/test"
@@ -107,6 +83,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
     layer_names = ["HP", "Type 1", "Type 2", "Type 3", "Friend", "Enemy"]
 
 
+    choose_tower.enable_explanation()
+
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
         state = env.reset(visualize=evaluation_config.render, record=True)
@@ -114,33 +92,29 @@ def run_task(evaluation_config, network_config, reinforce_config):
         episode_summary = tf.Summary()
 
         tower_to_kill, q_values, saliencies = choose_tower.predict(state.state)
-        choices = env.actions()['actions']
 
-        # for action_value, choice  in reward_types.items():
-        #     key = choice
-        #
-        #     explanation.add_layers(layer_names, saliencies[action_value - 1][0], key = key)
-        #     group = BarGroup("Attack {}".format(choice), saliency_key = key)
-        #
-        #     for index, r_type in enumerate(env.reward_types()):
-        #         key = "{}_{}".format(choice, r_type)
-        #         print(key, q_values[index][action_value-1])
-        #         bar = Bar(r_type, q_values[index][action_value-1], saliency_key = key)
-        #         explanation.add_layers(layer_names, saliencies[action_value-1][index], key=key)
-        #         group.add_bar(bar)
-        #
-        #     chart.add_bar_group(group)
-        #
-        # explanation.with_bar_chart(chart)
+        for choice_idx, choice in enumerate(choices):
+            key = choice_descriptions[choice_idx]
+            explanation.add_layers(layer_names, saliencies[choice]["all"], key = key)
+            group = BarGroup("Attack {}".format(key), saliency_key = key)
+
+            for reward_index, reward_type in enumerate(reward_types):
+                key = "{}_{}".format(choice, reward_type)
+                print(key, q_values[reward_index][choice_idx])
+                bar = Bar(reward_type, q_values[reward_index][choice_idx], saliency_key = key)
+                explanation.add_layers(layer_names, saliencies[choice][reward_type], key=key)
+                group.add_bar(bar)
+
+            chart.add_bar_group(group)
+
+        explanation.with_bar_chart(chart)
 
 
         action = env.new_action()
         action.attack_quadrant(tower_to_kill)
         action.skip = False if  evaluation_config.render else True
 
-        print(q_values)
-
-        state = env.act(action)
+        state = env.act(action, explanation = explanation)
 
         while not state.is_terminal():
             time.sleep(0.5)

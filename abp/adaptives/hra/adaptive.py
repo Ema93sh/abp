@@ -2,7 +2,7 @@ import logging
 
 logger = logging.getLogger('root')
 
-# import tensorflow as tf
+from copy import deepcopy
 import numpy as np
 import torch
 from torch.autograd import Variable
@@ -19,7 +19,7 @@ import excitationbp as eb
 class HRAAdaptive(object):
     """HRAAdaptive using HRA architecture"""
 
-    def __init__(self, name, choices, network_config, reinforce_config, log=True):
+    def __init__(self, name, choices, reward_types, network_config, reinforce_config, log=True):
         super(HRAAdaptive, self).__init__()
         self.name = name
         self.choices = choices
@@ -34,8 +34,11 @@ class HRAAdaptive(object):
         self.steps = 0
         self.previous_state = None
         self.previous_action = None
-        self.reward_types = len(self.network_config.networks)
-        self.current_reward = [0] * self.reward_types  # TODO: change reward into dictionary
+        self.reward_types = reward_types
+
+        self.clear_rewards()
+
+
         self.total_reward = 0
 
         self.eval_model = HRAModel(self.name + "_eval", self.network_config)
@@ -57,11 +60,11 @@ class HRAAdaptive(object):
 
     def predict(self, state):
         self.steps += 1
-        saliencies = []
+        saliencies = None
 
         # add to experience
         if self.previous_state is not None and self.previous_action is not None:
-            experience = Experience(self.previous_state, self.previous_action, self.current_reward, state)
+            experience = Experience(self.previous_state, self.previous_action, self.reward_list(), state)
             self.replay_memory.add(experience)
 
         if self.learning and self.should_explore():
@@ -79,29 +82,12 @@ class HRAAdaptive(object):
             self.target_model.replace(self.eval_model)
 
         if self.explanation:
-            eb.use_eb(True)
-            prob_outputs = Variable(torch.zeros((4,)))
-            for choice in range(len(self.choices)):
-                action_saliencies = []
-                prob_outputs[action] = 1
-                for reward_type in range(self.reward_types):
-                    self.eval_model.clear_weights(reward_type)
-                    saliency = eb.excitation_backprop(self.eval_model.model, _state, prob_outputs, contrastive=True)
-                    self.eval_model.restore_weights()
+            saliencies = self.generate_saliencies(_state)
 
-                    saliency = np.squeeze(saliency.view(*_state.shape).data.numpy())
-                    action_saliencies.append(saliency)
-
-                # for overall reward
-                saliency = eb.excitation_backprop(self.eval_model.model, _state, prob_outputs, contrastive=True)
-                saliency = np.squeeze(saliency.view(*_state.shape).data.numpy())
-                action_saliencies.append(saliency)
-
-                saliencies.append(action_saliencies)
 
         self.update()
 
-        self.current_reward = [0] * self.reward_types
+        self.clear_rewards()
 
         self.previous_state = state
         self.previous_action = action
@@ -116,6 +102,39 @@ class HRAAdaptive(object):
         self.learning = False
         self.episode = 0
 
+    def enable_explanation(self):
+        self.explanation = True
+
+    def disable_explanation(self):
+        self.explanation = False
+
+    def generate_saliencies(self, state):
+        eb.use_eb(True)
+
+        prob_outputs = Variable(torch.zeros((len(self.choices),)))
+        saliencies = {}
+        for idx, choice in enumerate(self.choices):
+            choice_saliencies = {}
+            prob_outputs[idx] = 1
+
+            for reward_idx, reward_type in enumerate(self.reward_types):
+                explainable_model = HRAModel(self.name + "_explain", self.network_config, restore = False)
+                explainable_model.replace(self.eval_model)
+
+                explainable_model.clear_weights(reward_idx)
+                saliency = eb.excitation_backprop(explainable_model.model, state, prob_outputs, contrastive = False, target_layer = 0)
+
+                choice_saliencies[reward_type] = np.squeeze(saliency.view(*state.shape).data.numpy())
+
+            # for overall reward
+            saliency = eb.excitation_backprop(self.eval_model.model, state, prob_outputs, contrastive = False, target_layer = 0)
+            choice_saliencies["all"] = np.squeeze(saliency.view(*state.shape).data.numpy())
+
+            saliencies[choice] = choice_saliencies
+
+        eb.use_eb(False)
+        return saliencies
+
     def end_episode(self, state):
         if not self.learning:
             return
@@ -129,10 +148,10 @@ class HRAAdaptive(object):
                                     global_step=self.episode)
             print('agent reward:', self.total_reward)
 
-        experience = Experience(self.previous_state, self.previous_action, self.current_reward, state, is_terminal=True)
+        experience = Experience(self.previous_state, self.previous_action, self.reward_list(), state, is_terminal=True)
         self.replay_memory.add(experience)
 
-        self.current_reward = [0] * self.reward_types
+        self.clear_rewards()
         self.total_reward = 0
 
         self.previous_state = None
@@ -140,10 +159,24 @@ class HRAAdaptive(object):
 
         self.update()
 
-    def reward(self, decomposed_rewards):
-        self.total_reward += sum(decomposed_rewards)
-        for i in range(self.reward_types):
-            self.current_reward[i] += decomposed_rewards[i]
+    def reward_list(self):
+        reward = [0] * len(self.reward_types)
+
+        for i, reward_type in enumerate(sorted(self.reward_types)):
+            reward[i] = self.current_reward[reward_type]
+
+        return reward
+
+    def clear_rewards(self):
+        self.current_reward = {}
+        for reward_type in self.reward_types:
+            self.current_reward[reward_type] = 0
+
+
+    def reward(self, reward_type, value):
+        self.current_reward[reward_type] += value
+        self.total_reward += value
+
 
     def update(self):
         if self.replay_memory.current_size < self.reinforce_config.batch_size:

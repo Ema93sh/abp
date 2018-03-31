@@ -1,20 +1,15 @@
 networks:
-  - name: "DamageDealth"
+  - name: "enemy_kill"
     layers:
         - 50
         - 50
 
-  - name: "AgentDied"
+  - name: "agent_death"
     layers:
         - 50
         - 50
 
-  - name: "Bonus"
-    layers:
-        - 50
-        - 50
-
-  - name: "DamageRecieved"
+  - name: "friendly_kill"
     layers:
         - 50
         - 50
