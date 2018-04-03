@@ -30,7 +30,7 @@ class FruitCollectionEnv(gym.Env):
         self.num_envs = 10
         self.reset(map_name)
 
-    def reset(self, map_name = "10x10_default", number_of_fruits = 5, state_mode = "channels"):
+    def reset(self, map_name = "10x10_default", number_of_fruits = 5, state_mode = "linear"):
         self.number_of_fruits = number_of_fruits
         self.state_mode = state_mode
         self.current_step = 0
