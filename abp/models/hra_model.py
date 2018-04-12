@@ -23,7 +23,7 @@ class _HRAModel(nn.Module):
                     nn.Linear(in_features, out_features),
                     nn.ReLU())
                 in_features = out_features
-                setattr(self, '{}_layer_{}'.format(network_i, i), layer)
+                setattr(self, 'network_{}_layer_{}'.format(network_i, i), layer)
             q_linear = nn.Linear(in_features, network_config.output_shape[0])
             setattr(self, 'layer_q_{}'.format(network_i), q_linear)
 
@@ -33,7 +33,7 @@ class _HRAModel(nn.Module):
         for network_i, network in enumerate(self.network_config.networks):
             out = input
             for i in range(len(network['layers'])):
-                out = getattr(self, '{}_layer_{}'.format(network_i, i))(out)
+                out = getattr(self, 'network_{}_layer_{}'.format(network_i, i))(out)
             q_values.append(getattr(self, 'layer_q_{}'.format(network_i))(out))
         return q_values
 
@@ -49,18 +49,25 @@ class HRAModel(Model):
         logger.info("Created network for %s " % self.name)
         self.optimizer = RMSprop(self.model.parameters(), lr=learning_rate)
         self.loss_fn = nn.MSELoss()
-        self.weights = {}
 
     def clear_weights(self, reward_type):
         for type in range(self.model.networks):
             if type != reward_type:
-                self.weights[reward_type] = getattr(self.model, 'layer_q_{}'.format(reward_type)).weight.data
-                getattr(self.model, 'layer_q_{}'.format(reward_type)).weight.data.fill_(0)
+                getattr(self.model, 'layer_q_{}'.format(type)).weight.data.fill_(0)
+                network = self.network_config.networks[type]
+                for i in range(len(network['layers'])):
+                    getattr(self.model, 'network_{}_layer_{}'.format(type, i)).apply(self.weights_init)
 
-    def restore_weights(self):
-        for reward_type, weights in self.weights.items():
-            getattr(self.model, 'layer_q_{}'.format(reward_type)).weight.data = weights
-        self.weights = {}
+    def weights_init(self, m):
+        classname = m.__class__.__name__
+        if type(m) == nn.Linear:
+            m.weight.data.fill_(0)
+            m.bias.data.fill_(0)
+        if classname.find('Conv') != -1:
+            m.weight.data.normal_(0.0, 0.0)
+        elif classname.find('BatchNorm') != -1:
+            m.weight.data.normal_(0.0, 0.0)
+            m.bias.data.fill_(0)
 
     def fit(self, states, target, steps):
         self.optimizer.zero_grad()
