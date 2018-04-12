@@ -111,10 +111,10 @@ class HRAAdaptive(object):
     def generate_saliencies(self, state):
         eb.use_eb(True)
 
-        prob_outputs = Variable(torch.zeros((len(self.choices),)))
         saliencies = {}
         for idx, choice in enumerate(self.choices):
             choice_saliencies = {}
+            prob_outputs = Variable(torch.zeros((len(self.choices),)))
             prob_outputs[idx] = 1
 
             for reward_idx, reward_type in enumerate(self.reward_types):
@@ -122,18 +122,6 @@ class HRAAdaptive(object):
                 explainable_model.replace(self.eval_model)
 
                 explainable_model.clear_weights(reward_idx)
-
-                # for network_i, network in enumerate(explainable_model.network_config.networks):
-                #     out = input
-                #     for i in range(len(network['layers'])):
-                #         print('*****************network_{}_layer_{}'.format(network_i, i))
-                #         l, _ = getattr(explainable_model.model, 'network_{}_layer_{}'.format(network_i, i))
-                #         print(l.weight.data)
-                #         print('-----------------network_{}_layer_{}'.format(network_i, i))
-                #
-                #     print('*************layer_q_{}'.format(network_i))
-                #     print(getattr(explainable_model.model, 'layer_q_{}'.format(network_i)).weight.data)
-                #     print('-------------layer_q_{}'.format(network_i))
 
                 saliency = eb.excitation_backprop(explainable_model.model, state, prob_outputs, contrastive = False, target_layer = 0)
 

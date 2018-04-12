@@ -58,6 +58,20 @@ class HRAModel(Model):
                 for i in range(len(network['layers'])):
                     getattr(self.model, 'network_{}_layer_{}'.format(type, i)).apply(self.weights_init)
 
+    def display_weights(self):
+        for network_i, network in enumerate(self.network_config.networks):
+            out = input
+            for i in range(len(network['layers'])):
+                print('*****************network_{}_layer_{}'.format(network_i, i))
+                l, _ = getattr(self.model, 'network_{}_layer_{}'.format(network_i, i))
+                print(l.weight.data)
+                print('-----------------network_{}_layer_{}'.format(network_i, i))
+
+            print('*************layer_q_{}'.format(network_i))
+            print(getattr(self.model, 'layer_q_{}'.format(network_i)).weight.data)
+            print('-------------layer_q_{}'.format(network_i))
+
+
     def weights_init(self, m):
         classname = m.__class__.__name__
         if type(m) == nn.Linear:
