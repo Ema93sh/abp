@@ -6,12 +6,12 @@ logger = logging.getLogger('root')
 
 import time
 from scaii.env.sky_rts.env.scenarios.tower_example import TowerExample
-from scaii.env.explanation import Explanation, BarChart, BarGroup, Bar
+from scaii.env.explanation import Explanation as SkyExplanation, BarChart, BarGroup, Bar
 import tensorflow as tf
 import numpy as np
 
 from abp import HRAAdaptive
-from abp.utils import clear_summary_path
+from abp.utils import clear_summary_path, Explanation
 
 from abp.utils.histogram import MultiQHistogram
 
@@ -76,22 +76,20 @@ def run_task(evaluation_config, network_config, reinforce_config):
     test_summary_writer = tf.summary.FileWriter(test_summaries_path)
 
 
-    # choose_tower.explanation = True
-
-    explanation = Explanation("Tower Capture", (40,40))
-    chart = BarChart("Move Explanation", "Actions", "QVal By Reward Type")
-    layer_names = ["HP", "Type 1", "Type 2", "Type 3", "Friend", "Enemy"]
-
-
-    choose_tower.enable_explanation()
-
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
+        explanation = SkyExplanation("Tower Capture", (40,40))
+        chart = BarChart("Move Explanation", "Actions", "QVal By Reward Type")
+        layer_names = ["HP", "Agent Location", "Small Towers", "Big Towers", "Friend", "Enemy"]
+
+        adaptive_explanation = Explanation(choose_tower)
+
         state = env.reset(visualize=evaluation_config.render, record=True)
         total_reward = 0
         episode_summary = tf.Summary()
-
-        tower_to_kill, q_values, saliencies = choose_tower.predict(state.state)
+        tower_to_kill, q_values = choose_tower.predict(state.state)
+        saliencies = adaptive_explanation.generate_saliencies(state.state)
+        pdx = adaptive_explanation.generate_pdx(q_values)
 
         for choice_idx, choice in enumerate(choices):
             key = choice_descriptions[choice_idx]
@@ -100,7 +98,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             for reward_index, reward_type in enumerate(reward_types):
                 key = "{}_{}".format(choice, reward_type)
-                print(key, q_values[reward_index][choice_idx])
                 bar = Bar(reward_type, q_values[reward_index][choice_idx], saliency_key = key)
                 explanation.add_layers(layer_names, saliencies[choice][reward_type], key=key)
                 group.add_bar(bar)

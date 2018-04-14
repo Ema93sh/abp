@@ -109,7 +109,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
         state = env.reset(visualize=evaluation_config.render)
         total_reward = 0
         episode_summary = tf.Summary()
-
         tower_to_kill, q_values = choose_tower.predict(state.state)
 
         if evaluation_config.render:

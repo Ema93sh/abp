@@ -71,6 +71,8 @@ class HRAModel(Model):
             print(getattr(self.model, 'layer_q_{}'.format(network_i)).weight.data)
             print('-------------layer_q_{}'.format(network_i))
 
+    def top_layer(self, reward_type):
+        return getattr(self.model, 'layer_q_{}'.format(reward_type))
 
     def weights_init(self, m):
         classname = m.__class__.__name__
