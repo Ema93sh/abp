@@ -79,7 +79,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
         explanation = SkyExplanation("Tower Capture", (40,40))
-        chart = BarChart("Move Explanation", "Actions", "QVal By Reward Type")
         layer_names = ["HP", "Agent Location", "Small Towers", "Big Towers", "Friend", "Enemy"]
 
         adaptive_explanation = Explanation(choose_tower)
@@ -88,9 +87,22 @@ def run_task(evaluation_config, network_config, reinforce_config):
         total_reward = 0
         episode_summary = tf.Summary()
         tower_to_kill, q_values = choose_tower.predict(state.state)
+        combined_q_values = np.sum(q_values, axis=0)
         saliencies = adaptive_explanation.generate_saliencies(state.state)
-        pdx = adaptive_explanation.generate_pdx(q_values)
+        charts = []
 
+        q_chart = BarChart("Q Values", "Actions", "Q Values", "qvalues")
+        for choice_idx, choice in enumerate(choices):
+            key = choice_descriptions[choice_idx]
+            explanation.add_layers(layer_names, saliencies[choice]["all"], key = key)
+            group = BarGroup("Attack {}".format(key), saliency_key = key)
+            bar = Bar(key, combined_q_values[choice_idx], saliency_key = key)
+            group.add_bar(bar)
+            q_chart.add_bar_group(group)
+
+        charts.append(q_chart)
+
+        decomposed_q_chart = BarChart("Decomposed Q Values", "Actions", "QVal By Reward Type", "decomposed_qvalues")
         for choice_idx, choice in enumerate(choices):
             key = choice_descriptions[choice_idx]
             explanation.add_layers(layer_names, saliencies[choice]["all"], key = key)
@@ -102,9 +114,30 @@ def run_task(evaluation_config, network_config, reinforce_config):
                 explanation.add_layers(layer_names, saliencies[choice][reward_type], key=key)
                 group.add_bar(bar)
 
-            chart.add_bar_group(group)
+            decomposed_q_chart.add_bar_group(group)
 
-        explanation.with_bar_chart(chart)
+        charts.append(decomposed_q_chart)
+
+        for choice_idx, choice in enumerate(choices):
+            key = choice_descriptions[choice_idx]
+            pdx_chart = BarChart("PDX", "Actions", ("Why is %s better?" % key), ("pdx_%s" % key))
+
+            all_pairs = [(choice_idx, i) for i in range(len(choices)) if i != choice_idx]
+
+            for current_choice, other_choice in all_pairs:
+                group = BarGroup("({}, {})".format(choices[current_choice], choices[other_choice]))
+                current_pdx = np.squeeze(adaptive_explanation.pdx(q_values, current_choice, [other_choice]))
+
+                for reward_index, reward_type in enumerate(reward_types):
+                    key = "{}_{}".format(choice, reward_type)
+                    bar = Bar(reward_type, current_pdx[reward_index], saliency_key = key)
+                    group.add_bar(bar)
+
+                pdx_chart.add_bar_group(group)
+
+            charts.append(pdx_chart)
+
+        explanation.with_bar_charts(charts)
 
 
         action = env.new_action()

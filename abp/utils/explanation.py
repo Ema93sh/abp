@@ -16,18 +16,20 @@ class Explanation(object):
         self.adaptive = adaptive
 
 
-    def pdx(self, q_value, other_q_value):
-        return np.array(q_value) - np.array(other_q_value)
+    def pdx(self, q_values, selected_action, target_actions):
+        _pdx = [
+                [q_values[r][selected_action] - q_values[r][target]  for target in target_actions]
+                for r in range(len(q_values))
+                ]
+        return np.array(_pdx)
 
     def generate_pdx(self, q_values):
-        n = len(q_values)
         pdx = {}
-        for i in range(n):
-            for j in range(n):
-                if i == j:
-                    continue
-                pdx[(i, j)] = self.pdx(q_values[i], q_values[j])
-
+        n_actions = len(q_values[0])
+        for i in range(n_actions):
+            for j in range(n_actions):
+                if i != j:
+                    pdx[(i, j)] = self.pdx(q_values, i, [j])
         return pdx
 
     def generate_saliencies(self, state):
