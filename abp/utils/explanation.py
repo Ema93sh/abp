@@ -32,7 +32,7 @@ class Explanation(object):
                     pdx[(i, j)] = self.pdx(q_values, i, [j])
         return pdx
 
-    def generate_saliencies(self, state):
+    def generate_saliencies(self, state, contrastive = False):
         eb.use_eb(True)
 
         state = Variable(torch.Tensor(state)).unsqueeze(0)
@@ -52,12 +52,12 @@ class Explanation(object):
 
                 layer_top = explainable_model.top_layer(reward_idx)
 
-                saliency = eb.excitation_backprop(explainable_model.model, state, prob_outputs, contrastive = False, layer_top = layer_top, target_layer = 0)
+                saliency = eb.excitation_backprop(explainable_model.model, state, prob_outputs, contrastive = contrastive, layer_top = layer_top, target_layer = 0)
 
                 choice_saliencies[reward_type] = np.squeeze(saliency.view(*state.shape).data.numpy())
 
             # for overall reward
-            saliency = eb.excitation_backprop(self.adaptive.eval_model.model, state, prob_outputs, contrastive = False, target_layer = 0)
+            saliency = eb.excitation_backprop(self.adaptive.eval_model.model, state, prob_outputs, contrastive = contrastive, target_layer = 0)
             choice_saliencies["all"] = np.squeeze(saliency.view(*state.shape).data.numpy())
 
             saliencies[choice] = choice_saliencies

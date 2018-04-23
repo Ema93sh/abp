@@ -11,7 +11,7 @@ import tensorflow as tf
 import numpy as np
 
 from abp import HRAAdaptive
-from abp.utils import clear_summary_path, Explanation
+from abp.utils import clear_summary_path, Explanation, saliency_to_excel
 
 from abp.utils.histogram import MultiQHistogram
 
@@ -78,6 +78,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
+        contrastive = True
         explanation = SkyExplanation("Tower Capture", (40,40))
         layer_names = ["HP", "Agent Location", "Small Towers", "Big Towers", "Friend", "Enemy"]
 
@@ -88,7 +89,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         episode_summary = tf.Summary()
         tower_to_kill, q_values = choose_tower.predict(state.state)
         combined_q_values = np.sum(q_values, axis=0)
-        saliencies = adaptive_explanation.generate_saliencies(state.state)
+        saliencies = adaptive_explanation.generate_saliencies(state.state, contrastive)
         charts = []
 
         q_chart = BarChart("Q Values", "Actions", "Q Values", "qvalues")
@@ -120,12 +121,14 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         for choice_idx, choice in enumerate(choices):
             key = choice_descriptions[choice_idx]
-            pdx_chart = BarChart("PDX", "Actions", ("Why is %s better?" % key), ("pdx_%s" % key))
+            pdx_chart = BarChart("PDX for %s" % key, "Actions", ("Why is %s better?" % key), ("pdx_%s" % key))
 
             all_pairs = [(choice_idx, i) for i in range(len(choices)) if i != choice_idx]
 
             for current_choice, other_choice in all_pairs:
-                group = BarGroup("({}, {})".format(choices[current_choice], choices[other_choice]))
+                current_choice_description = choice_descriptions[current_choice]
+                other_choice_description = choice_descriptions[other_choice]
+                group = BarGroup("({}, {})".format(current_choice_description, other_choice_description))
                 current_pdx = np.squeeze(adaptive_explanation.pdx(q_values, current_choice, [other_choice]))
 
                 for reward_index, reward_type in enumerate(reward_types):
@@ -160,5 +163,14 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         episode_summary.value.add(tag = "Reward", simple_value = total_reward)
         test_summary_writer.add_summary(episode_summary, episode + 1)
+
+        game_info = {
+            "Total Reward": total_reward,
+            "Tower To Kill": choice_descriptions[tower_to_kill - 1],
+            "Contrastive Saliency": contrastive
+        }
+
+        saliency_to_excel(saliencies, choices, reward_types, choice_descriptions, layer_names, game_info)
+
 
     test_summary_writer.flush()
