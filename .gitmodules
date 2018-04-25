@@ -1,0 +1,3 @@
+[submodule "paper/xdap-paper"]
+	path = paper/xdap-paper
+	url = https://github.com/Ema93sh/xdap-paper
