@@ -16,3 +16,4 @@ log
 *.log
 *.synctex.gz
 runs/
+__pycache__/
