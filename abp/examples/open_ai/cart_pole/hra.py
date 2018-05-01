@@ -13,8 +13,11 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     LEFT, RIGHT = [0, 1]
 
+    reward_types = sorted(["pole_angle", "steps", "cart_position"])
+
     agent = HRAAdaptive(name="cartpole",
                         choices=[LEFT, RIGHT],
+                        reward_types = reward_types,
                         network_config=network_config,
                         reinforce_config=reinforce_config)
 
@@ -26,23 +29,21 @@ def run_task(evaluation_config, network_config, reinforce_config):
             state, reward, done, info = env.step(action)
             cart_position, cart_velocity, pole_angle, pole_velocity = state
 
-            d_reward = [0] * 3
-
             # Reward for pole angle increase or decrease
+
             if -threshold_angle < pole_angle < threshold_angle:
-                d_reward[0] = 1
+                agent.reward("pole_angle", 1)
             else:
-                d_reward[0] = -1
+                agent.reward("pole_angle", -1)
 
             if steps < max_episode_steps and done:
-                d_reward[1] = -40
+                agent.reward("steps", -40)
 
             if -threshold_x < cart_position < threshold_x:
-                d_reward[2] = 1
+                agent.reward("cart_position", 1)
             else:
-                d_reward[2] = -1
+                agent.reward("cart_position", -1)
 
-            agent.reward(d_reward)
 
             if done:
                 agent.end_episode(state)

@@ -7,11 +7,12 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 
-from abp.adaptives.common.memory import Memory
-from abp.adaptives.common.experience import Experience
+from abp.adaptives.common.replay_memory.prioritized_experience import PrioritizedReplayBuffer
 from abp.utils import clear_summary_path
 from abp.models import HRAModel
 from tensorboardX import SummaryWriter
+
+from baselines.common.schedules import LinearSchedule
 
 # TODO Too many duplicate code. Need to refactor!
 
@@ -26,7 +27,7 @@ class HRAAdaptive(object):
         self.reinforce_config = reinforce_config
         self.update_frequency = reinforce_config.update_frequency
 
-        self.replay_memory = Memory(self.reinforce_config.memory_size)
+        self.replay_memory = PrioritizedReplayBuffer(self.reinforce_config.memory_size, 0.6)
         self.learning = True
         self.explanation = False
 
@@ -44,15 +45,16 @@ class HRAAdaptive(object):
         self.target_model = HRAModel(self.name + "_target", self.network_config)
         self.log = log
         if self.log:
-            self.summary = SummaryWriter()
+            self.summary = SummaryWriter(log_dir = self.reinforce_config.summaries_path + "/" + self.name)
         self.episode = 0
+        self.beta_schedule = LinearSchedule(10 * 1000, initial_p = 0.2, final_p = 1.0)
+        self.epsilon_schedule = LinearSchedule(10 * 1000, initial_p = self.reinforce_config.starting_epsilon, final_p = 0.1)
 
     def __del__(self):
         self.summary.close()
 
     def should_explore(self):
-        epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (
-                    self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
+        epsilon = self.epsilon_schedule.value(self.steps)
         if self.log:
             self.summary.add_scalar(tag='epsilon', scalar_value=epsilon, global_step=self.steps)
         return np.random.choice([True, False], p=[epsilon, 1 - epsilon])
@@ -60,10 +62,8 @@ class HRAAdaptive(object):
     def predict(self, state):
         self.steps += 1
 
-        # add to experience
         if self.previous_state is not None and self.previous_action is not None:
-            experience = Experience(self.previous_state, self.previous_action, self.reward_list(), state)
-            self.replay_memory.add(experience)
+            self.replay_memory.add(self.previous_state, self.previous_action, self.reward_list(), state, False)
 
         if self.learning and self.should_explore():
             action = np.random.choice(len(self.choices))
@@ -107,17 +107,21 @@ class HRAAdaptive(object):
         if not self.learning:
             return
 
-        logger.info("End of Episode %d with total reward %d" % (self.episode + 1, self.total_reward))
+        logger.info("End of Episode %d with total reward %.2f" % (self.episode + 1, self.total_reward))
 
         self.episode += 1
         print('episode:', self.episode)
         if self.log:
             self.summary.add_scalar(tag='%s agent reward' % self.name,scalar_value=self.total_reward,
                                     global_step=self.episode)
+            epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (
+                        self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
             print('agent reward:', self.total_reward)
+            print('epsilon:', self.epsilon_schedule.value(self.steps))
+            print('beta:', self.beta_schedule.value(self.steps))
 
-        experience = Experience(self.previous_state, self.previous_action, self.reward_list(), state, is_terminal=True)
-        self.replay_memory.add(experience)
+
+        self.replay_memory.add(self.previous_state, self.previous_action, self.reward_list(), state, True)
 
         self.clear_rewards()
         self.total_reward = 0
@@ -147,24 +151,15 @@ class HRAAdaptive(object):
 
 
     def update(self):
-        if self.replay_memory.current_size < self.reinforce_config.batch_size:
+        if self.steps <= self.reinforce_config.batch_size:
             return
 
-        batch = self.replay_memory.sample(self.reinforce_config.batch_size)
-
-        # TODO: Convert to tensor operations instead of for loops
-
-        states = [experience.state for experience in batch]
-
-        next_states = [experience.next_state for experience in batch]
+        states, actions, reward, next_states, is_terminal, weights, batch_idxes = self.replay_memory.sample(self.reinforce_config.batch_size,
+                                                                                                                self.beta_schedule.value(self.steps))
         states = Variable(torch.Tensor(states))
         next_states = Variable(torch.Tensor(next_states))
 
-        is_terminal = [0 if experience.is_terminal else 1 for experience in batch]
-
-        actions = [experience.action for experience in batch]
-
-        reward = np.array([experience.reward for experience in batch])
+        is_terminal = [0 if t else 1 for t in is_terminal]
 
         q_next = self.target_model.predict_batch(next_states)
 
@@ -180,4 +175,13 @@ class HRAAdaptive(object):
 
         q_target[:, batch_index, actions] = np.transpose(reward) + self.reinforce_config.discount_factor * q_2
 
+        td_errors = q_values[:, batch_index, actions] - q_target[:, batch_index, actions]
+
+        td_errors = td_errors.sum(axis=0)
+
+        new_priorities = np.abs(td_errors) + 1e-6 #prioritized_replay_eps
+        self.replay_memory.update_priorities(batch_idxes, new_priorities)
+
         self.eval_model.fit(states, q_target, self.steps)
+
+        return td_errors
