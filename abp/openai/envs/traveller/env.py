@@ -39,9 +39,15 @@ class TravellerEnv(Env):
                      'river': 2
                     }
 
-        self.treasure = {
-                         'gold': 2,
-                         'diamond': 3
+        self.terrain_reward = {
+                     'mountain': .4,
+                     'hill': .3,
+                     'river': .2
+                    }
+
+        self.treasure_reward = {
+                         'gold': .2,
+                         'diamond': .3
                          }
 
         self.current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -93,9 +99,9 @@ class TravellerEnv(Env):
         river = self.one_shot_encode(self.river_locations)
         hill = self.one_shot_encode(self.hill_locations)
         gold = self.one_shot_encode(self.current_gold_locations)
-        daimond = self.one_shot_encode(self.current_diamond_locations)
+        diamond = self.one_shot_encode(self.current_diamond_locations)
 
-        return traveller + home + mountain + river + hill + gold + daimond + [self.days_remaining]
+        return traveller + home + mountain + river + hill + gold + diamond + [self.days_remaining / 10]
 
         # shape = self.map.shape()
         #
@@ -208,29 +214,29 @@ class TravellerEnv(Env):
             self.traveller_location = updated_location
 
             if self.traveller_location in self.hill_locations:
-                terrain_reward[0] -= self.days['hill']
+                terrain_reward[0] -= self.terrain_reward['hill']
                 days_reward -= self.days['hill']
 
             elif self.traveller_location in self.mountain_locations:
-                terrain_reward[1] -= self.days['mountain']
+                terrain_reward[1] -= self.terrain_reward['mountain']
                 days_reward -= self.days['mountain']
 
             elif self.traveller_location in self.river_locations:
-                terrain_reward[2] -= self.days['river']
+                terrain_reward[2] -= self.terrain_reward['river']
                 days_reward -= self.days['river']
 
             elif self.traveller_location in self.current_gold_locations:
-                treasure_reward[0] += self.treasure['gold']
+                treasure_reward[0] += self.treasure_reward['gold']
                 idx = self.current_gold_locations.index(self.traveller_location)
                 del self.current_gold_locations[idx]
                 days_reward -= 1
             elif self.traveller_location in self.current_diamond_locations:
-                treasure_reward[1] += self.treasure['diamond']
+                treasure_reward[1] += self.treasure_reward['diamond']
                 idx = self.current_diamond_locations.index(self.traveller_location)
                 del self.current_diamond_locations[idx]
                 days_reward -= 1
             elif self.traveller_location in self.house_locations:
-                home_reward += 10
+                home_reward += 3
                 days_reward -= 1
             else:
                 days_reward -= 1
@@ -240,17 +246,30 @@ class TravellerEnv(Env):
         done = self.days_remaining <= 0 or self.traveller_location in self.house_locations
 
         if done and self.traveller_location not in self.house_locations:
-            home_reward -= 10
+            death_reward -= 3
 
 
         info["days_remaining"] = self.days_remaining
 
         if decompose_level == 0:
             reward = sum(terrain_reward) + sum(treasure_reward) + home_reward + death_reward
+
         if decompose_level == 1:
-            reward = [sum(terrain_reward), sum(treasure_reward), home_reward, death_reward]
+            reward = {}
+            reward["TERRAIN"]  = sum(terrain_reward)
+            reward["TREASURE"] = sum(treasure_reward)
+            reward["HOME"] = home_reward
+            reward["DEATH"] = death_reward
+
         if decompose_level == 2:
-            reward = terrain_reward + treasure_reward + [home_reward] + [death_reward]
+            reward = {}
+            reward["HOME"] = home_reward
+            reward["DEATH"] = death_reward
+            reward["HILL"] = terrain_reward[0]
+            reward["MOUNTAIN"] = terrain_reward[1]
+            reward["RIVER"] = terrain_reward[2]
+            reward["GOLD"] = treasure_reward[0]
+            reward["DIAMOND"] = treasure_reward[1]
 
         return self.generate_state(), reward, done, info
 

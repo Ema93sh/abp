@@ -24,6 +24,12 @@ for epoch in range(100):
     reward = 0
     days_remaining = 8
     total_reward = 0
+    decomposed_total_reward = {
+     'Terrain': 0,
+     'Treasure': 0,
+     'Home': 0,
+     'Death': 0
+    }
     info = None
     state = env_spec.reset()
     for steps in range(max_episode_steps):
@@ -32,7 +38,8 @@ for epoch in range(100):
         screen.addstr(s.getvalue())
         screen.addstr("Days Remaining: %d\n" % days_remaining)
         screen.addstr("Reward: %s \n" % str(reward))
-        screen.addstr("Total Reward: %d \n" % total_reward)
+        screen.addstr("Total Reward: %.2f \n" % total_reward)
+        screen.addstr("Decomposed Total Reward: " + str(decomposed_total_reward) + "\n")
         screen.addstr("State: %s \n Len State: %d\n" % (str(state),len(state)))
         screen.refresh()
         key = screen.getch()
@@ -48,7 +55,12 @@ for epoch in range(100):
             action = 1
 
         state, reward, done, info = env_spec.step(action, decompose_level = 1)
-        total_reward += sum(reward)
+        total_reward += sum(reward.values())
+
+        decomposed_total_reward["Home"] += reward["HOME"]
+        decomposed_total_reward["Treasure"] += reward["TREASURE"]
+        decomposed_total_reward["Terrain"] += reward["TERRAIN"]
+        decomposed_total_reward["Death"] += reward["DEATH"]
 
         days_remaining = info['days_remaining']
         screen.refresh()
@@ -60,9 +72,11 @@ for epoch in range(100):
             screen.addstr(s.getvalue())
             screen.addstr("Reward: " + str(reward) + "\n")
             screen.addstr("Total Reward: " + str(total_reward) + "\n")
+            screen.addstr("Decomposed Total Reward: " + str(decomposed_total_reward) + "\n")
+            screen.addstr("State: %s \n Len State: %d\n" % (str(state),len(state)))
             screen.addstr("End Episode \n")
             screen.refresh()
-            time.sleep(5)
+            key = screen.getch()
             break
 
 env_spec.close()
