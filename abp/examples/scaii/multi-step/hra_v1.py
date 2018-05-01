@@ -16,7 +16,7 @@ from abp.utils import clear_summary_path, Explanation, saliency_to_excel
 from abp.utils.histogram import MultiQHistogram
 
 def run_task(evaluation_config, network_config, reinforce_config):
-    env = TowerExample()
+    env = TowerExample("multi_step")
 
     reward_types = sorted(env.reward_types())
     decomposed_rewards = {}
@@ -24,7 +24,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
     for type in reward_types:
         decomposed_rewards[type] = 0
 
-    max_episode_steps = 10000
+    max_episode_steps = 5
 
     state = env.reset()
 
@@ -66,7 +66,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         choose_tower.end_episode(state.state)
 
-        logger.info("Episode %d : %d, Step: %d" % (episode + 1, total_reward, step))
+        logger.debug("Episode %d : %d, Step: %d" % (episode + 1, total_reward, step))
         episode_summary.value.add(tag = "Reward", simple_value = total_reward)
         train_summary_writer.add_summary(episode_summary, episode + 1)
 
@@ -81,8 +81,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
-        contrastive = True
-        explanation = SkyExplanation("Tower Capture", (40,40))
         layer_names = ["HP", "Agent Location", "Small Towers", "Big Towers", "Friend", "Enemy"]
 
         adaptive_explanation = Explanation(choose_tower)
@@ -90,11 +88,14 @@ def run_task(evaluation_config, network_config, reinforce_config):
         state = env.reset(visualize=evaluation_config.render, record=True)
         total_reward = 0
         episode_summary = tf.Summary()
+        step = 0
 
         while not state.is_terminal():
+            step += 1
+            explanation = SkyExplanation("Tower Capture", (40,40))
             tower_to_kill, q_values = choose_tower.predict(state.state)
             combined_q_values = np.sum(q_values, axis=0)
-            saliencies = adaptive_explanation.generate_saliencies(state.state, contrastive)
+            saliencies = adaptive_explanation.generate_saliencies(state.state, evaluation_config.contrastive)
             charts = []
 
             decomposed_q_chart = BarChart("Q Values", "Actions", "QVal By Reward Type")
@@ -115,7 +116,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             action = env.new_action()
             action.attack_quadrant(tower_to_kill)
-            action.skip = False if  evaluation_config.render else True
+            action.skip = True
 
             state = env.act(action, explanation = explanation)
 
@@ -123,7 +124,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             total_reward += state.reward
 
-        logger.info("End Episode of episode %d!" % (episode + 1))
+        logger.info("End Episode of episode %d with %d steps" % (episode + 1, step + 1))
         logger.info("Total Reward %d!" % (total_reward))
 
         episode_summary.value.add(tag = "Reward", simple_value = total_reward)
