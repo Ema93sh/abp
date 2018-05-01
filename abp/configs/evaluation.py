@@ -6,7 +6,8 @@ default_evaluation_config = {
     "summaries_path": None,
     "training_episodes": 100,
     "test_episodes": 100,
-    "render": False
+    "render": False,
+    "contrastive": False
 }
 
 class EvaluationConfig(BaseConfig):
@@ -27,3 +28,5 @@ class EvaluationConfig(BaseConfig):
     test_episodes = property(BaseConfig.get_property("test_episodes"), BaseConfig.set_property("test_episodes"))
 
     render = property(BaseConfig.get_property("render"), BaseConfig.set_property("render"))
+
+    contrastive = property(BaseConfig.get_property("contrastive"), BaseConfig.set_property("contrastive"))
