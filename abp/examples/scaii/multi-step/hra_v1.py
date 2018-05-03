@@ -124,7 +124,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             total_reward += state.reward
 
-        logger.info("End Episode of episode %d with %d steps" % (episode + 1, step + 1))
+        logger.info("End Episode of episode %d with %d steps" % (episode + 1, step))
         logger.info("Total Reward %d!" % (total_reward))
 
         episode_summary.value.add(tag = "Reward", simple_value = total_reward)
