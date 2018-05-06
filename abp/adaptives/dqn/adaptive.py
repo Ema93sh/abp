@@ -2,8 +2,7 @@ import logging
 import numpy as np
 import torch
 from torch.autograd import Variable
-from abp.adaptives.common.memory import Memory
-from abp.adaptives.common.experience import Experience
+from abp.adaptives.common.memory import Memory, Experience
 from abp.models import DQNModel
 
 from tensorboardX import SummaryWriter

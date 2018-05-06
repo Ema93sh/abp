@@ -7,14 +7,14 @@ import numpy as np
 from abp.adaptives.common.memory import Memory
 from abp.adaptives.common.experience import Experience
 from abp.utils import clear_summary_path
-from abp.models import HRAModel
+from abp.models import CriticModel, ActorModel
 
 #TODO Too many duplicate code. Need to refactor!
 
-class DACAdaptive(object):
-    """DACAdaptive using Decomposed Actor Critic"""
+class A3CAdaptive(object):
+    """A3CAdaptive using Actor Critic Algorithm"""
     def __init__(self, name, choices, network_config, reinforce_config):
-        super(DACAdaptive, self).__init__()
+        super(A3CAdaptive, self).__init__()
         self.name = name
         self.choices = choices
         self.network_config = network_config
@@ -28,16 +28,16 @@ class DACAdaptive(object):
         self.previous_state = None
         self.previous_action = None
         self.reward_types = len(self.network_config.networks)
-        self.current_reward = [0] * self.reward_types #TODO: change reward into dictionary
+        self.current_reward = 0
         self.total_reward = 0
         self.session = tf.Session()
 
-        self.critic_model = HRAModel(self.name + "_critic", self.network_config, self.session)
-        self.actor_model = HRAModel(self.name + "_actor", self.network_config, self.session)
+        self.critic_model = CriticModel(self.name + "_critic", self.network_config, self.session)
+        self.actor_model = ActorModel(self.name + "_actor", self.network_config, self.session)
 
         #TODO:
         # * Add more information/summaries related to reinforcement learning
-        # * Option to diable summary?
+        # * Option to disable summary?
         clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
 
         self.summaries_writer = tf.summary.FileWriter(self.reinforce_config.summaries_path + "/" + self.name, graph = self.session.graph)
@@ -61,21 +61,24 @@ class DACAdaptive(object):
     def predict(self, state):
         self.steps += 1
 
-        # add to experience
-        if self.previous_state is not None and self.previous_action is not None:
-            experience = Experience(self.previous_state, self.previous_action, self.current_reward, state)
-            self.replay_memory.add(experience)
-
         if self.learning:
-            actor_prob = self.actor_model.predict(state) # TODO add noise
-            q_values = self.critic_model.predict(state)
-            action = #TODO sample
+            # TODO add noise when learning is True
+            actor_prob = self.actor_model.predict(state)
+            critic_values = self.critic_model.predict(state)
+            action = np.random.choice(range(len(self.choices)), p = actor_prob)
             choice = self.choices[action]
         else:
-            actor = self.actor_model.predict(state)
-            action  = #TODO
+            actor_prob = self.actor_model.predict(state)
             critic_values = self.critic_model.predict(state)
+            action = np.random.choice(range(len(self.choices)), p = actor_prob)
             choice = self.choices[action]
+
+        # add to experience
+        if self.previous_state is not None and self.previous_action is not None:
+            experience = Experience(self.previous_state, self.previous_action, self.current_reward, state, action)
+            self.replay_memory.add(experience)
+
+
 
         # TODO
         # if self.learning and self.steps % self.update_frequency == 0:
@@ -84,12 +87,12 @@ class DACAdaptive(object):
 
         self.update()
 
-        self.current_reward = [0] * self.reward_types
+        self.current_reward = 0
 
         self.previous_state = state
         self.previous_action = action
 
-        return choice, q_values
+        return choice, actor_prob, critic_values
 
     def disable_learning(self):
         logger.info("Disabled Learning for %s agent" % self.name)
@@ -111,10 +114,10 @@ class DACAdaptive(object):
         reward_summary.value.add(tag='%s agent reward' % self.name, simple_value = self.total_reward)
         self.summaries_writer.add_summary(reward_summary, self.episode)
 
-        experience = Experience(self.previous_state, self.previous_action, self.current_reward, state, is_terminal = True)
+        experience = Experience(self.previous_state, self.previous_action, self.current_reward, state,  is_terminal = True)
         self.replay_memory.add(experience)
 
-        self.current_reward = [0] * self.reward_types
+        self.current_reward = 0
         self.total_reward = 0
 
         self.previous_state = None
@@ -122,55 +125,47 @@ class DACAdaptive(object):
 
         self.update()
 
-    def reward(self, decomposed_rewards):
-        self.total_reward += sum(decomposed_rewards)
+    def reward(self, reward):
+        self.total_reward += reward
         for i in range(self.reward_types):
             self.current_reward[i] += decomposed_rewards[i]
 
 
-    def update_critic(self):
+    def update_critic(self, batch):
         # TODO: Convert to tensor operations instead of for loops
 
         states = [experience.state for experience in batch]
 
         next_states = [experience.next_state for experience in batch]
 
-        is_terminal = [ 0 if experience.is_terminal else 1 for experience in batch]
+        is_terminal = np.array([ 0 if experience.is_terminal else 1 for experience in batch])
 
         actions = [experience.action for experience in batch]
 
         reward = np.array([experience.reward for experience in batch])
 
-        q_next = self.critic_model.predict_batch(next_states)
+        v_next = self.critic_model.predict_batch(next_states)
 
-        q_2 = np.mean(q_next, axis = 2)
+        v_next = is_terminal.reshape(self.reinforce_config.batch_size, 1) * v_next
 
-        q_2 = is_terminal * q_2
+        v_current = self.critic_model.predict_batch(states)
 
-        q_values = self.critic_model.predict_batch(states)
+        v_target = reward.reshape(self.reinforce_config.batch_size, 1) + self.reinforce_config.discount_factor * v_next
 
-        q_target = q_values.copy()
-
-        batch_index = np.arange(self.reinforce_config.batch_size, dtype=np.int32)
-
-        q_target[:, batch_index, actions] = np.transpose(reward) + self.reinforce_config.discount_factor * q_2
-
-        self.critic_model.fit(states, q_target, self.steps)
-
+        self.critic_model.fit(states, v_target, self.steps)
 
 
     def update_actor(self, batch):
         states = [experience.state for experience in batch]
 
-        actions = self.actor_model.predict(state)
+        is_terminal = np.array([ 0 if experience.is_terminal else 1 for experience in batch])
 
-        q_values = self.critic_model.predict_batch(states)
+        actions = np.array([experience.action for experience in batch]).reshape(self.reinforce_config.batch_size, 1)
 
-        # TODO calculate gradient
+        v_current = is_terminal.reshape(self.reinforce_config.batch_size, 1) * self.critic_model.predict_batch(states)
 
-        # TODO Fit to actor model
+        self.actor_model.fit(states, actions, v_current, self.steps)
 
-        pass
 
     def update(self):
         if self.replay_memory.current_size < self.reinforce_config.batch_size:

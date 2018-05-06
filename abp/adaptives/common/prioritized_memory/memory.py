@@ -3,6 +3,7 @@ import random
 
 from baselines.common.segment_tree import SumSegmentTree, MinSegmentTree
 
+# Taken from baseline code
 
 class ReplayBuffer(object):
     def __init__(self, size):

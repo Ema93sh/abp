@@ -4,8 +4,7 @@ logger = logging.getLogger('root')
 import tensorflow as tf
 import numpy as np
 
-from abp.adaptives.common.memory import Memory
-from abp.adaptives.common.experience import Experience
+from abp.adaptives.common.memory import Memory, Experience
 
 from abp.models import DQNModel
 

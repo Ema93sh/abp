@@ -61,8 +61,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             for reward_type, reward in state.typed_reward.items():
                 choose_tower.reward(reward_type, reward)
-
-        total_reward += state.reward
+                total_reward += reward
 
         choose_tower.end_episode(state.state)
 

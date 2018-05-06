@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 
-from abp.adaptives.common.replay_memory.prioritized_experience import PrioritizedReplayBuffer
+from abp.adaptives.common.prioritized_memory.memory import PrioritizedReplayBuffer
 from abp.utils import clear_summary_path
 from abp.models import HRAModel
 from tensorboardX import SummaryWriter
@@ -48,16 +48,20 @@ class HRAAdaptive(object):
             self.summary = SummaryWriter(log_dir = self.reinforce_config.summaries_path + "/" + self.name)
         self.episode = 0
         self.beta_schedule = LinearSchedule(10 * 1000, initial_p = 0.2, final_p = 1.0)
-        self.epsilon_schedule = LinearSchedule(10 * 1000, initial_p = self.reinforce_config.starting_epsilon, final_p = 0.1)
+
 
     def __del__(self):
         self.summary.close()
 
+
     def should_explore(self):
-        epsilon = self.epsilon_schedule.value(self.steps)
-        if self.log:
-            self.summary.add_scalar(tag='epsilon', scalar_value=epsilon, global_step=self.steps)
+        epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (
+                         self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
+
+        self.summary.add_scalar(tag='epsilon', scalar_value=epsilon, global_step=self.steps)
+
         return np.random.choice([True, False], p=[epsilon, 1 - epsilon])
+
 
     def predict(self, state):
         self.steps += 1
@@ -97,11 +101,6 @@ class HRAAdaptive(object):
         self.learning = False
         self.episode = 0
 
-    def enable_explanation(self):
-        self.explanation = True
-
-    def disable_explanation(self):
-        self.explanation = False
 
     def end_episode(self, state):
         if not self.learning:
@@ -117,7 +116,6 @@ class HRAAdaptive(object):
             epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (
                         self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
             print('agent reward:', self.total_reward)
-            print('epsilon:', self.epsilon_schedule.value(self.steps))
             print('beta:', self.beta_schedule.value(self.steps))
 
 
