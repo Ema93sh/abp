@@ -1,0 +1,7 @@
+decay_steps: 1000
+starting_epsilon: 1
+discount_factor: 0.99
+batch_size: 35
+memory_size: 1000000
+summaries_path: "./tensorflow_summaries/traveller/hra/v2/reinforce_summary"
+update_frequency: 150

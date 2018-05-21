@@ -116,6 +116,10 @@ class HRAAdaptive(object):
             epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (
                         self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
             print('agent reward:', self.total_reward)
+            epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (
+                             self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
+
+            print('epsilon:', epsilon)
             print('beta:', self.beta_schedule.value(self.steps))
 
 

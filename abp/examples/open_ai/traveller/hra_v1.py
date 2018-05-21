@@ -40,14 +40,11 @@ def run_task(evaluation_config, network_config, reinforce_config, log=True):
         total_reward = 0
         for steps in range(max_episode_steps):
             action, _ = traveller.predict(state)
-        
+
             state, reward, done, info = env.step(action, decompose_level = 1)
 
             total_reward += sum(reward.values())
-            if total_reward >= 1:
-                goal += 1
-                print("*****************************************************************")
-                # import pdb; pdb.set_trace()
+
 
             traveller.reward("Home", reward["HOME"])
             traveller.reward("Treasure", reward["TREASURE"])
@@ -55,6 +52,10 @@ def run_task(evaluation_config, network_config, reinforce_config, log=True):
             traveller.reward("Death", reward["DEATH"])
 
             if done:
+                if total_reward >= 20:
+                    goal += 1
+                    print("*****************************************************************")
+
                 traveller.end_episode(state)
                 train_summary_writer.add_scalar(tag="Episode Reward", scalar_value=total_reward,
                                                     global_step=episode + 1)

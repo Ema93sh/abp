@@ -1,19 +1,20 @@
 networks:
   - name: "HOME_TYPE"
     layers:
-        - 200
+        - 150
+        - 50
 
   - name: "TREASURE_TYPE"
     layers:
-         - 200
+         - 150
 
   - name: "TERRAIN_TYPE"
     layers:
-         - 200
+         - 150
 
   - name: "DEATH_TYPE"
     layers:
-         - 200
+         - 150
 
 input_shape:
     - 197

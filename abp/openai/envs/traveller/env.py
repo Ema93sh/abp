@@ -40,14 +40,14 @@ class TravellerEnv(Env):
                     }
 
         self.terrain_reward = {
-                     'mountain': .4,
-                     'hill': .3,
-                     'river': .2
+                     'mountain': 2,
+                     'hill': 1.5,
+                     'river':  1
                     }
 
         self.treasure_reward = {
-                         'gold': .2,
-                         'diamond': .3
+                         'gold': 2,
+                         'diamond': 5
                          }
 
         self.current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -236,8 +236,9 @@ class TravellerEnv(Env):
                 del self.current_diamond_locations[idx]
                 days_reward -= 1
             elif self.traveller_location in self.house_locations:
-                home_reward += 3
+                home_reward += 30
                 days_reward -= 1
+                done = True
             else:
                 days_reward -= 1
 
@@ -246,8 +247,7 @@ class TravellerEnv(Env):
         done = self.days_remaining <= 0 or self.traveller_location in self.house_locations
 
         if done and self.traveller_location not in self.house_locations:
-            death_reward -= 3
-
+            death_reward -= 10
 
         info["days_remaining"] = self.days_remaining
 
