@@ -10,8 +10,7 @@ register(
 
 register(
     id='FruitCollection-v0',
-    entry_point='abp.openai.envs.fruit_collection:FruitCollectionEnv',
-    reward_threshold=5 #TODO
+    entry_point='abp.openai.envs.fruit_collection:FruitCollectionEnv'
 )
 
 register(

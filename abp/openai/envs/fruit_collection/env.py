@@ -1,184 +1,244 @@
-import sys
-import numpy as np
-from six import StringIO
+# A hunter is searching for a treasure! :| But WHY???????????
 
-import gym
-from gym import spaces
-from .env_map import EnvMap
+import random
 import os
+from collections import Counter
 
+import numpy as np
+import gym
+import visdom
+import time
 
+from .env_map import EnvMap
 
 class FruitCollectionEnv(gym.Env):
-    """A simple gridworld problem. The objective of the agent to collect all
-    the randomly placed fruit in the grid.
+    """The agent is looking for fruit without getting hit by lightning"""
 
-    ACTIONS:
-    0 - LEFT
-    1 - RIGHT
-    2 - UP
-    3 - DOWN
-
-    """
-    metadata = {'render.modes': ['ansi'], 'state.modes': ['linear', 'grid', 'channels']} #TODO render to RGB
-    LEFT, RIGHT, UP, DOWN, NOOP = [0, 1, 2, 3, 4]
-
-    def __init__(self, map_name = "10x10_default"):
-        super(FruitCollectionEnv, self).__init__()
-        self.action_space = spaces.Discrete(4)
+    def __init__(self, map_name = "10x10_default", state_representation="linear"):
+        self.action_space = 4
         self.current_dir = os.path.dirname(os.path.realpath(__file__))
-        self.max_step = 300
-        self.num_envs = 10
-        self.reset(map_name)
-
-    def reset(self, map_name = "10x10_default", number_of_fruits = 5, state_mode = "channels"):
-        self.number_of_fruits = number_of_fruits
-        self.state_mode = state_mode
-        self.current_step = 0
-
+        self.vis = visdom.Visdom()
+        self.name = "FruitCollection"
         self.map = EnvMap(os.path.join(self.current_dir, "maps", map_name + ".map"))
+        self.max_step = 100
+        self.treasure_locations = self.map.get_all_treasure_locations()
+        self.total_treasure = len(self.treasure_locations)
+        self.image_window = None
+        self.heatmap_window = None
+        self.get_action_meanings = ['Up', 'Right', 'Down', 'Left']
+        self.reward_types = [ "(%d, %d)" % (location) for location in self.treasure_locations] + ["Lightning Strike"]
+        self.state_representation = state_representation
+        self.reset()
 
-        self.possible_fruit_locations = self.map.get_possible_fruit_locations()
-        self.agent_location           = self.map.agent_location()
 
-        selected_index = np.random.choice(len(self.possible_fruit_locations), self.number_of_fruits, replace = False)
-        self.current_fruit_locations = []
+    def reset(self, agent_location = None, treasure_found = None):
+        self.agent_location = agent_location if agent_location  else self.map.agent_location()
+        self.current_step = 0
+        self.treasure_found = treasure_found if treasure_found else [False for i in self.treasure_locations]
 
-        for i in selected_index:
-            self.current_fruit_locations.append(self.possible_fruit_locations[i])
+        if len(self.treasure_found) != len(self.treasure_locations):
+            print(len(self.treasure_found), len(self.treasure_locations))
+            raise Exception("Treasure found dim and treasure location dim should be the same!")
 
-        state = self.generate_state()
-        self.observation_space = spaces.Box(low= 0, high = 1, shape = state.shape)
-        return state
+
+        self.lightning_pos = []
+        self.total_reward = 0
+        self.current_reward = []
+
+        return self.generate_state()
+
+
+    def move(self, action):
+        agent_pos = None
+        if action == 0:
+            agent_pos = (self.agent_location[0] - 1, self.agent_location[1])
+        elif action == 1:
+            agent_pos = (self.agent_location[0], self.agent_location[1] + 1)
+        elif action == 2:
+            agent_pos = (self.agent_location[0] + 1, self.agent_location[1])
+        elif action == 3:
+            agent_pos = (self.agent_location[0], self.agent_location[1] - 1)
+
+
+        if self.map.has_wall(agent_pos[0], agent_pos[1]):
+            return
+
+        self.agent_location = agent_pos
+
 
     def generate_state(self):
-        generate = {
-            "linear": self.generate_linear_state,
-            "grid": self.generate_grid_state,
-            "channels": self.generate_channels_state
-        }
-        return generate[self.state_mode]()
+        start_time = time.time()
+        agent_grid = np.zeros(self.map.shape())
+        agent_grid[self.agent_location[0], self.agent_location[1]] = 1
 
-    def generate_linear_state(self):
-        shape = self.map.shape()
-        agent_state = np.zeros(shape)
-        agent_state[self.agent_location] = 1
-
-        fruit_state = np.zeros(len(self.possible_fruit_locations))
-
-        for i in range(len(self.possible_fruit_locations)):
-            location = self.possible_fruit_locations[i]
-            if location in self.current_fruit_locations:
-                fruit_state[i] = 1
-
-        return np.concatenate((agent_state.reshape(np.prod(shape)), fruit_state))
-
-    def generate_grid_state(self):
-        # (2, 10, 10) grid
-        # one for fruit locations
-        # one for agent location
-        shape = self.map.shape()
-        agent_state = np.zeros(shape)
-        agent_state[self.agent_location] = 1
-
-        fruit_state = np.zeros(shape)
-
-        for location in self.possible_fruit_locations:
-            if location in self.current_fruit_locations:
-                fruit_state[location] = 1
-
-        return np.stack((agent_state, fruit_state))
-
-    def generate_channels_state(self):
-        # (n, 10, 10) grid
-        # on channel for each fruit
-
-        shape = self.map.shape()
-        agent_state = np.zeros(shape)
-        agent_state[self.agent_location] = 1
-
-        channels = [agent_state]
-
-        for location in self.possible_fruit_locations:
-            fruit_state = np.zeros(shape)
-
-            if location in self.current_fruit_locations:
-                fruit_state[location] = 1
-
-            channels.append(fruit_state)
-
-        return np.stack(channels)
+        treasure_locations = np.zeros(self.total_treasure)
+        treasure_locations[[not x for x in self.treasure_found]] = 1
 
 
-    def update_agent_location(self, action):
-        x, y = self.agent_location
+        lightning_grid = np.zeros(self.map.shape())
+        for pos in self.lightning_pos:
+            lightning_grid[pos] = 1
 
-        if action == self.LEFT: #LEFT
-            y = y - 1
-        elif action == self.RIGHT: #RIGHT
-            y = y + 1
-        elif action == self.UP: #UP
-            x = x - 1
-        elif action == self.DOWN: #DOWN
-            x = x + 1
-        elif action == self.NOOP:
-            return self.agent_location
+        if self.state_representation == "grid":
+            treasure_locations = np.zeros(self.map.shape())
+            for pos in self.treasure_locations:
+                treasure_locations[pos] = 1
+            state = np.stack((agent_grid, treasure_locations, lightning_grid))
         else:
-            print(action)
-            raise "Invalid Action"
+            agent_grid = agent_grid.reshape(np.prod(agent_grid.shape))
+            lightning_grid = lightning_grid.reshape(np.prod(lightning_grid.shape))
+            state = np.concatenate((agent_grid, treasure_locations, lightning_grid))
 
-        if self.map.has_wall(x, y):
-            return self.agent_location
+        return state
+
+    def generate_lightning(self):
+        row, col = self.map.shape()
+
+        lightning_pos = []
+        lightning_probability = self.map.get_all_lightning_probability()
+
+        for i in range(row):
+            for j in range(col):
+                probability = lightning_probability[i][j]
+                if random.random() < probability:
+                    lightning_pos.append((i, j))
+
+        return lightning_pos
+
+    def render(self):
+        if self.vis is None:
+            return
+
+        obs_image = self.__get_obs_image()
+
+        total_treasure_found = Counter(self.treasure_found)[True]
+
+        title = '{}\t\tTreasures Found:{} Overall_Reward:{} Step Reward:{} Steps:{}' \
+                    .format(self.name, total_treasure_found, self.total_reward, self.current_reward, self.current_step)
+
+        opts = dict(title = title, width = 360, height = 350)
+        lightning_probability = np.array(self.map.get_all_lightning_probability()[::-1])
+
+        heatmap_opts = dict(xtick = False, ytick = False, ytickmin = 0, ytickmax = 0)
+
+        if self.heatmap_window is None:
+            self.heatmap_window = self.vis.heatmap(lightning_probability, opts = heatmap_opts)
         else:
-            self.agent_location = (x, y)
-            return self.agent_location
+            self.vis.heatmap(lightning_probability, win = self.heatmap_window, opts = heatmap_opts)
 
 
-    def step(self, action, decompose_reward = False): #TODO clear this mess!
-        done = False
+        if self.image_window is None:
+            self.image_window = self.vis.image(obs_image, opts = opts)
+        else:
+            self.vis.image(obs_image, opts = opts, win = self.image_window)
+
+
+    def __get_obs_image(self):
+        shape = self.map.shape()
+        img = np.zeros((3,) + shape)
+        img[:] = 255
+
+        # Treasure
+        for i, consumed in enumerate(self.treasure_found):
+            row, col = self.treasure_locations[i]
+
+            if not consumed:
+                img[0, row, col] = 91
+                img[1, row, col] = 226
+                img[2, row, col] = 116
+            else:
+                img[0, row, col] = 0
+                img[1, row, col] = 0
+                img[2, row, col] = 0
+
+        # lightning
+        for row, col in self.lightning_pos:
+            img[0, row, col] = 238
+            img[1, row, col] = 232
+            img[2, row, col] = 170
+
+        # wall
+        for row, col in self.map.get_all_wall_locations():
+            img[0, row, col] = 205
+            img[1, row, col] = 133
+            img[2, row, col] = 63
+
+        # color agent
+        row, col = self.agent_location
+        img[0, row, col] = 224
+        img[1, row, col] = 80
+        img[2, row, col] = 20
+
+        return img
+
+
+
+    def step(self, action, decompose_reward = False, log_time=False):
         self.current_step += 1
 
-        reward = [0] * len(self.possible_fruit_locations)
+        rewards = {}
 
-        info = {}
+        for reward_type in self.reward_types:
+            rewards[reward_type] = 0
 
+        self.move(action)
 
-        self.update_agent_location(action)
-
-        if self.agent_location in self.current_fruit_locations:
-            idx = self.current_fruit_locations.index(self.agent_location)
-            r_idx = self.possible_fruit_locations.index(self.agent_location)
-            reward[r_idx] = 1
-            del self.current_fruit_locations[idx]
-
-        done = len(self.current_fruit_locations) == 0 or self.current_step == self.max_step
-
-        reward = reward if decompose_reward else sum(reward)
-
-        return self.generate_state(), reward, done, info
-
-    def render_ansi(self):
-        shape = self.map.shape()
-
-        outfile = StringIO()
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                location = (i, j)
-                if self.map.has_wall(i, j) == 1:
-                    outfile.write(" * ")
-                elif location == self.agent_location:
-                    outfile.write(" X ")
-                elif location in self.current_fruit_locations:
-                    outfile.write(" F ")
-                else:
-                    outfile.write(" - ")
-            outfile.write('\n')
-
-        return outfile
+        start_time = time.time()
+        self.lightning_pos = self.generate_lightning()
+        end_time = time.time()
 
 
-    def render(self, mode = 'ansi', close = False):
-        if close:
-            return None
+        if self.agent_location in self.treasure_locations:
+            index = self.treasure_locations.index(self.agent_location)
+            if index != -1 and not self.treasure_found[index]:
+                reward_type = self.reward_types[index]
+                rewards[reward_type] = 2
 
-        return self.render_ansi()
+                self.treasure_found[index] = True
+
+
+        struck_by_lightning = self.agent_location in self.lightning_pos
+
+        if struck_by_lightning:
+            rewards["Lightning Strike"] = -1
+
+
+        all_treasure_collected = all(self.treasure_found)
+        done = (self.current_step >= self.max_step) or all_treasure_collected or struck_by_lightning
+
+        self.total_reward += sum(rewards.values())
+        self.current_reward = rewards
+
+
+        rewards = rewards if decompose_reward else sum(reward)
+
+
+        state = self.generate_state()
+
+
+        if log_time:
+            print("Generate state time %.2f" %(end_time - start_time))
+        info =  {"state_gen_time": end_time - start_time, "lightning_pos": self.lightning_pos}
+
+        return state, rewards, done, info
+
+    def close(self):
+        pass
+
+
+if __name__ == '__main__':
+    """ User interaction with the Environment"""
+    env = gym.make("FruitCollection-v0")
+    for ep in range(5):
+        done = False
+        obs = env.reset()
+        total_reward = 0
+        while not done:
+            env.render()
+            print(obs)
+            action = int(input("action:"))
+            obs, rewards, done, info = env.step(action, decompose_reward = True)
+            print(rewards)
+            total_reward += sum(rewards.values())
+        env.close()
+        print("Episode Reward:", total_reward)

@@ -154,4 +154,5 @@ class DQNAdaptive(object):
         batch_index = np.arange(self.reinforce_config.batch_size, dtype=np.int32)
         q_target[batch_index, actions] = reward + self.reinforce_config.discount_factor * q_max
         q_target = Variable(torch.Tensor(q_target))
+
         self.eval_model.fit(states, q_target, self.steps)

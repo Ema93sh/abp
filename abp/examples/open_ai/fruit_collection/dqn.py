@@ -8,13 +8,14 @@ from abp import DQNAdaptive
 from abp.utils import clear_summary_path
 
 def run_task(evaluation_config, network_config, reinforce_config):
-    env_spec = gym.make(evaluation_config.env)
+    env = gym.make(evaluation_config.env)
     max_episode_steps = 300
-    state = env_spec.reset()
+    state = env.reset()
     LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
+    choices = [LEFT, RIGHT, UP, DOWN]
 
     agent = DQNAdaptive(name = "FruitCollecter",
-                        choices = [LEFT, RIGHT, UP, DOWN],
+                        choices = choices,
                         network_config =  network_config,
                         reinforce_config = reinforce_config)
 
@@ -28,49 +29,51 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     #Training Episodes
     for episode in range(evaluation_config.training_episodes):
-        state = env_spec.reset()
+        state = env.reset()
         total_reward = 0
-        episode_summary = tf.Summary()
-        for steps in range(max_episode_steps):
-            action, _ = agent.predict(state)
-            state, reward, done, info = env_spec.step(action)
+        done = False
+        steps = 0
+        while not done:
+            steps += 1
+            action, q_values = agent.predict(state)
+            state, rewards, done, info = env.step(action, decompose_reward = True)
 
-            agent.reward(reward)
+            for reward_type in rewards.keys():
+                agent.reward(reward_type, rewards[reward_type])
 
-            total_reward += reward
+            total_reward += sum(rewards.values())
 
-            if done or steps == (max_episode_steps - 1):
-                agent.end_episode(state)
-                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
-                episode_summary.value.add(tag = "Steps to collect all fruits", simple_value = steps + 1)
-                train_summary_writer.add_summary(episode_summary, episode + 1)
-                break
-
-    train_summary_writer.flush()
+        agent.end_episode(state)
+        test_summary_writer.add_scalar(tag="Train/Episode Reward", scalar_value=total_reward,
+                                       global_step=episode + 1)
+        train_summary_writer.add_scalar(tag="Train/Steps to collect all Fruits", scalar_value=steps + 1,
+                                        global_step=episode + 1)
 
     agent.disable_learning()
 
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
-        state = env_spec.reset()
+        state = env.reset()
         total_reward = 0
-        episode_summary = tf.Summary()
-        for steps in range(max_episode_steps):
+        done = False
+        steps = 0
+
+        while not done:
+            steps += 1
             action, q_values = agent.predict(state)
             if evaluation_config.render:
-                #TODO
-                env_spec.render()
+                env.render()
                 time.sleep(0.5)
 
-            state, reward, done, info = env_spec.step(action)
-            total_reward += reward
+            state, reward, done, info = env.step(action)
 
-            if done:
-                episode_summary.value.add(tag = "Episode Reward", simple_value = total_reward)
-                episode_summary.value.add(tag = "Steps to collect all fruits", simple_value = steps + 1)
-                test_summary_writer.add_summary(episode_summary, episode + 1)
-                break
+            total_reward += sum(reward)
 
-    test_summary_writer.flush()
+        agent.end_episode(state)
 
-    env_spec.close()
+        test_summary_writer.add_scalar(tag="Test/Episode Reward", scalar_value=total_reward,
+                                       global_step=episode + 1)
+        test_summary_writer.add_scalar(tag="Test/Steps to collect all Fruits", scalar_value=steps + 1,
+                                       global_step=episode + 1)
+
+    env.close()

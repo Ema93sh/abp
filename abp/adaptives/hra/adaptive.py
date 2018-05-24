@@ -6,7 +6,6 @@ from copy import deepcopy
 import numpy as np
 import torch
 from torch.autograd import Variable
-
 from abp.adaptives.common.prioritized_memory.memory import PrioritizedReplayBuffer
 from abp.utils import clear_summary_path
 from abp.models import HRAModel
@@ -14,12 +13,11 @@ from tensorboardX import SummaryWriter
 
 from baselines.common.schedules import LinearSchedule
 
-# TODO Too many duplicate code. Need to refactor!
 
 class HRAAdaptive(object):
     """HRAAdaptive using HRA architecture"""
 
-    def __init__(self, name, choices, reward_types, network_config, reinforce_config, log=True):
+    def __init__(self, name, choices, reward_types, network_config, reinforce_config):
         super(HRAAdaptive, self).__init__()
         self.name = name
         self.choices = choices
@@ -43,9 +41,11 @@ class HRAAdaptive(object):
 
         self.eval_model = HRAModel(self.name + "_eval", self.network_config)
         self.target_model = HRAModel(self.name + "_target", self.network_config)
-        self.log = log
-        if self.log:
-            self.summary = SummaryWriter(log_dir = self.reinforce_config.summaries_path + "/" + self.name)
+
+        clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
+        self.summary = SummaryWriter(log_dir = self.reinforce_config.summaries_path + "/" + self.name)
+
+
         self.episode = 0
         self.beta_schedule = LinearSchedule(10 * 1000, initial_p = 0.2, final_p = 1.0)
 
@@ -58,7 +58,7 @@ class HRAAdaptive(object):
         epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (
                          self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
 
-        self.summary.add_scalar(tag='epsilon', scalar_value=epsilon, global_step=self.steps)
+        self.summary.add_scalar(tag='%s/Epsilon' % self.name, scalar_value=epsilon, global_step=self.steps)
 
         return np.random.choice([True, False], p=[epsilon, 1 - epsilon])
 
@@ -109,19 +109,10 @@ class HRAAdaptive(object):
         logger.info("End of Episode %d with total reward %.2f" % (self.episode + 1, self.total_reward))
 
         self.episode += 1
-        print('episode:', self.episode)
-        if self.log:
-            self.summary.add_scalar(tag='%s agent reward' % self.name,scalar_value=self.total_reward,
-                                    global_step=self.episode)
-            epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (
-                        self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
-            print('agent reward:', self.total_reward)
-            epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (
-                             self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
 
-            print('epsilon:', epsilon)
-            print('beta:', self.beta_schedule.value(self.steps))
-
+        self.summary.add_scalar(tag  = '%s/Episode Reward' % self.name,
+                                    scalar_value = self.total_reward,
+                                    global_step = self.episode)
 
         self.replay_memory.add(self.previous_state, self.previous_action, self.reward_list(), state, True)
 
@@ -156,8 +147,12 @@ class HRAAdaptive(object):
         if self.steps <= self.reinforce_config.batch_size:
             return
 
-        states, actions, reward, next_states, is_terminal, weights, batch_idxes = self.replay_memory.sample(self.reinforce_config.batch_size,
-                                                                                                                self.beta_schedule.value(self.steps))
+        beta = self.beta_schedule.value(self.steps)
+
+        self.summary.add_scalar(tag='%s/Beta' % self.name, scalar_value=beta, global_step=self.steps)
+
+        states, actions, reward, next_states, is_terminal, weights, batch_idxes = self.replay_memory.sample(self.reinforce_config.batch_size, beta)
+        
         states = Variable(torch.Tensor(states))
         next_states = Variable(torch.Tensor(next_states))
 
