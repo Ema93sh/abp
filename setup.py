@@ -1,7 +1,7 @@
 from setuptools import find_packages
 from setuptools import setup
 
-REQUIRED_PACKAGES = ["tensorflow-gpu", "gym", "numpy==1.13.1"]
+REQUIRED_PACKAGES = ["torch==0.3.1", "gym", "numpy==1.13.1", "visdom", "tensorboardX"]
 
 
 setup( name='abp',
