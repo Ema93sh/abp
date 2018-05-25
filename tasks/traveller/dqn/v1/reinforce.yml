@@ -1,7 +1,0 @@
-decay_steps: 350
-starting_epsilon: 1
-discount_factor: 0.95
-batch_size: 35
-memory_size: 4000
-summaries_path: "./tensorflow_summaries/traveller/dqn/v1/reinforce_summary"
-update_frequency: 50

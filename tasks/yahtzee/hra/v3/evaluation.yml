@@ -1,6 +1,0 @@
-name: "Yahtzee"
-env: "Yahtzee-v0"
-summaries_path: "./tensorflow_summaries/Yahtzee/hra/v3/evaluation_summary"
-test_episodes: 100
-training_episodes: 0
-render: True

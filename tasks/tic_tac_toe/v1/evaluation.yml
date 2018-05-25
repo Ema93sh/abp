@@ -1,6 +1,0 @@
-name: "Tic Tac Toe"
-env: "TicTacToe-v0"
-summaries_path: "./tensorflow_summaries/tic_tac_toe/v1/evaluation_summary"
-test_episodes: 200
-training_episodes: 8000
-render: False
