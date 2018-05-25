@@ -5,15 +5,16 @@ import logging
 logger = logging.getLogger('root')
 
 import time
-from scaii.env.sky_rts.env.scenarios.tower_example import TowerExample
-from scaii.env.explanation import Explanation as SkyExplanation, BarChart, BarGroup, Bar
 import tensorflow as tf
 import numpy as np
 
-from abp import HRAAdaptive
-from abp.utils import clear_summary_path, Explanation, saliency_to_excel
+from scaii.env.sky_rts.env.scenarios.tower_example import TowerExample
+from scaii.env.explanation import Explanation as SkyExplanation, BarChart, BarGroup, Bar
 
-from abp.utils.histogram import MultiQHistogram
+from abp import HRAAdaptive
+from abp.utils import clear_summary_path, saliency_to_excel
+from abp.explanations import Saliency
+
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = TowerExample("multi_step")
@@ -82,7 +83,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
     for episode in range(evaluation_config.test_episodes):
         layer_names = ["HP", "Agent Location", "Small Towers", "Big Towers", "Friend", "Enemy"]
 
-        adaptive_explanation = Explanation(choose_tower)
+        saliency_explanation = Saliency(choose_tower)
 
         state = env.reset(visualize=evaluation_config.render, record=True)
         total_reward = 0
@@ -94,7 +95,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
             explanation = SkyExplanation("Tower Capture", (40,40))
             tower_to_kill, q_values = choose_tower.predict(state.state)
             combined_q_values = np.sum(q_values, axis=0)
-            saliencies = adaptive_explanation.generate_saliencies(state.state, evaluation_config.contrastive)
+            saliencies = saliency_explanation.generate_saliencies(state.state, evaluation_config.contrastive)
             charts = []
 
             decomposed_q_chart = BarChart("Q Values", "Actions", "QVal By Reward Type")

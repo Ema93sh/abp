@@ -7,30 +7,13 @@ from abp.models import HRAModel
 
 import excitationbp as eb
 
-class Explanation(object):
-    """ Explanation for an Adaptive Variable """
+class Saliency(object):
+    """ Saliency for an Adaptive Variable """
     #TODO currenly supports only HRA Adaptive
 
     def __init__(self, adaptive):
-        super(Explanation, self).__init__()
+        super(Saliency, self).__init__()
         self.adaptive = adaptive
-
-
-    def pdx(self, q_values, selected_action, target_actions):
-        _pdx = [
-                [q_values[r][selected_action] - q_values[r][target]  for target in target_actions]
-                for r in range(len(q_values))
-                ]
-        return np.array(_pdx)
-
-    def generate_pdx(self, q_values):
-        pdx = {}
-        n_actions = len(q_values[0])
-        for i in range(n_actions):
-            for j in range(n_actions):
-                if i != j:
-                    pdx[(i, j)] = self.pdx(q_values, i, [j])
-        return pdx
 
     def generate_saliencies(self, state, contrastive = False):
         eb.use_eb(True)

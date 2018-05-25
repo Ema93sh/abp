@@ -1,19 +1,22 @@
 import copy
 import operator
 import sys
+import time
 import logging
+
 logger = logging.getLogger('root')
 
-import time
-from scaii.env.sky_rts.env.scenarios.tower_example import TowerExample
-from scaii.env.explanation import Explanation as SkyExplanation, BarChart, BarGroup, Bar
+
 import tensorflow as tf
 import numpy as np
 
 from abp import HRAAdaptive
 from abp.utils import clear_summary_path, Explanation, saliency_to_excel
-
 from abp.utils.histogram import MultiQHistogram
+
+from scaii.env.sky_rts.env.scenarios.tower_example import TowerExample
+from scaii.env.explanation import Explanation as SkyExplanation, BarChart, BarGroup, Bar
+
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = TowerExample()
@@ -33,7 +36,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
     choice_descriptions = list(map(lambda x: x[0], actions))
     choices = list(map(lambda x: x[1], actions))
 
-    choose_tower = HRAAdaptive(name = "tower",
+    choose_tower = HRAAdaptive(name = "Tower",
                                choices = choices,
                                reward_types = reward_types,
                                network_config = network_config,
@@ -67,7 +70,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         choose_tower.end_episode(state.state)
 
         logger.info("Episode %d : %d, Step: %d" % (episode + 1, total_reward, step))
-        episode_summary.value.add(tag = "Reward", simple_value = total_reward)
+        episode_summary.value.add(tag = "Train/Reward", simple_value = total_reward)
         train_summary_writer.add_summary(episode_summary, episode + 1)
 
     train_summary_writer.flush()
@@ -123,10 +126,9 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             total_reward += state.reward
 
-        logger.info("End Episode of episode %d!" % (episode + 1))
-        logger.info("Total Reward %d!" % (total_reward))
+        logger.info("Episode %d : %d, Step: %d" % (episode + 1, total_reward, step))
 
-        episode_summary.value.add(tag = "Reward", simple_value = total_reward)
+        episode_summary.value.add(tag = "Test/Episode Reward", simple_value = total_reward)
         test_summary_writer.add_summary(episode_summary, episode + 1)
 
     test_summary_writer.flush()
