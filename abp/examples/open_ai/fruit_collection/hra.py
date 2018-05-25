@@ -4,6 +4,7 @@ import numpy as np
 
 from abp import HRAAdaptive
 from abp.utils import clear_summary_path
+from abp.explanations import PDX
 from tensorboardX import SummaryWriter
 
 
@@ -13,6 +14,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
     state = env.reset()
     LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
     choices = [LEFT, RIGHT, UP, DOWN]
+    pdx_explanation = PDX()
 
     reward_types = env.reward_types
 
@@ -67,11 +69,12 @@ def run_task(evaluation_config, network_config, reinforce_config):
             action, q_values = agent.predict(state)
             if evaluation_config.render:
                 env.render()
-                time.sleep(0.5)
+                pdx_explanation.render_all_pdx(action, env.action_space, q_values, env.action_names, env.reward_types)
+                time.sleep(evaluation_config.sleep)
 
             state, reward, done, info = env.step(action)
 
-            total_reward += sum(reward)
+            total_reward += reward
 
         agent.end_episode(state)
 

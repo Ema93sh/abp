@@ -25,7 +25,7 @@ class FruitCollectionEnv(gym.Env):
         self.total_treasure = len(self.treasure_locations)
         self.image_window = None
         self.heatmap_window = None
-        self.get_action_meanings = ['Up', 'Right', 'Down', 'Left']
+        self.action_names = ['Up', 'Right', 'Down', 'Left']
         self.reward_types = [ "(%d, %d)" % (location) for location in self.treasure_locations] + ["Lightning Strike"]
         self.state_representation = state_representation
         self.reset()
@@ -193,7 +193,6 @@ class FruitCollectionEnv(gym.Env):
             if index != -1 and not self.treasure_found[index]:
                 reward_type = self.reward_types[index]
                 rewards[reward_type] = 2
-
                 self.treasure_found[index] = True
 
 
@@ -210,7 +209,7 @@ class FruitCollectionEnv(gym.Env):
         self.current_reward = rewards
 
 
-        rewards = rewards if decompose_reward else sum(reward)
+        rewards = rewards if decompose_reward else sum(rewards.values())
 
 
         state = self.generate_state()

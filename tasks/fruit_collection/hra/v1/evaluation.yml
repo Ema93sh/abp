@@ -4,3 +4,4 @@ summaries_path: "./tensorflow_summaries/fruit_collection/hra/v1/evaluation_summa
 test_episodes: 200
 training_episodes: 2000
 render: False
+sleep: 5
