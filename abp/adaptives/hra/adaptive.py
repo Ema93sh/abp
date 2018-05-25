@@ -38,6 +38,9 @@ class HRAAdaptive(object):
 
 
         self.total_reward = 0
+        self.decomposed_total_reward = {}
+        self.clear_episode_rewards()
+
 
         self.eval_model = HRAModel(self.name + "_eval", self.network_config)
         self.target_model = HRAModel(self.name + "_target", self.network_config)
@@ -110,14 +113,19 @@ class HRAAdaptive(object):
 
         self.episode += 1
 
-        self.summary.add_scalar(tag  = '%s/Episode Reward' % self.name,
-                                    scalar_value = self.total_reward,
+        self.summary.add_scalar(tag = '%s/Episode Reward' % self.name,
+                                scalar_value = self.total_reward,
+                                global_step = self.episode)
+
+        for reward_type in self.reward_types:
+            self.summary.add_scalar(tag = '%s/Decomposed Reward/%s' % (self.name, reward_type),
+                                    scalar_value = self.decomposed_total_reward[reward_type],
                                     global_step = self.episode)
 
         self.replay_memory.add(self.previous_state, self.previous_action, self.reward_list(), state, True)
 
         self.clear_rewards()
-        self.total_reward = 0
+        self.clear_episode_rewards()
 
         self.previous_state = None
         self.previous_action = None
@@ -137,9 +145,16 @@ class HRAAdaptive(object):
         for reward_type in self.reward_types:
             self.current_reward[reward_type] = 0
 
+    def clear_episode_rewards(self):
+        self.total_reward = 0
+        self.decomposed_total_reward = {}
+        for reward_type in self.reward_types:
+            self.decomposed_total_reward[reward_type] = 0
+
 
     def reward(self, reward_type, value):
         self.current_reward[reward_type] += value
+        self.decomposed_total_reward[reward_type] += value
         self.total_reward += value
 
 
@@ -152,7 +167,7 @@ class HRAAdaptive(object):
         self.summary.add_scalar(tag='%s/Beta' % self.name, scalar_value=beta, global_step=self.steps)
 
         states, actions, reward, next_states, is_terminal, weights, batch_idxes = self.replay_memory.sample(self.reinforce_config.batch_size, beta)
-        
+
         states = Variable(torch.Tensor(states))
         next_states = Variable(torch.Tensor(next_states))
 
