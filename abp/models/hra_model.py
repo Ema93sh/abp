@@ -19,9 +19,9 @@ class _HRAModel(nn.Module):
         for network_i, network in enumerate(network_config.networks):
             in_features = int(np.prod(network_config.input_shape))
             for i, out_features in enumerate(network['layers']):
-                layer = nn.Sequential(
+                layer = nn.DataParallel(nn.Sequential(
                     nn.Linear(in_features, out_features),
-                    nn.ReLU())
+                    nn.ReLU()))
                 in_features = out_features
                 setattr(self, 'network_{}_layer_{}'.format(network_i, i), layer)
             q_linear = nn.Linear(in_features, network_config.output_shape[0])

@@ -8,7 +8,8 @@ default_reinforce_config = {
     "batch_size": 35,
     "memory_size": 10000, # Total Memory size for the batch
     "summaries_path": None, # Path to store reinforcement related summaries
-    "update_frequency": 1000
+    "update_frequency": 1000,
+    "update_steps": 10, # Will update the model after n steps
 }
 
 class ReinforceConfig(BaseConfig):
@@ -35,3 +36,5 @@ class ReinforceConfig(BaseConfig):
     summaries_path = property(BaseConfig.get_property("summaries_path"), BaseConfig.set_property("summaries_path"))
 
     update_frequency = property(BaseConfig.get_property("update_frequency"), BaseConfig.set_property("update_frequency"))
+
+    update_steps = property(BaseConfig.get_property("update_steps"), BaseConfig.set_property("update_steps"))

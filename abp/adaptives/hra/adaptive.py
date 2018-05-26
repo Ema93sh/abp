@@ -1,8 +1,11 @@
 import logging
+import time
+import random
+from copy import deepcopy
 
 logger = logging.getLogger('root')
 
-from copy import deepcopy
+
 import numpy as np
 import torch
 from torch.autograd import Variable
@@ -63,7 +66,7 @@ class HRAAdaptive(object):
 
         self.summary.add_scalar(tag='%s/Epsilon' % self.name, scalar_value=epsilon, global_step=self.steps)
 
-        return np.random.choice([True, False], p=[epsilon, 1 - epsilon])
+        return  random.random() < epsilon
 
 
     def predict(self, state):
@@ -73,12 +76,14 @@ class HRAAdaptive(object):
             self.replay_memory.add(self.previous_state, self.previous_action, self.reward_list(), state, False)
 
         if self.learning and self.should_explore():
-            action = np.random.choice(len(self.choices))
+            action = random.choice(list(range(len(self.choices))))
             q_values = [None] * len(self.choices)  # TODO should it be output shape or from choices?
             choice = self.choices[action]
         else:
             _state = Variable(torch.Tensor(state)).unsqueeze(0)
+            predict_start_time =  time.time()
             action, q_values = self.eval_model.predict(_state)
+            # print("predict time", time.time() - predict_start_time)
 
             choice = self.choices[action]
 
@@ -86,8 +91,10 @@ class HRAAdaptive(object):
             logger.debug("Replacing target model for %s" % self.name)
             self.target_model.replace(self.eval_model)
 
-
-        self.update()
+        if self.steps % self.reinforce_config.update_steps == 0:
+            update_start_time = time.time()
+            self.update()
+            # print("update time", time.time() - update_start_time)
 
         self.clear_rewards()
 
@@ -195,5 +202,4 @@ class HRAAdaptive(object):
         self.replay_memory.update_priorities(batch_idxes, new_priorities)
 
         self.eval_model.fit(states, q_target, self.steps)
-
         return td_errors
