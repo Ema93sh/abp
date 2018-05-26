@@ -1,1 +1,0 @@
-from .adaptive import QAdaptive
