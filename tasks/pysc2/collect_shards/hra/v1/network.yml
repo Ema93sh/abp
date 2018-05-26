@@ -1,0 +1,18 @@
+# [0, 4, 9, 49, 54, 59, 64, 89, 94, 99]
+networks:
+
+input_shape:
+    - 17
+    - 10
+    - 10
+
+output_shape:
+     - 4
+
+shared_layers: [] #TODO
+aggeregator: "average" #TODO
+
+network_path: "./saved_models/pysc2/collect_shards/hra/v1.ckpt"
+summaries_path: "./tensorflow_summaries/pysc2/collect_shards/hra/v1/network_summary"
+summaries_step: 100
+restore_network: False

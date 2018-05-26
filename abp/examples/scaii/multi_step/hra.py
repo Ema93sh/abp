@@ -34,6 +34,15 @@ def run_task(evaluation_config, network_config, reinforce_config):
     choice_descriptions = list(map(lambda x: x[0], actions))
     choices = list(map(lambda x: x[1], actions))
 
+    # Configure network for reward type
+    networks = []
+    for reward_type in reward_types:
+        name = reward_type
+        layers = [250]
+        networks.append({"name": name, "layers": layers})
+
+    network_config.networks = networks
+
     choose_tower = HRAAdaptive(name = "tower",
                                choices = choices,
                                reward_types = reward_types,
