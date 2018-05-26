@@ -31,7 +31,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
                           visualize = False,
                           save_replay_episodes = 0,
                           replay_dir = 'replay',
-                          game_steps_per_episode = 1000,
+                          game_steps_per_episode = 10000,
                           use_feature_units = True,
                           feature_screen_size = 10,
                           feature_minimap_size = 10)
