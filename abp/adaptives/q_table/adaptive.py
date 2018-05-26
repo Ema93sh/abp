@@ -24,8 +24,6 @@ class QAdaptive(object):
         self.current_test_reward = 0 # Used once learning is disabled
 
 
-        self.session = tf.Session(config=tf.ConfigProto(log_device_placement=True))
-
         self.q_table = QTable(0.001, self.config.action_size)
 
         dirname = os.path.join(config.job_dir, "tensorflow_summaries/%s/%s" %(config.name, "qtable_summary"))
@@ -43,7 +41,6 @@ class QAdaptive(object):
         self.episode = 0
 
     def __del__(self):
-        self.session.close()
         self.writer.close()
 
     def save_model(self):

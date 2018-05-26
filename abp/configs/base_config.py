@@ -1,6 +1,5 @@
 import yaml
 
-# import tensorflow as tf
 from functools import partial
 
 class BaseConfig(object):

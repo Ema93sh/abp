@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger('root')
 
 
-import tensorflow as tf
+from tensorboardX import SummaryWriter
 import numpy as np
 
 from abp import HRAAdaptive
@@ -45,7 +45,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
     clear_summary_path(training_summaries_path)
-    train_summary_writer = tf.summary.FileWriter(training_summaries_path)
+    train_summary_writer = SummaryWriter(training_summaries_path)
 
     #Training Episodes
     for episode in range(evaluation_config.training_episodes):
@@ -79,7 +79,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     test_summaries_path = evaluation_config.summaries_path + "/test"
     clear_summary_path(test_summaries_path)
-    test_summary_writer = tf.summary.FileWriter(test_summaries_path)
+    test_summary_writer = SummaryWriter(test_summaries_path)
 
 
     #Test Episodes

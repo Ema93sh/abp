@@ -1,3 +1,4 @@
+from tensorboardX import SummaryWriter
 import tensorflow as tf
 import numpy as np
 
@@ -24,13 +25,11 @@ class DQAdaptive(object):
         self.current_test_reward = 0 # Used once learning is disabled
 
 
-        self.session = tf.Session(config=tf.ConfigProto(log_device_placement=True))
-
         self.aggregate_qtable =  AggregateQTable(self.config.size_rewards, self.config.action_size, 0.001)
 
         dirname = os.path.join(config.job_dir, "tensorflow_summaries/%s/%s" %(config.name, "dqtable_summary"))
         run_number = 0 if not tf.gfile.IsDirectory(dirname) else len(tf.gfile.ListDirectory(dirname))
-        self.writer = tf.summary.FileWriter("%s/%s" %(dirname, "run" + str(run_number)))
+        self.writer = SummaryWriter("%s/%s" %(dirname, "run" + str(run_number)))
 
         if config.restore_model and self.config.model_path is not None:
             dirname = os.path.dirname(self.config.model_path)
@@ -43,7 +42,6 @@ class DQAdaptive(object):
         self.episode = 0
 
     def __del__(self):
-        self.session.close()
         self.writer.close()
 
     def save_model(self):
