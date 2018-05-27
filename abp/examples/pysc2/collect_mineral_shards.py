@@ -27,8 +27,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
     flags.FLAGS(sys.argv[:1]) #TODO Fix this!
 
     env = sc2_env.SC2Env( map_name = "CollectMineralShards",
-                          step_mul = 10,
-                          visualize = False,
+                          step_mul = 8,
+                          visualize = True,
                           save_replay_episodes = 0,
                           replay_dir = 'replay',
                           game_steps_per_episode = 10000,
@@ -75,19 +75,21 @@ def run_task(evaluation_config, network_config, reinforce_config):
         done = False
         steps = 0
         model_time = 0
+        env_time = 0
         episode_start_time = time.time()
         while steps < 1000 and not done:
             steps += 1
             model_start_time = time.time()
-            action, q_values = agent.predict(state[0].observation.feature_screen)
+            action, q_values = agent.predict(state[0].observation.feature_screen.flatten())
             action = np.random.choice(choices)
 
             model_time += (time.time() - model_start_time)
 
             actions = ActionWrapper(state).select([action])
 
-
+            env_time -= time.time()
             state = env.step(actions)
+            env_time += time.time()
 
             decomposed_reward = reward_wrapper.reward(state)
 
@@ -98,9 +100,12 @@ def run_task(evaluation_config, network_config, reinforce_config):
             done = state[0].step_type == environment.StepType.LAST
 
 
-        agent.end_episode(state[0].observation.feature_screen)
-        print("Model Time", model_time)
+
+        agent.end_episode(state[0].observation.feature_screen.flatten())
+        print("Decision Time", model_time)
+        print("Env Time", env_time)
         print("Episode Time", time.time() - episode_start_time)
+        print("Steps", steps)
         test_summary_writer.add_scalar(tag="Train/Episode Reward", scalar_value=total_reward,
                                        global_step=episode + 1)
 

@@ -33,7 +33,7 @@ class Model(object):
             self.model.load_state_dict(torch.load(self.model_path))
 
     def predict_batch(self, input):
-        return np.array([x.data.numpy() for x in self.model(input)])
+        return np.array([x for x in self.model(input)])
 
     def predict(self, input):
         raise NotImplementedError('Needs to be implemented!')

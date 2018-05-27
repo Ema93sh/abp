@@ -19,9 +19,9 @@ class _HRAModel(nn.Module):
         for network_i, network in enumerate(network_config.networks):
             in_features = int(np.prod(network_config.input_shape))
             for i, out_features in enumerate(network['layers']):
-                layer = nn.DataParallel(nn.Sequential(
+                layer = nn.Sequential(
                     nn.Linear(in_features, out_features),
-                    nn.ReLU()))
+                    nn.ReLU())
                 in_features = out_features
                 setattr(self, 'network_{}_layer_{}'.format(network_i, i), layer)
             q_linear = nn.Linear(in_features, network_config.output_shape[0])
@@ -29,13 +29,14 @@ class _HRAModel(nn.Module):
 
     def forward(self, input):
         q_values = []
-        input = input.view((input.shape[0], int(np.prod(input.shape[1:]))))
+        #input = input.view((input.shape[0], int(np.prod(input.shape[1:]))))
         for network_i, network in enumerate(self.network_config.networks):
             out = input
             for i in range(len(network['layers'])):
                 out = getattr(self, 'network_{}_layer_{}'.format(network_i, i))(out)
             q_values.append(getattr(self, 'layer_q_{}'.format(network_i))(out))
-        return q_values
+
+        return torch.stack(q_values)
 
 
 class HRAModel(Model):
@@ -90,11 +91,20 @@ class HRAModel(Model):
         predict = self.model(states)
         loss = 0
         for i, p in enumerate(predict):
-            loss += self.loss_fn(p, Variable(torch.Tensor(target[i])))
+            loss += self.loss_fn(p, target[i])
         loss.backward()
         self.optimizer.step()
+        return loss
 
     def predict(self, input):
-        q_values = self.predict_batch(input.unsqueeze(0)).squeeze(axis=1)
-        q_actions = np.sum(q_values, axis=0)
-        return np.argmax(q_actions), q_values
+        q_values = self.model(input)
+        combined_q_values = torch.sum(q_values, 0)
+        values, q_actions = torch.max(combined_q_values, 1)
+        return q_actions.data[0], q_values
+
+
+    def predict_batch(self, input):
+        q_values = self.model(input)
+        combined_q_values = torch.sum(q_values, 0)
+        values, q_actions = torch.max(combined_q_values, 1)
+        return q_actions, q_values

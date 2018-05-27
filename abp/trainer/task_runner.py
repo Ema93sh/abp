@@ -4,6 +4,8 @@ import os
 
 from importlib import import_module
 
+import torch
+
 from abp.configs import NetworkConfig, ReinforceConfig, EvaluationConfig
 from abp.utils import setup_custom_logger
 logger = setup_custom_logger('root')
@@ -75,6 +77,8 @@ def main():
 
     if args.render:
         evaluation_config.render = True
+
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 
 
     task_module = import_module(args.task)

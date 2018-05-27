@@ -2,7 +2,7 @@ decay_steps: 300
 starting_epsilon: 1
 discount_factor: 0.99
 batch_size: 35
-memory_size: 100000
+memory_size: 10000
 summaries_path: "./tensorflow_summaries/pysc2/collect_shards/hra/v1/reinforce_summary"
-update_frequency: 200
-update_steps: 20
+update_frequency: 60
+update_steps: 10
