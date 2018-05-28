@@ -87,7 +87,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         while steps < 1000 and not done:
             steps += 1
             model_start_time = time.time()
-            action, q_values = agent.predict(state[0].observation.feature_screen.flatten())
+            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen.flatten())
 
             model_time += (time.time() - model_start_time)
 
@@ -134,8 +134,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         while steps < 1000 and not done:
             steps += 1
             model_start_time = time.time()
-            action, q_values = agent.predict(state[0].observation.feature_screen)
-            combined_q_values = np.sum(q_values, axis=0)
+            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen)
 
             if evaluation_config.render:
                 action_index = choices.index(action)

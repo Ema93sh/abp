@@ -212,15 +212,14 @@ class HRAAdaptive(object):
 
         _, q_next, _ = self.target_model.predict_batch(next_states)
 
-        q_next = q_next.mean(2)
+        q_next = q_next.mean(2).detach()
 
         q_next = (1 - terminal) * q_next
 
         self.fit_time += time.time() - fit_start_time
 
         q_target = reward.t() + self.reinforce_config.discount_factor * q_next
-        q_target = Variable(q_target.data)
-
+        
         td_errors = q_values - q_target
 
         td_errors = torch.sum(td_errors, 0)
