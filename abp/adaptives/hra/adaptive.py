@@ -219,6 +219,7 @@ class HRAAdaptive(object):
         self.fit_time += time.time() - fit_start_time
 
         q_target = reward.t() + self.reinforce_config.discount_factor * q_next
+        q_target = Variable(q_target.data)
 
         td_errors = q_values - q_target
 

@@ -3,7 +3,7 @@ import logging
 import torch
 import copy
 import torch.nn as nn
-from torch.optim import RMSprop
+from torch.optim import RMSprop, Adam
 import numpy as np
 from .model import Model
 from torch.autograd import Variable
@@ -48,8 +48,8 @@ class HRAModel(Model):
         model = _HRAModel(network_config)
         Model.__init__(self, model, name, network_config, restore)
         logger.info("Created network for %s " % self.name)
-        self.optimizer = RMSprop(self.model.parameters(), lr=learning_rate)
-        self.loss_fn = nn.MSELoss()
+        self.optimizer = Adam(self.model.parameters(), lr=learning_rate)
+        self.loss_fn = nn.SmoothL1Loss()
 
     def clear_weights(self, reward_type):
         for type in range(self.model.networks):
