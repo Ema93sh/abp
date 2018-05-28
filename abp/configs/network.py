@@ -18,7 +18,8 @@ default_network_config = {
     "networks": [], # cointaining details of multiple network
     "shared_layers": [], # the layers shared among the networks TODO
     "aggregator": "average", # the type of the aggregator TODO
-    "save_network": True
+    "save_network": True,
+    "save_steps": 100
 }
 
 
@@ -50,3 +51,5 @@ class NetworkConfig(BaseConfig):
     aggregator = property(BaseConfig.get_property("aggregator"), BaseConfig.set_property("aggregator"))
 
     save_network = property(BaseConfig.get_property("save_network"), BaseConfig.set_property("save_network"))
+
+    save_steps = property(BaseConfig.get_property("save_steps"), BaseConfig.set_property("save_steps"))

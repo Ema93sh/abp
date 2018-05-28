@@ -5,3 +5,4 @@ batch_size: 35
 memory_size: 10000
 summaries_path: "./tensorflow_summaries/fruit_collection/hra/v1/reinforce_summary"
 update_frequency: 50
+update_steps: 1

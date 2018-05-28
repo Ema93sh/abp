@@ -41,7 +41,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         steps = 0
         while not done:
             steps += 1
-            action, q_values = agent.predict(state)
+            action, q_values, combined_q_values = agent.predict(state)
             state, rewards, done, info = env.step(action, decompose_reward = True)
 
             for reward_type in rewards.keys():
@@ -52,7 +52,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
         agent.end_episode(state)
         test_summary_writer.add_scalar(tag="Train/Episode Reward", scalar_value=total_reward,
                                        global_step=episode + 1)
-        train_summary_writer.add_scalar(tag="Train/Steps to collect all Fruits", scalar_value=steps + 1,
+
+        train_summary_writer.add_scalar(tag="Train/Episode Steps", scalar_value=steps + 1,
                                         global_step=episode + 1)
 
     agent.disable_learning()
@@ -66,10 +67,12 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         while not done:
             steps += 1
-            action, q_values = agent.predict(state)
+            action, q_values, combined_q_values = agent.predict(state)
+
             if evaluation_config.render:
                 env.render()
-                pdx_explanation.render_all_pdx(action, env.action_space, q_values, env.action_names, env.reward_types)
+                pdx_explanation.render_decomposed_rewards(action, combined_q_values.data.numpy(), q_values.data.numpy(), env.action_names, env.reward_types)
+                pdx_explanation.render_all_pdx(action, env.action_space, q_values.data, env.action_names, env.reward_types)
                 time.sleep(evaluation_config.sleep)
 
             state, reward, done, info = env.step(action)
@@ -80,7 +83,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         test_summary_writer.add_scalar(tag="Test/Episode Reward", scalar_value=total_reward,
                                        global_step=episode + 1)
-        test_summary_writer.add_scalar(tag="Test/Steps to collect all Fruits", scalar_value=steps + 1,
+        test_summary_writer.add_scalar(tag="Test/Episode Steps", scalar_value=steps + 1,
                                        global_step=episode + 1)
 
     env.close()

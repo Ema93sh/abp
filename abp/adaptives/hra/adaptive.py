@@ -17,6 +17,12 @@ from tensorboardX import SummaryWriter
 
 from baselines.common.schedules import LinearSchedule
 
+use_cuda = torch.cuda.is_available()
+FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
+LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
+ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
+Tensor = FloatTensor
+
 
 class HRAAdaptive(object):
     """HRAAdaptive using HRA architecture"""
@@ -47,9 +53,11 @@ class HRAAdaptive(object):
 
 
         self.eval_model = HRAModel(self.name + "_eval", self.network_config)
-        self.eval_model.model = self.eval_model.model.cuda()
         self.target_model = HRAModel(self.name + "_target", self.network_config)
-        self.target_model.model = self.target_model.model.cuda()
+
+        if use_cuda:
+            self.eval_model.model = self.eval_model.model.cuda()
+            self.target_model.model = self.target_model.model.cuda()
 
         clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
         self.summary = SummaryWriter(log_dir = self.reinforce_config.summaries_path + "/" + self.name)
@@ -83,12 +91,13 @@ class HRAAdaptive(object):
 
         if self.learning and self.should_explore():
             action = random.choice(list(range(len(self.choices))))
-            q_values = [None] * len(self.choices)  # TODO should it be output shape or from choices?
+            q_values = None
+            combined_q_values = None
             choice = self.choices[action]
         else:
-            _state = Variable(torch.Tensor(state), requires_grad = False).unsqueeze(0)
+            _state = Variable(Tensor(state), requires_grad = False).unsqueeze(0)
             model_start_time =  time.time()
-            action, q_values = self.eval_model.predict(_state)
+            action, q_values, combined_q_values = self.eval_model.predict(_state)
             choice = self.choices[action]
             self.model_time += time.time() - model_start_time
 
@@ -96,7 +105,7 @@ class HRAAdaptive(object):
             logger.debug("Replacing target model for %s" % self.name)
             self.target_model.replace(self.eval_model)
 
-        if self.steps % self.reinforce_config.update_steps == 0:
+        if self.learning and self.steps % self.reinforce_config.update_steps == 0:
             update_start_time = time.time()
             self.update()
             self.update_time += time.time() - update_start_time
@@ -106,7 +115,7 @@ class HRAAdaptive(object):
         self.previous_state = state
         self.previous_action = action
 
-        return choice, q_values
+        return choice, q_values, combined_q_values
 
     def disable_learning(self):
         logger.info("Disabled Learning for %s agent" % self.name)
@@ -142,10 +151,12 @@ class HRAAdaptive(object):
         self.previous_state = None
         self.previous_action = None
 
+        if self.episode % self.network_config.save_steps == 0:
+            self.eval_model.save_network()
+            self.target_model.save_network()
+
         self.update()
-        print("Model update time", self.update_time)
-        print("Model predict time", self.model_time)
-        print("Fit time", self.fit_time)
+        logger.debug("Model prediction time: %.2f, updated time: %.2f, update fit time: %.2f" %( self.model_time, self.update_time, self.fit_time))
         self.update_time = 0
         self.fit_time = 0
         self.model_time = 0
@@ -186,39 +197,38 @@ class HRAAdaptive(object):
 
         states, actions, reward, next_states, is_terminal, weights, batch_idxes = self.replay_memory.sample(self.reinforce_config.batch_size, beta)
 
-        states = Variable(torch.Tensor(states), requires_grad = False)
-        next_states = Variable(torch.Tensor(next_states), requires_grad = False)
-        is_terminal = Variable(torch.cuda.FloatTensor([0 if t else 1 for t in is_terminal]), requires_grad = False)
-        reward = Variable(torch.cuda.FloatTensor(reward), requires_grad = False)
+        states = Variable(Tensor(states), requires_grad = False)
+        next_states = Variable(Tensor(next_states), requires_grad = False)
+        terminal = Variable(FloatTensor([1 if t else 0 for t in is_terminal]), requires_grad = False, volatile = True)
+        reward = Variable(FloatTensor(reward), requires_grad = False)
+        batch_index = np.arange(self.reinforce_config.batch_size, dtype=np.int32)
+
 
         fit_start_time = time.time()
 
-        _, q_next = self.target_model.predict_batch(next_states)
+        q_actions, q_values, _ = self.eval_model.predict_batch(states)
 
-        q_next = q_next.detach() # No need of grad for this.
+        q_values = q_values[:, batch_index, actions]
 
-        q_2 = torch.mean(q_next, 2)
+        _, q_next, _ = self.target_model.predict_batch(next_states)
 
-        q_2 = is_terminal * q_2
+        q_next = q_next.mean(2)
 
-        q_actions, q_values = self.eval_model.predict_batch(states)
+        q_next = (1 - terminal) * q_next
 
         self.fit_time += time.time() - fit_start_time
 
-        q_target = q_values.clone().detach()
+        q_target = reward.t() + self.reinforce_config.discount_factor * q_next
 
-        batch_index = np.arange(self.reinforce_config.batch_size, dtype=np.int32)
-
-        q_target[:, batch_index, actions] = torch.transpose(reward, 0, 1) + self.reinforce_config.discount_factor * q_2
-
-        td_errors = q_values[:, batch_index, actions] - q_target[:, batch_index, actions]
+        td_errors = q_values - q_target
 
         td_errors = torch.sum(td_errors, 0)
 
         new_priorities = torch.abs(td_errors) + 1e-6 #prioritized_replay_eps
         self.replay_memory.update_priorities(batch_idxes, new_priorities.data)
 
-        loss = self.eval_model.fit(states, q_target, self.steps)
+        loss = self.eval_model.fit(q_values, q_target, self.steps)
+
         self.summary.add_scalar(tag = '%s/Loss' % self.name,
                                 scalar_value = loss,
                                 global_step = self.steps)

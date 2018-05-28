@@ -35,9 +35,13 @@ def run_task(evaluation_config, network_config, reinforce_config):
                           use_feature_units = True,
                           feature_screen_size = 10,
                           feature_minimap_size = 10)
+
     choices =  ["Up", "Down", "Left", "Right"]
 
+    pdx_explanation = PDX()
+
     reward_types = [(x, y)  for x in range(10) for y in range(10)]
+    reward_names = ["loc (%d, %d)" %(x,y) for x, y in reward_types]
 
 
     # Configure network for reward type
@@ -57,7 +61,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
-    clear_summary_path(training_summaries_path)
+
+    if evaluation_config.training_episodes > 0:
+        clear_summary_path(training_summaries_path)
+
     train_summary_writer = SummaryWriter(training_summaries_path)
 
     test_summaries_path = evaluation_config.summaries_path + "/test"
@@ -81,7 +88,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
             steps += 1
             model_start_time = time.time()
             action, q_values = agent.predict(state[0].observation.feature_screen.flatten())
-            action = np.random.choice(choices)
 
             model_time += (time.time() - model_start_time)
 
@@ -117,20 +123,41 @@ def run_task(evaluation_config, network_config, reinforce_config):
     # Test Episodes
     for episode in range(evaluation_config.test_episodes):
         state = env.reset()
+        actions = ActionWrapper(state).select(["SelectMarine1"])
+        reward_wrapper = RewardWrapper(state, reward_types)
+        state = env.step(actions)
         total_reward = 0
         done = False
         steps = 0
-
+        model_time = 0
+        episode_start_time = time.time()
         while steps < 1000 and not done:
             steps += 1
+            model_start_time = time.time()
             action, q_values = agent.predict(state[0].observation.feature_screen)
+            combined_q_values = np.sum(q_values, axis=0)
+
+            if evaluation_config.render:
+                action_index = choices.index(action)
+                pdx_explanation.render_decomposed_rewards(action_index, combined_q_values, q_values, choices, reward_names)
+                pdx_explanation.render_all_pdx(action_index, len(choices), q_values, choices, reward_names)
+                time.sleep(evaluation_config.sleep)
+
+
+            model_time += (time.time() - model_start_time)
 
             actions = ActionWrapper(state).select([action])
 
+
             state = env.step(actions)
 
-            total_reward += sum([obs.reward for obs in state])
+            decomposed_reward = reward_wrapper.reward(state)
+
+            total_reward += sum(decomposed_reward.values())
             done = state[0].step_type == environment.StepType.LAST
+
+
+        print("Episode", episode + 1, total_reward)
 
         test_summary_writer.add_scalar(tag="Test/Episode Reward", scalar_value=total_reward,
                                        global_step=episode + 1)

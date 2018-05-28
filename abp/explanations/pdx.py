@@ -15,6 +15,8 @@ class PDX(object):
         super(PDX, self).__init__()
         self.pdx_box = {}
         self.min_pdx_box = {}
+        self.q_box = None
+        self.decomposed_q_box = None
         self.viz = visdom.Visdom()
 
     def get_pdx(self, q_values, selected_action, target_actions):
@@ -63,19 +65,48 @@ class PDX(object):
 
         return np.square(np.subtract(prediction_x, target_x)).mean()
 
-    def clear_windows(self):
-        for box in self.pdx_box.values():
-            self.viz.close(box)
+    def clear_windows(self, current_action):
+        for (a, t) in self.pdx_box.keys():
+            if a != current_action:
+                self.viz.close(self.pdx_box[(a, t)])
 
-        for box in self.min_pdx_box.values():
-            self.viz.close(box)
+        for (a, t) in self.min_pdx_box.keys():
+            if a != current_action:
+                self.viz.close(self.min_pdx_box[(a, t)])
 
 
     def render_all_pdx(self, current_action, action_space, q_values, action_names, reward_types):
-        self.clear_windows()
+        self.clear_windows(current_action)
         for target_action in range(action_space):
             if current_action != target_action:
                 self.render_pdx(q_values, current_action, target_action, action_names, reward_types)
+
+    def render_decomposed_rewards(self, action, combined_q_values, q_values, action_names, reward_names):
+        q_box_opts = dict(
+            title='Q Values',
+            rownames=[action_name for action_name in action_names]
+        )
+
+        decomposed_q_box_opts = dict(
+            title='Decomposed Q Values',
+            stacked=False,
+            legend=[r_type for r_type in reward_names],
+            rownames=[action_name for action_name in action_names]
+        )
+
+        q_box_opts['title'] = 'Q Values - (Selected Action:' + str(
+            action_names[action]) + ')'
+
+        if self.q_box is None:
+            self.q_box = self.viz.bar(X = combined_q_values, opts = q_box_opts)
+        else:
+            self.viz.bar(X = combined_q_values, opts = q_box_opts, win = self.q_box)
+
+        if self.decomposed_q_box is None:
+            self.decomposed_q_box = self.viz.bar(X = q_values.T, opts = decomposed_q_box_opts)
+        else:
+            self.viz.bar(X = q_values.T, opts = decomposed_q_box_opts, win = self.decomposed_q_box)
+
 
     def render_pdx(self, q_values, current_action, target_action, action_names, reward_types):
         action_name = action_names[current_action]

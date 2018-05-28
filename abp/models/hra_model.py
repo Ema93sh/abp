@@ -86,25 +86,22 @@ class HRAModel(Model):
             m.weight.data.normal_(0.0, 0.0)
             m.bias.data.fill_(0)
 
-    def fit(self, states, target, steps):
+    def fit(self, q_values, target_q_values, steps):
+        loss = self.loss_fn(q_values, target_q_values)
         self.optimizer.zero_grad()
-        predict = self.model(states)
-        loss = 0
-        for i, p in enumerate(predict):
-            loss += self.loss_fn(p, target[i])
         loss.backward()
         self.optimizer.step()
         return loss
 
     def predict(self, input):
-        q_values = self.model(input)
+        q_values = self.model(input).squeeze(1)
         combined_q_values = torch.sum(q_values, 0)
-        values, q_actions = torch.max(combined_q_values, 1)
-        return q_actions.data[0], q_values
+        values, q_actions = torch.max(combined_q_values, 0)
+        return q_actions.data[0], q_values, combined_q_values
 
 
     def predict_batch(self, input):
         q_values = self.model(input)
         combined_q_values = torch.sum(q_values, 0)
         values, q_actions = torch.max(combined_q_values, 1)
-        return q_actions, q_values
+        return q_actions, q_values, combined_q_values

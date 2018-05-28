@@ -58,7 +58,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
     for episode in range(evaluation_config.training_episodes):
         state = env.reset()
         total_reward = 0
-        episode_summary = tf.Summary()
         step = 1
 
         while not state.is_terminal():
@@ -76,8 +75,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
         choose_tower.end_episode(state.state)
 
         logger.debug("Episode %d : %d, Step: %d" % (episode + 1, total_reward, step))
-        episode_summary.value.add(tag = "Reward", simple_value = total_reward)
-        train_summary_writer.add_summary(episode_summary, episode + 1)
 
     train_summary_writer.flush()
 
@@ -96,7 +93,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         state = env.reset(visualize=evaluation_config.render, record=True)
         total_reward = 0
-        episode_summary = tf.Summary()
         step = 0
 
         while not state.is_terminal():
@@ -135,8 +131,5 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         logger.info("End Episode of episode %d with %d steps" % (episode + 1, step))
         logger.info("Total Reward %d!" % (total_reward))
-
-        episode_summary.value.add(tag = "Reward", simple_value = total_reward)
-        test_summary_writer.add_summary(episode_summary, episode + 1)
 
     test_summary_writer.flush()

@@ -78,9 +78,6 @@ def main():
     if args.render:
         evaluation_config.render = True
 
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
-
-
     task_module = import_module(args.task)
 
     task_module.run_task(evaluation_config, network_config, reinforce_config)
