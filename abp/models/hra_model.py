@@ -10,6 +10,11 @@ from tensorboardX import SummaryWriter
 from .model import Model
 from abp.utils import clear_summary_path
 
+def weights_initialize(module):
+    if type(module) == nn.Linear:
+        torch.nn.init.xavier_uniform_(module.weight)
+        module.bias.data.fill_(0.01)
+
 
 class _HRAModel(nn.Module):
     def __init__(self, network_config):
@@ -23,9 +28,12 @@ class _HRAModel(nn.Module):
                     nn.Linear(in_features, out_features),
                     nn.ReLU())
                 in_features = out_features
+                layer.apply(weights_initialize)
+
                 setattr(self, 'network_{}_layer_{}'.format(network_i, i), layer)
-            q_linear = nn.Linear(in_features, network_config.output_shape[0])
-            setattr(self, 'layer_q_{}'.format(network_i), q_linear)
+            output_layer = nn.Linear(in_features, network_config.output_shape[0])
+            setattr(self, 'layer_q_{}'.format(network_i), output_layer)
+
 
     def forward(self, input):
         q_values = []
@@ -43,8 +51,7 @@ class HRAModel(Model):
 
     def __init__(self, name, network_config, restore=True, learning_rate=0.001):
         self.network_config = network_config
-        self.optimizer = Adam(self.model.parameters(), lr=learning_rate)
-        self.loss_fn = nn.SmoothL1Loss()
+        self.name = name
 
         summaries_path =  self.network_config.summaries_path + "/" + self.name
         clear_summary_path(summaries_path)
@@ -53,6 +60,9 @@ class HRAModel(Model):
         model = _HRAModel(network_config)
         Model.__init__(self, model, name, network_config, restore)
         logger.info("Created network for %s " % self.name)
+
+        self.optimizer = Adam(self.model.parameters(), lr=learning_rate)
+        self.loss_fn = nn.SmoothL1Loss()
 
         dummy_input = torch.rand(1, int(np.prod(network_config.input_shape)))
         self.summary.add_graph(self.model, dummy_input)
