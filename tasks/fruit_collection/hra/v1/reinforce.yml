@@ -4,5 +4,5 @@ discount_factor: 0.99
 batch_size: 35
 memory_size: 10000
 summaries_path: "./tensorflow_summaries/fruit_collection/hra/v1/reinforce_summary"
-update_frequency: 50
+replace_frequency: 60
 update_steps: 1

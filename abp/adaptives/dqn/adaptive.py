@@ -21,7 +21,7 @@ class DQNAdaptive(object):
         self.choices = choices
         self.network_config = network_config
         self.reinforce_config = reinforce_config
-        self.update_frequency = reinforce_config.update_frequency
+        self.replace_frequency = reinforce_config.replace_frequency
 
         self.replay_memory = Memory(self.reinforce_config.memory_size)
         self.learning = True
@@ -81,7 +81,7 @@ class DQNAdaptive(object):
                 saliencies.append(saliency)
 
 
-        if self.learning and self.steps % self.update_frequency == 0:
+        if self.learning and self.steps % self.replace_frequency == 0:
             logger.debug("Replacing target model for %s" % self.name)
             self.target_model.replace(self.eval_model)
 

@@ -28,7 +28,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     env = sc2_env.SC2Env( map_name = "CollectMineralShards",
                           step_mul = 8,
-                          visualize = True,
+                          visualize = False,
                           save_replay_episodes = 0,
                           replay_dir = 'replay',
                           game_steps_per_episode = 10000,
@@ -87,7 +87,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         while steps < 1000 and not done:
             steps += 1
             model_start_time = time.time()
-            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen.flatten())
+            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen.player_id.flatten())
 
             model_time += (time.time() - model_start_time)
 
@@ -107,11 +107,11 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
 
 
-        agent.end_episode(state[0].observation.feature_screen.flatten())
-        print("Decision Time", model_time)
-        print("Env Time", env_time)
-        print("Episode Time", time.time() - episode_start_time)
-        print("Steps", steps)
+        agent.end_episode(state[0].observation.feature_screen.player_id.flatten())
+        # print("Decision Time", model_time)
+        # print("Env Time", env_time)
+        # print("Episode Time", time.time() - episode_start_time)
+        # print("Steps", steps)
         test_summary_writer.add_scalar(tag="Train/Episode Reward", scalar_value=total_reward,
                                        global_step=episode + 1)
 
@@ -132,21 +132,23 @@ def run_task(evaluation_config, network_config, reinforce_config):
         model_time = 0
         episode_start_time = time.time()
         while steps < 1000 and not done:
+            print("step", steps)
             steps += 1
             model_start_time = time.time()
-            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen)
+            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen.player_id.flatten())
 
             if evaluation_config.render:
                 action_index = choices.index(action)
-                pdx_explanation.render_decomposed_rewards(action_index, combined_q_values, q_values, choices, reward_names)
+                combined_q_values = combined_q_values.data.numpy()
+                q_values = q_values.data.numpy()
+                # pdx_explanation.render_decomposed_rewards(action_index, combined_q_values, q_values, choices, reward_names)
                 pdx_explanation.render_all_pdx(action_index, len(choices), q_values, choices, reward_names)
-                time.sleep(evaluation_config.sleep)
+                time.sleep(1)
 
 
             model_time += (time.time() - model_start_time)
 
             actions = ActionWrapper(state).select([action])
-
 
             state = env.step(actions)
 

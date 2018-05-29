@@ -1,12 +1,12 @@
 from setuptools import find_packages
 from setuptools import setup
 
-REQUIRED_PACKAGES = ["torch==0.3.1", "gym", "numpy==1.13.1", "visdom", "tensorboardX"]
+REQUIRED_PACKAGES = ["torch", "gym", "numpy", "visdom", "tensorboardX"]
 
 
 setup( name='abp',
        version='0.1',
-       description='Adaptation Based Programming Library in python',
+       description='Reinforcement Learning Library in python',
        author='Magesh Kumar',
        author_email='muralim@oregonstate.edu',
        include_package_data=True,

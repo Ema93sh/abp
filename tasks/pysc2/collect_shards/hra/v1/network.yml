@@ -1,7 +1,6 @@
 networks:
 
 input_shape:
-    - 17
     - 10
     - 10
 

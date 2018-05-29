@@ -5,21 +5,20 @@ from copy import deepcopy
 
 logger = logging.getLogger('root')
 
-
-import numpy as np
 import torch
-from torch.autograd import Variable
-import torch.nn as nn
+from baselines.common.schedules import LinearSchedule
+
+
 from abp.adaptives.common.prioritized_memory.memory import PrioritizedReplayBuffer
 from abp.utils import clear_summary_path
 from abp.models import HRAModel
 from tensorboardX import SummaryWriter
 
-from baselines.common.schedules import LinearSchedule
 
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
+IntTensor = torch.cuda.IntTensor if use_cuda else torch.IntTensor
 ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
@@ -33,7 +32,7 @@ class HRAAdaptive(object):
         self.choices = choices
         self.network_config = network_config
         self.reinforce_config = reinforce_config
-        self.update_frequency = reinforce_config.update_frequency
+        self.replace_frequency = reinforce_config.replace_frequency
 
         self.replay_memory = PrioritizedReplayBuffer(self.reinforce_config.memory_size, 0.6)
         self.learning = True
@@ -65,6 +64,7 @@ class HRAAdaptive(object):
 
         self.episode = 0
         self.beta_schedule = LinearSchedule(10 * 1000, initial_p = 0.2, final_p = 1.0)
+        self.episode_time = time.time()
         self.update_time = 0
         self.fit_time = 0
         self.model_time = 0
@@ -75,7 +75,7 @@ class HRAAdaptive(object):
 
 
     def should_explore(self):
-        epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (
+        epsilon = max([0.1, self.reinforce_config.starting_epsilon * (
                          self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
 
         self.summary.add_scalar(tag='%s/Epsilon' % self.name, scalar_value=epsilon, global_step=self.steps)
@@ -95,13 +95,13 @@ class HRAAdaptive(object):
             combined_q_values = None
             choice = self.choices[action]
         else:
-            _state = Variable(Tensor(state), requires_grad = False).unsqueeze(0)
+            _state = Tensor(state).unsqueeze(0)
             model_start_time =  time.time()
-            action, q_values, combined_q_values = self.eval_model.predict(_state)
+            action, q_values, combined_q_values = self.eval_model.predict(_state, self.steps)
             choice = self.choices[action]
             self.model_time += time.time() - model_start_time
 
-        if self.learning and self.steps % self.update_frequency == 0:
+        if self.learning and self.steps % self.replace_frequency == 0:
             logger.debug("Replacing target model for %s" % self.name)
             self.target_model.replace(self.eval_model)
 
@@ -156,7 +156,9 @@ class HRAAdaptive(object):
             self.target_model.save_network()
 
         self.update()
-        logger.debug("Model prediction time: %.2f, updated time: %.2f, update fit time: %.2f" %( self.model_time, self.update_time, self.fit_time))
+        self.episode_time = time.time() - self.episode_time
+        logger.debug("Episode Time: %.2f, Model prediction time: %.2f, updated time: %.2f, update fit time: %.2f" %(self.episode_time, self.model_time, self.update_time, self.fit_time))
+        self.episode_time = time.time()
         self.update_time = 0
         self.fit_time = 0
         self.model_time = 0
@@ -192,46 +194,31 @@ class HRAAdaptive(object):
             return
 
         beta = self.beta_schedule.value(self.steps)
-
         self.summary.add_scalar(tag='%s/Beta' % self.name, scalar_value=beta, global_step=self.steps)
 
         states, actions, reward, next_states, is_terminal, weights, batch_idxes = self.replay_memory.sample(self.reinforce_config.batch_size, beta)
 
-        states = Variable(Tensor(states), requires_grad = False)
-        next_states = Variable(Tensor(next_states), requires_grad = False)
-        terminal = Variable(FloatTensor([1 if t else 0 for t in is_terminal]), requires_grad = False, volatile = True)
-        reward = Variable(FloatTensor(reward), requires_grad = False)
-        batch_index = np.arange(self.reinforce_config.batch_size, dtype=np.int32)
+        states = Tensor(states)
+        next_states = Tensor(next_states)
+        terminal = FloatTensor([1 if t else 0 for t in is_terminal])
+        reward = FloatTensor(reward)
+        batch_index = torch.arange(self.reinforce_config.batch_size, dtype = torch.long)
 
-
-        fit_start_time = time.time()
-
+        #Find the target values
         q_actions, q_values, _ = self.eval_model.predict_batch(states)
-
         q_values = q_values[:, batch_index, actions]
-
         _, q_next, _ = self.target_model.predict_batch(next_states)
-
         q_next = q_next.mean(2).detach()
-
         q_next = (1 - terminal) * q_next
+        q_target = reward.t() + self.reinforce_config.discount_factor * q_next
 
+        #Update the model
+        fit_start_time = time.time()
+        self.eval_model.fit(q_values, q_target, self.steps)
         self.fit_time += time.time() - fit_start_time
 
-        q_target = reward.t() + self.reinforce_config.discount_factor * q_next
-        
+        #Update priorities
         td_errors = q_values - q_target
-
         td_errors = torch.sum(td_errors, 0)
-
         new_priorities = torch.abs(td_errors) + 1e-6 #prioritized_replay_eps
         self.replay_memory.update_priorities(batch_idxes, new_priorities.data)
-
-        loss = self.eval_model.fit(q_values, q_target, self.steps)
-
-        self.summary.add_scalar(tag = '%s/Loss' % self.name,
-                                scalar_value = loss,
-                                global_step = self.steps)
-
-
-        return td_errors

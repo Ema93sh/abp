@@ -14,7 +14,7 @@ from .env_map import EnvMap
 class FruitCollectionEnv(gym.Env):
     """The agent is looking for fruit without getting hit by lightning"""
 
-    def __init__(self, map_name = "10x10_default", state_representation="linear"):
+    def __init__(self, map_name = "10x10_easy", state_representation="linear"):
         self.action_space = 4
         self.current_dir = os.path.dirname(os.path.realpath(__file__))
         self.vis = visdom.Visdom()
