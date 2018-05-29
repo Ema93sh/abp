@@ -82,16 +82,16 @@ class HRAModel(Model):
                 weight_name = 'Network{}/layer{}/weights'.format(network_i, i)
                 bias_name = 'Network{}/layer{}/bias'.format(network_i, i)
                 layer, _ = getattr(self.model, 'network_{}_layer_{}'.format(network_i, i))
-                self.summary.add_histogram(tag = weight_name, values = layer.weight.data.clone().numpy(), global_step = steps, bins = 100000)
-                self.summary.add_histogram(tag = bias_name, values = layer.bias.data.clone().numpy(), global_step = steps, bins = 100000)
+                self.summary.add_histogram(tag = weight_name, values = layer.weight.data.clone().cpu().numpy(), global_step = steps, bins = 100000)
+                self.summary.add_histogram(tag = bias_name, values = layer.bias.data.clone().cpu().numpy(), global_step = steps, bins = 100000)
 
             weight_name = 'Network{}/Output Layer/weights'.format(network_i, i)
             bias_name = 'Network{}/Output Layer/bias'.format(network_i, i)
 
             output_layer = getattr(self.model, 'layer_q_{}'.format(network_i))
 
-            self.summary.add_histogram(tag = weight_name, values = output_layer.weight.data.clone().numpy(), global_step = steps, bins = 100000)
-            self.summary.add_histogram(tag = bias_name, values = output_layer.bias.data.clone().numpy(), global_step = steps, bins = 100000)
+            self.summary.add_histogram(tag = weight_name, values = output_layer.weight.data.clone().cpu().numpy(), global_step = steps, bins = 100000)
+            self.summary.add_histogram(tag = bias_name, values = output_layer.bias.data.clone().cpu().numpy(), global_step = steps, bins = 100000)
 
     def top_layer(self, reward_type):
         return getattr(self.model, 'layer_q_{}'.format(reward_type))
