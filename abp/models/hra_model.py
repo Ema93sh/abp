@@ -82,16 +82,16 @@ class HRAModel(Model):
                 weight_name = 'Network{}/layer{}/weights'.format(network_i, i)
                 bias_name = 'Network{}/layer{}/bias'.format(network_i, i)
                 layer, _ = getattr(self.model, 'network_{}_layer_{}'.format(network_i, i))
-                self.summary.add_histogram(weight_name, layer.weight.data.clone().numpy(), steps)
-                self.summary.add_histogram(bias_name, layer.bias.data.clone().numpy(), steps)
+                self.summary.add_histogram(tag = weight_name, values = layer.weight.data.clone().numpy(), global_step = steps, bins = 100000)
+                self.summary.add_histogram(tag = bias_name, values = layer.bias.data.clone().numpy(), global_step = steps, bins = 100000)
 
             weight_name = 'Network{}/Output Layer/weights'.format(network_i, i)
             bias_name = 'Network{}/Output Layer/bias'.format(network_i, i)
 
             output_layer = getattr(self.model, 'layer_q_{}'.format(network_i))
 
-            self.summary.add_histogram(weight_name, output_layer.weight.data.clone().numpy(), steps)
-            self.summary.add_histogram(bias_name, output_layer.bias.data.clone().numpy(), steps)
+            self.summary.add_histogram(tag = weight_name, values = output_layer.weight.data.clone().numpy(), global_step = steps, bins = 100000)
+            self.summary.add_histogram(tag = bias_name, values = output_layer.bias.data.clone().numpy(), global_step = steps, bins = 100000)
 
     def top_layer(self, reward_type):
         return getattr(self.model, 'layer_q_{}'.format(reward_type))
@@ -125,10 +125,10 @@ class HRAModel(Model):
 
         if steps % self.network_config.summaries_step == 0:
             self.weights_summary(steps)
-            self.summary.add_histogram("%s/Q values" % (self.name), combined_q_values.clone().cpu().data.numpy(), steps)
+            self.summary.add_histogram(tag = "%s/Q values" % (self.name), values = combined_q_values.clone().cpu().data.numpy(), global_step = steps, bins = 100000)
             for network_i, network in enumerate(self.network_config.networks):
                  name = 'Network{}/Q_value'.format(network_i)
-                 self.summary.add_histogram(name, q_values[network_i].clone().cpu().data.numpy(), steps)
+                 self.summary.add_histogram(tag = name, values = q_values[network_i].clone().cpu().data.numpy(), global_step = steps, bins = 100000)
 
         return q_actions.item(), q_values, combined_q_values
 
