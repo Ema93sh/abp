@@ -2,39 +2,48 @@
 networks:
   - name: "location0"
     layers:
-        - 250
+        - 120
+        - 120
 
   - name: "location4"
     layers:
-        - 250
+        - 120
+        - 120
 
   - name: "location9"
     layers:
-        - 250
+        - 120
+        - 120
 
   - name: "location49"
     layers:
-        - 250
+        - 120
+        - 120
 
   - name: "location54"
     layers:
-        - 250
+        - 120
+        - 120
 
   - name: "location59"
     layers:
-        - 250
+        - 120
+        - 120
 
   - name: "location64"
     layers:
-        - 250
+        - 120
+        - 120
 
   - name: "location89"
     layers:
-        - 250
+        - 120
+        - 120
 
   - name: "location94"
     layers:
-        - 250
+        - 120
+        - 120
 
 input_shape:
     - 296

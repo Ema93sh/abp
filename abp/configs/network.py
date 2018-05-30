@@ -19,7 +19,8 @@ default_network_config = {
     "shared_layers": [], # the layers shared among the networks TODO
     "aggregator": "average", # the type of the aggregator TODO
     "save_network": True,
-    "save_steps": 100
+    "save_steps": 100,
+    "learning_rate": 0.001
 }
 
 
@@ -53,3 +54,5 @@ class NetworkConfig(BaseConfig):
     save_network = property(BaseConfig.get_property("save_network"), BaseConfig.set_property("save_network"))
 
     save_steps = property(BaseConfig.get_property("save_steps"), BaseConfig.set_property("save_steps"))
+
+    learning_rate = property(BaseConfig.get_property("learning_rate"), BaseConfig.set_property("learning_rate"))
