@@ -32,12 +32,6 @@ class BaseConfig(object):
         self._config[property_name] = value
         return self._config[property_name]
 
-    # def set_property(property_name):
-    #     return partial(self._set_property, property_name)
-    #
-    # def get_property(property_name):
-    #     return partial(self._get_property, property_name)
-
     def set_property(cls, property_name):
         return (lambda self, value: self._set_property(property_name, value))
 

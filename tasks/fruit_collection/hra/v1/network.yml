@@ -59,3 +59,4 @@ summaries_path: "./tensorflow_summaries/fruit_collection/hra/v1/network_summary"
 summaries_step: 100
 restore_network: False
 save_steps: 200
+learning_rate: 0.00029

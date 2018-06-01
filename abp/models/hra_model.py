@@ -16,9 +16,9 @@ def weights_initialize(module):
         torch.nn.init.xavier_uniform_(module.weight, gain=nn.init.calculate_gain('relu'))
         module.bias.data.fill_(0.01)
 
-class RewardModel(nn.Module):
+class DecomposedModel(nn.Module):
     def __init__(self, layers, input_shape, output_shape):
-        super(RewardModel, self).__init__()
+        super(DecomposedModel, self).__init__()
         layer_modules = OrderedDict()
 
         for i, layer in enumerate(layers):
@@ -42,7 +42,8 @@ class _HRAModel(nn.Module):
         self.network_config = network_config
         modules = []
         for network_i, network in enumerate(network_config.networks):
-            model = RewardModel(network["layers"], network_config.input_shape[0], network_config.output_shape[0])
+            input_shape = int(np.prod(network_config.input_shape))
+            model = DecomposedModel(network["layers"], input_shape, network_config.output_shape[0])
             modules.append(model)
         self.reward_models = nn.ModuleList(modules)
 
@@ -137,11 +138,11 @@ class HRAModel(Model):
         values, q_actions = torch.max(combined_q_values, 0)
 
         if steps % self.network_config.summaries_step == 0:
-            logger.deubg("Adding network summaries!")
+            logger.debug("Adding network summaries!")
             self.weights_summary(steps)
             self.summary.add_histogram(tag = "%s/Q values" % (self.name), values = combined_q_values.clone().cpu().data.numpy(), global_step = steps)
             for network_i, network in enumerate(self.network_config.networks):
-                 name = 'Network{}/Q_value'.format(network_i)
+                 name = 'Sub Network Type:{}/Q_value'.format(network_i)
                  self.summary.add_histogram(tag = name, values = q_values[network_i].clone().cpu().data.numpy(), global_step = steps)
 
         return q_actions.item(), q_values, combined_q_values
