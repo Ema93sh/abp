@@ -5,4 +5,4 @@ batch_size: 35
 memory_size: 10000
 summaries_path: "./tensorflow_summaries/fruit_collection/dqn/v1/reinforce_summary"
 replace_frequency: 100
-update_steps: 40
+update_steps: 20

@@ -91,15 +91,15 @@ class HRAModel(Model):
             model = self.model.reward_models[network_i]
             for i in range(len(network['layers'])):
                 layer_name = "Layer_%d" % i
-                weight_name = 'Network{}/layer{}/weights'.format(network_i, i)
-                bias_name = 'Network{}/layer{}/bias'.format(network_i, i)
+                weight_name = 'Sub Network Type:{}/layer{}/weights'.format(network_i, i)
+                bias_name = 'Sub Network Type:{}/layer{}/bias'.format(network_i, i)
                 weight = getattr(model.layers, layer_name).weight.clone().data
                 bias = getattr(model.layers, layer_name).bias.clone().data
                 self.summary.add_histogram(tag = weight_name, values = weight, global_step = steps)
                 self.summary.add_histogram(tag = bias_name, values = bias, global_step = steps)
 
-            weight_name = 'Network{}/Output Layer/weights'.format(network_i, i)
-            bias_name = 'Network{}/Output Layer/bias'.format(network_i, i)
+            weight_name = 'Sub Network Type:{}/Output Layer/weights'.format(network_i, i)
+            bias_name = 'Sub Network Type:{}/Output Layer/bias'.format(network_i, i)
 
             weight = getattr(model.layers, "OutputLayer").weight.clone().data
             bias = getattr(model.layers, "OutputLayer").bias.clone().data

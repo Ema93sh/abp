@@ -108,10 +108,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
 
         agent.end_episode(state[0].observation.feature_screen.player_id.flatten())
-        # print("Decision Time", model_time)
-        # print("Env Time", env_time)
-        # print("Episode Time", time.time() - episode_start_time)
-        # print("Steps", steps)
+
         test_summary_writer.add_scalar(tag="Train/Episode Reward", scalar_value=total_reward,
                                        global_step=episode + 1)
 
@@ -141,7 +138,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
                 action_index = choices.index(action)
                 combined_q_values = combined_q_values.data.numpy()
                 q_values = q_values.data.numpy()
-                # pdx_explanation.render_decomposed_rewards(action_index, combined_q_values, q_values, choices, reward_names)
+                pdx_explanation.render_decomposed_rewards(action_index, combined_q_values, q_values, choices, reward_names)
                 pdx_explanation.render_all_pdx(action_index, len(choices), q_values, choices, reward_names)
                 time.sleep(1)
 

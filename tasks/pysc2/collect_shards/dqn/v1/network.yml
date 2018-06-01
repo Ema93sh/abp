@@ -1,0 +1,20 @@
+networks:
+
+input_shape:
+    - 32
+    - 32
+
+output_shape:
+     - 4
+
+layers:
+    - 512
+    - 256
+    - 64
+
+aggeregator: "average" #TODO
+
+network_path: "./saved_models/pysc2/collect_shards/dqn/v1.ckpt"
+summaries_path: "./tensorflow_summaries/pysc2/collect_shards/dqn/v1/network_summary"
+summaries_step: 100
+restore_network: False

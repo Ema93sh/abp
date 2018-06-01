@@ -1,0 +1,8 @@
+decay_steps: 2000
+starting_epsilon: 1
+discount_factor: 0.99
+batch_size: 35
+memory_size: 40000
+summaries_path: "./tensorflow_summaries/pysc2/collect_shards/dqn/v1/reinforce_summary"
+replace_frequency: 100
+update_steps: 10
