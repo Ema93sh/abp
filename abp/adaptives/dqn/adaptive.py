@@ -72,7 +72,7 @@ class DQNAdaptive(object):
             choice = random.choice(self.choices)
             action = self.choices.index(choice)
         else:
-            _state = torch.Tensor(state).unsqueeze(0)
+            _state = Tensor(state).unsqueeze(0)
             action, q_values = self.eval_model.predict(_state, self.steps, self.learning)
             choice = self.choices[action]
 
