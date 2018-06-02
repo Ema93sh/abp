@@ -60,6 +60,8 @@ class DQNModel(Model):
             clear_summary_path(summaries_path)
             self.summary = SummaryWriter(log_dir = summaries_path)
             dummy_input = torch.rand(1, int(np.prod(network_config.input_shape)))
+            if use_cuda:
+                dummy_input = dummy_input.cuda()
             self.summary.add_graph(self.model, dummy_input)
         else:
             self.summary = SummaryWriter(log_dir = summaries_path)
