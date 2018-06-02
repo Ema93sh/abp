@@ -84,10 +84,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
         model_time = 0
         env_time = 0
         episode_start_time = time.time()
-        while steps < 1000 and not done:
+        while not done:
             steps += 1
             model_start_time = time.time()
-            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen.player_id.flatten())
+            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen.player_relative.flatten())
 
             model_time += (time.time() - model_start_time)
 
@@ -107,7 +107,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
 
 
-        agent.end_episode(state[0].observation.feature_screen.player_id.flatten())
+        agent.end_episode(state[0].observation.feature_screen.player_relative.flatten())
 
         test_summary_writer.add_scalar(tag="Train/Episode Reward", scalar_value=total_reward,
                                        global_step=episode + 1)
@@ -129,10 +129,9 @@ def run_task(evaluation_config, network_config, reinforce_config):
         model_time = 0
         episode_start_time = time.time()
         while steps < 1000 and not done:
-            print("step", steps)
             steps += 1
             model_start_time = time.time()
-            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen.player_id.flatten())
+            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen.player_relative.flatten())
 
             if evaluation_config.render:
                 action_index = choices.index(action)

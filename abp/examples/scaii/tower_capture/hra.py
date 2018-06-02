@@ -56,7 +56,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         while not state.is_terminal():
             step += 1
-            tower_to_kill, q_values = choose_tower.predict(state.state)
+            tower_to_kill, q_values, _ = choose_tower.predict(state.state)
             action = env.new_action()
             action.attack_quadrant(tower_to_kill)
             action.skip = True
@@ -95,7 +95,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
         episode_summary = tf.Summary()
 
         while not state.is_terminal():
-            tower_to_kill, q_values = choose_tower.predict(state.state)
+            tower_to_kill, q_values, _ = choose_tower.predict(state.state)
             combined_q_values = np.sum(q_values, axis=0)
             saliencies = adaptive_explanation.generate_saliencies(state.state, contrastive)
             charts = []
