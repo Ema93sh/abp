@@ -110,7 +110,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
             action, q_values = agent.predict(state[0].observation.feature_screen.player_id.flatten())
 
             if evaluation_config.render:
-                time.sleep(1)
+                time.sleep(evaluation_config.sleep)
 
 
             model_time += (time.time() - model_start_time)

@@ -4,4 +4,4 @@ summaries_path: "./tensorflow_summaries/pysc2/collect_shards/dqn/v1/evaluation_s
 test_episodes: 100
 training_episodes: 10000
 render: True
-sleep: 5
+sleep: 0.1

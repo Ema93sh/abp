@@ -42,20 +42,28 @@ class _DQNModel(nn.Module):
 
 class DQNModel(Model):
 
-    def __init__(self, name, network_config, restore = True, learning_rate = 0.001):
+    def __init__(self, name, network_config, use_cuda, restore = True, learning_rate = 0.001):
         self.name = name
         model = _DQNModel(network_config)
+        if use_cuda:
+            logger.info("Network %s is using cuda " % self.name)
+            model = model.cuda()
+
         super(DQNModel, self).__init__(model, name, network_config, restore)
         self.network_config = network_config
         self.optimizer = Adam(self.model.parameters(), lr = self.network_config.learning_rate)
         self.loss_fn = nn.SmoothL1Loss()
 
         summaries_path =  self.network_config.summaries_path + "/" + self.name
-        clear_summary_path(summaries_path)
-        self.summary = SummaryWriter(log_dir = summaries_path)
 
-        dummy_input = torch.rand(1, int(np.prod(network_config.input_shape)))
-        self.summary.add_graph(self.model, dummy_input)
+        if not network_config.restore_network:
+            clear_summary_path(summaries_path)
+            self.summary = SummaryWriter(log_dir = summaries_path)
+            dummy_input = torch.rand(1, int(np.prod(network_config.input_shape)))
+            self.summary.add_graph(self.model, dummy_input)
+        else:
+            self.summary = SummaryWriter(log_dir = summaries_path)
+
         logger.info("Created network for %s " % self.name)
 
     def weights_summary(self, steps):
@@ -77,11 +85,11 @@ class DQNModel(Model):
         self.summary.add_histogram(tag = weight_name, values = weight, global_step = steps)
         self.summary.add_histogram(tag = bias_name, values = bias, global_step = steps)
 
-    def predict(self, input, steps):
+    def predict(self, input, steps, learning):
         q_values = self.model(input).squeeze(1)
         action = torch.argmax(q_values)
 
-        if steps % self.network_config.summaries_step == 0:
+        if steps % self.network_config.summaries_step == 0 and learning:
             logger.debug("Adding network summaries!")
             self.weights_summary(steps)
             self.summary.add_histogram(tag = "%s/Q values" % (self.name), values = q_values.clone().cpu().data.numpy(), global_step = steps)

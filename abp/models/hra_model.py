@@ -59,23 +59,30 @@ class _HRAModel(nn.Module):
 class HRAModel(Model):
     """Neural Network with the HRA architecture  """
 
-    def __init__(self, name, network_config, restore=True):
+    def __init__(self, name, network_config, use_cuda, restore=True):
         self.network_config = network_config
         self.name = name
 
         summaries_path =  self.network_config.summaries_path + "/" + self.name
-        clear_summary_path(summaries_path)
-        self.summary = SummaryWriter(log_dir = summaries_path)
 
         model = _HRAModel(network_config)
+        if use_cuda:
+            logger.info("Network %s is using cuda " % self.name)
+            model = model.cuda()
+
         Model.__init__(self, model, name, network_config, restore)
         logger.info("Created network for %s " % self.name)
 
         self.optimizer = Adam(self.model.parameters(), lr=self.network_config.learning_rate)
         self.loss_fn = nn.SmoothL1Loss()
 
-        dummy_input = torch.rand(1, int(np.prod(network_config.input_shape)))
-        self.summary.add_graph(self.model, dummy_input)
+        if not network_config.restore_network:
+            clear_summary_path(summaries_path)
+            self.summary = SummaryWriter(log_dir = summaries_path)
+            dummy_input = torch.rand(1, int(np.prod(network_config.input_shape)))
+            self.summary.add_graph(self.model, dummy_input)
+        else:
+            self.summary = SummaryWriter(log_dir = summaries_path)
 
     def clear_weights(self, reward_type):
         for type in range(self.model.networks):
@@ -132,12 +139,12 @@ class HRAModel(Model):
                                 scalar_value = float(loss),
                                 global_step = steps)
 
-    def predict(self, input, steps):
+    def predict(self, input, steps, learning):
         q_values = self.model(input).squeeze(1)
         combined_q_values = torch.sum(q_values, 0)
         values, q_actions = torch.max(combined_q_values, 0)
 
-        if steps % self.network_config.summaries_step == 0:
+        if steps % self.network_config.summaries_step == 0 and  learning:
             logger.debug("Adding network summaries!")
             self.weights_summary(steps)
             self.summary.add_histogram(tag = "%s/Q values" % (self.name), values = combined_q_values.clone().cpu().data.numpy(), global_step = steps)

@@ -6,3 +6,4 @@ memory_size: 40000
 summaries_path: "./tensorflow_summaries/pysc2/collect_shards/hra/v1/reinforce_summary"
 replace_frequency: 100
 update_steps: 10
+beta_timesteps: 1000000

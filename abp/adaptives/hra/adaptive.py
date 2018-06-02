@@ -51,19 +51,20 @@ class HRAAdaptive(object):
         self.clear_episode_rewards()
 
 
-        self.eval_model = HRAModel(self.name + "_eval", self.network_config)
-        self.target_model = HRAModel(self.name + "_target", self.network_config)
+        self.eval_model = HRAModel(self.name + "_eval", self.network_config, use_cuda)
+        self.target_model = HRAModel(self.name + "_target", self.network_config, use_cuda)
 
-        if use_cuda:
-            self.eval_model.model = self.eval_model.model.cuda()
-            self.target_model.model = self.target_model.model.cuda()
+        if not network_config.restore_network:
+            clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
 
-        clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
         self.summary = SummaryWriter(log_dir = self.reinforce_config.summaries_path + "/" + self.name)
 
 
         self.episode = 0
-        self.beta_schedule = LinearSchedule(10 * 1000, initial_p = 0.2, final_p = 1.0)
+        self.beta_schedule = LinearSchedule(self.reinforce_config.beta_timesteps,
+                                            initial_p = self.reinforce_config.beta_initial,
+                                            final_p = self.reinforce_config.beta_final)
+
         self.episode_time = time.time()
         self.update_time = 0
         self.fit_time = 0
@@ -97,7 +98,7 @@ class HRAAdaptive(object):
         else:
             _state = Tensor(state).unsqueeze(0)
             model_start_time =  time.time()
-            action, q_values, combined_q_values = self.eval_model.predict(_state, self.steps)
+            action, q_values, combined_q_values = self.eval_model.predict(_state, self.steps, self.learning)
             choice = self.choices[action]
             self.model_time += time.time() - model_start_time
 
@@ -197,6 +198,11 @@ class HRAAdaptive(object):
         self.summary.add_scalar(tag='%s/Beta' % self.name, scalar_value=beta, global_step=self.steps)
 
         states, actions, reward, next_states, is_terminal, weights, batch_idxes = self.replay_memory.sample(self.reinforce_config.batch_size, beta)
+
+        self.summary.add_histogram(tag = '%s/Batch Indices' % self.name,
+                                   values = Tensor(batch_idxes),
+                                   global_step = self.steps)
+
 
         states = Tensor(states)
         next_states = Tensor(next_states)

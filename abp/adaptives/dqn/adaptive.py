@@ -41,14 +41,16 @@ class DQNAdaptive(object):
         self.current_reward = 0
         self.total_reward = 0
 
-        clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
+        if not network_config.restore_network:
+            clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
+
         self.summary = SummaryWriter(log_dir = self.reinforce_config.summaries_path + "/" + self.name)
 
-        self.target_model = DQNModel(self.name + "_target", self.network_config)
-        self.eval_model = DQNModel(self.name + "_eval", self.network_config)
+        self.target_model = DQNModel(self.name + "_target", self.network_config, use_cuda)
+        self.eval_model = DQNModel(self.name + "_eval", self.network_config, use_cuda)
 
         self.episode = 0
-        self.beta_schedule = LinearSchedule(10 * 1000, initial_p = 0.2, final_p = 1.0)
+        self.beta_schedule = LinearSchedule(self.reinforce_config.beta_timesteps, initial_p = self.reinforce_config.beta_initial, final_p = self.reinforce_config.beta_final)
 
     def should_explore(self):
         epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
@@ -71,7 +73,7 @@ class DQNAdaptive(object):
             action = self.choices.index(choice)
         else:
             _state = torch.Tensor(state).unsqueeze(0)
-            action, q_values = self.eval_model.predict(_state, self.steps)
+            action, q_values = self.eval_model.predict(_state, self.steps, self.learning)
             choice = self.choices[action]
 
         if self.learning and self.steps % self.reinforce_config.replace_frequency == 0:
@@ -138,6 +140,10 @@ class DQNAdaptive(object):
         self.summary.add_scalar(tag='%s/Beta' % self.name, scalar_value=beta, global_step=self.steps)
 
         states, actions, reward, next_states, is_terminal, weights, batch_idxes = self.replay_memory.sample(self.reinforce_config.batch_size, beta)
+
+        self.summary.add_histogram(tag = '%s/Batch Indices' % self.name,
+                                   values = Tensor(batch_idxes),
+                                   global_step = self.steps)
 
         states = FloatTensor(states)
         next_states = FloatTensor(next_states)
