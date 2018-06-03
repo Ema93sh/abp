@@ -11,5 +11,5 @@ output_shape:
 network_path: "./saved_models/cart_pole/dqn/v1/network"
 summaries_path: "./tensorflow_summaries/cart_pole/dqn/v1/network_summary"
 summaries_step: 100
-restore_network: False
+restore_network: True
 learning_rate: 0.00089

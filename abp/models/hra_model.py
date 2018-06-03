@@ -86,13 +86,15 @@ class HRAModel(Model):
         else:
             self.summary = SummaryWriter(log_dir = summaries_path)
 
-    def clear_weights(self, reward_type):
-        for type in range(self.model.networks):
-            if type != reward_type:
-                getattr(self.model, 'layer_q_{}'.format(type)).weight.data.fill_(0)
-                network = self.network_config.networks[type]
-                for i in range(len(network['layers'])):
-                    getattr(self.model, 'network_{}_layer_{}'.format(type, i)).apply(self.weights_init)
+    def clear_weights(self, reward_idx):
+        for network_i, network in enumerate(self.network_config.networks):
+            model = self.model.reward_models[network_i]
+
+            for layer_id in range(len(network['layers'])):
+                getattr(model.layers, 'Layer_{}'.format(layer_id)).apply(self.weights_init)
+
+            getattr(model.layers, 'OutputLayer'.format(layer_id)).apply(self.weights_init)
+
 
     def weights_summary(self, steps):
         for network_i, network in enumerate(self.network_config.networks):
@@ -116,8 +118,8 @@ class HRAModel(Model):
             self.summary.add_histogram(tag = weight_name, values = weight, global_step = steps)
             self.summary.add_histogram(tag = bias_name, values = bias, global_step = steps)
 
-    def top_layer(self, reward_type):
-        return getattr(self.model, 'layer_q_{}'.format(reward_type))
+    def top_layer(self, network_idx):
+        return getattr(self.model.reward_models[network_idx].layers, 'OutputLayer')
 
     def weights_init(self, m):
         classname = m.__class__.__name__

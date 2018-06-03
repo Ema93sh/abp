@@ -62,7 +62,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         while not state.is_terminal():
             step += 1
-            tower_to_kill, q_values, combined_q_values = choose_tower.predict(np.array(state.state).flatten())
+            tower_to_kill, q_values, combined_q_values = choose_tower.predict(state.state.flatten())
             action = env.new_action()
             action.attack_quadrant(tower_to_kill)
             action.skip = True
@@ -72,11 +72,10 @@ def run_task(evaluation_config, network_config, reinforce_config):
                 choose_tower.reward(reward_type, reward)
                 total_reward += reward
 
-        choose_tower.end_episode(state.state)
+        choose_tower.end_episode(state.state.flatten())
 
         logger.debug("Episode %d : %d, Step: %d" % (episode + 1, total_reward, step))
 
-    train_summary_writer.flush()
 
     choose_tower.disable_learning()
 
@@ -98,9 +97,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
         while not state.is_terminal():
             step += 1
             explanation = SkyExplanation("Tower Capture", (40,40))
-            tower_to_kill, q_values, combined_q_values = choose_tower.predict(np.array(state.state).flatten())
-            combined_q_values = np.sum(q_values, axis=0)
-            saliencies = saliency_explanation.generate_saliencies(state.state, evaluation_config.contrastive)
+            tower_to_kill, q_values, combined_q_values = choose_tower.predict(state.state.flatten())
+            saliencies = saliency_explanation.generate_saliencies(state.state.flatten(), evaluation_config.contrastive)
             charts = []
 
             decomposed_q_chart = BarChart("Q Values", "Actions", "QVal By Reward Type")
@@ -131,5 +129,3 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
         logger.info("End Episode of episode %d with %d steps" % (episode + 1, step))
         logger.info("Total Reward %d!" % (total_reward))
-
-    test_summary_writer.flush()

@@ -1,11 +1,19 @@
+import copy
+
 import numpy as np
 import torch
-from torch.autograd import Variable
-
 
 from abp.models import HRAModel
 
 import excitationbp as eb
+
+use_cuda = torch.cuda.is_available()
+FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
+LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
+IntTensor = torch.cuda.IntTensor if use_cuda else torch.IntTensor
+ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
+Tensor = FloatTensor
+
 
 class Saliency(object):
     """ Saliency for an Adaptive Variable """
@@ -18,17 +26,16 @@ class Saliency(object):
     def generate_saliencies(self, state, contrastive = False):
         eb.use_eb(True)
 
-        state = Variable(torch.Tensor(state)).unsqueeze(0)
+        state = Tensor(state).unsqueeze(0)
 
         saliencies = {}
         for idx, choice in enumerate(self.adaptive.choices):
             choice_saliencies = {}
-            prob_outputs = Variable(torch.zeros((len(self.adaptive.choices),)))
+            prob_outputs = torch.zeros((len(self.adaptive.choices),))
             prob_outputs[idx] = 1
 
             for reward_idx, reward_type in enumerate(self.adaptive.reward_types):
-                #TODO better way to do this
-                explainable_model = HRAModel(self.adaptive.name + "_explain", self.adaptive.network_config, restore = False)
+                explainable_model = HRAModel(self.adaptive.name + "_explain", self.adaptive.network_config, False, restore = False)
                 explainable_model.replace(self.adaptive.eval_model)
 
                 explainable_model.clear_weights(reward_idx)

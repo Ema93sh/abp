@@ -3,8 +3,9 @@ logger = logging.getLogger('root')
 
 import time
 import random
+import pickle
+import os
 
-import numpy as np
 import torch
 from tensorboardX import SummaryWriter
 from baselines.common.schedules import LinearSchedule
@@ -40,27 +41,36 @@ class DQNAdaptive(object):
         self.previous_action = None
         self.current_reward = 0
         self.total_reward = 0
+        self.reward_history = []
+        self.best_reward_mean = 0
+        self.episode = 0
 
-        if not network_config.restore_network:
+        if not self.network_config.restore_network:
             clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
+        else:
+            self.restore_state()
 
         self.summary = SummaryWriter(log_dir = self.reinforce_config.summaries_path + "/" + self.name)
 
         self.target_model = DQNModel(self.name + "_target", self.network_config, use_cuda)
         self.eval_model = DQNModel(self.name + "_eval", self.network_config, use_cuda)
 
-        self.episode = 0
+
         self.beta_schedule = LinearSchedule(self.reinforce_config.beta_timesteps, initial_p = self.reinforce_config.beta_initial, final_p = self.reinforce_config.beta_final)
 
+    def __del__(self):
+        self.save()
+        self.summary.close()
+
+
     def should_explore(self):
-        epsilon = np.max([0.1, self.reinforce_config.starting_epsilon * (self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
+        epsilon = max([0.1, self.reinforce_config.starting_epsilon * (self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
         self.summary.add_scalar(tag='epsilon', scalar_value=epsilon, global_step=self.steps)
 
         return random.random() < epsilon
 
     def predict(self, state):
         self.steps += 1
-        saliencies = []
 
         # add to experience
         if self.previous_state is not None:
@@ -92,15 +102,16 @@ class DQNAdaptive(object):
 
     def disable_learning(self):
         logger.info("Disabled Learning for %s agent" % self.name)
-        self.eval_model.save_network()
-        self.target_model.save_network()
-
+        self.save()
         self.learning = False
         self.episode = 0
+
 
     def end_episode(self, state):
         if not self.learning:
             return
+
+        self.reward_history.append(self.total_reward)
 
         logger.info("End of Episode %d with total reward %d" % (self.episode + 1, self.total_reward))
 
@@ -111,12 +122,7 @@ class DQNAdaptive(object):
 
         experience = (self.previous_state, self.previous_action, self.current_reward, state, True)
         self.replay_memory.add(*experience)
-
-
-        if self.episode % self.network_config.save_steps == 0:
-            self.eval_model.save_network()
-            self.target_model.save_network()
-
+        self.save()
         self.reset()
 
 
@@ -125,6 +131,43 @@ class DQNAdaptive(object):
         self.total_reward = 0
         self.previous_state = None
         self.previous_action = None
+
+    def restore_state(self):
+        restore_path = self.network_config.network_path + "/adaptive.info"
+        if self.network_config.network_path and os.path.exists(restore_path):
+            logger.info("Restoring state from %s" % self.network_config.network_path)
+            with open(restore_path, "rb") as file:
+                info = pickle.load(file)
+
+            self.steps = info["steps"]
+            self.best_reward_mean = info["best_reward_mean"]
+            self.episode = info["episode"]
+
+    def save(self, force = False):
+        info = {
+            "steps": self.steps,
+            "best_reward_mean": self.best_reward_mean,
+            "episode": self.episode
+        }
+
+        if force:
+            logger.info("Forced to save network")
+            self.eval_model.save_network()
+            self.target_model.save_network()
+            pickle.dump(info, self.network_config.network_path + "adaptive.info")
+
+
+        if len(self.reward_history) >= self.network_config.save_steps and self.episode % self.network_config.save_steps == 0:
+            current_reward_mean = sum(self.reward_history[-self.network_config.save_steps:]) /  (self.network_config.save_steps * 1.0)
+            if current_reward_mean >= self.best_reward_mean:
+                self.best_reward_mean = current_reward_mean
+                logger.info("Saving network. Found new best reward (%.2f)" % current_reward_mean)
+                self.eval_model.save_network()
+                self.target_model.save_network()
+                with open(self.network_config.network_path + "/adaptive.info", "wb") as file:
+                    pickle.dump(info, file, protocol=pickle.HIGHEST_PROTOCOL)
+            else:
+                logger.info("The best reward is still %.2f. Not saving" % current_reward_mean)
 
 
     def reward(self, r):

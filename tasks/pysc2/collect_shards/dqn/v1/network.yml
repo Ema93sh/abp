@@ -12,8 +12,9 @@ layers:
 
 aggeregator: "average" #TODO
 
-network_path: "./saved_models/pysc2/collect_shards/dqn/v1.ckpt"
+network_path: "./saved_models/pysc2/collect_shards/dqn/v1"
 summaries_path: "./tensorflow_summaries/pysc2/collect_shards/dqn/v1/network_summary"
 summaries_step: 1000
-restore_network: False
+restore_network: True
 learning_rate: 0.00029
+save_steps: 100

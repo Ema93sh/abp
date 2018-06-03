@@ -18,11 +18,9 @@ def run_task(evaluation_config, network_config, reinforce_config):
                         reinforce_config=reinforce_config)
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
-    clear_summary_path(training_summaries_path)
     train_summary_writer = SummaryWriter(training_summaries_path)
 
     test_summaries_path = evaluation_config.summaries_path + "/test"
-    clear_summary_path(test_summaries_path)
     test_summary_writer = SummaryWriter(test_summaries_path)
 
     # Training Episodes
@@ -31,8 +29,11 @@ def run_task(evaluation_config, network_config, reinforce_config):
         total_reward = 0
         for steps in range(max_episode_steps):
             action, q_values = agent.predict(state)
+
             state, reward, done, info = env.step(action)
+
             agent.reward(reward)  # Reward for every step
+
             total_reward += reward
 
             if done:
