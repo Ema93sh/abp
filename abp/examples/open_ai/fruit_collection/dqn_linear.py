@@ -2,7 +2,7 @@ import time
 
 import gym
 import numpy as np
-import tensorflow as tf
+from tensorboardX import SummaryWriter
 
 from abp import DQNAdaptive
 from abp.utils import clear_summary_path
@@ -10,7 +10,7 @@ from abp.utils import clear_summary_path
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
     max_episode_steps = 300
-    state = env.reset()
+    state = env.reset(state_representation = "linear")
     LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
     choices = [LEFT, RIGHT, UP, DOWN]
 
@@ -21,31 +21,31 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
     clear_summary_path(training_summaries_path)
-    train_summary_writer = tf.summary.FileWriter(training_summaries_path)
+    train_summary_writer = SummaryWriter(training_summaries_path)
 
     test_summaries_path = evaluation_config.summaries_path + "/test"
     clear_summary_path(test_summaries_path)
-    test_summary_writer = tf.summary.FileWriter(test_summaries_path)
+    test_summary_writer = SummaryWriter(test_summaries_path)
 
     #Training Episodes
     for episode in range(evaluation_config.training_episodes):
-        state = env.reset()
+        state = env.reset(state_representation = "linear")
         total_reward = 0
         done = False
         steps = 0
         while not done:
             steps += 1
             action, q_values = agent.predict(state)
-            state, rewards, done, info = env.step(action, decompose_reward = True)
+            state, reward, done, info = env.step(action)
 
-            for reward_type in rewards.keys():
-                agent.reward(reward_type, rewards[reward_type])
+            agent.reward(reward)
 
-            total_reward += sum(rewards.values())
+            total_reward += reward
 
         agent.end_episode(state)
         test_summary_writer.add_scalar(tag="Train/Episode Reward", scalar_value=total_reward,
                                        global_step=episode + 1)
+
         train_summary_writer.add_scalar(tag="Train/Steps to collect all Fruits", scalar_value=steps + 1,
                                         global_step=episode + 1)
 
@@ -53,7 +53,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     #Test Episodes
     for episode in range(evaluation_config.test_episodes):
-        state = env.reset()
+        state = env.reset(state_representation = "linear")
         total_reward = 0
         done = False
         steps = 0
@@ -67,7 +67,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             state, reward, done, info = env.step(action)
 
-            total_reward += sum(reward)
+            total_reward += reward
 
         agent.end_episode(state)
 

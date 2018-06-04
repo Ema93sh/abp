@@ -5,7 +5,7 @@ logger = logging.getLogger('root')
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.optim import RMSprop, Adam
+from torch.optim import Adam
 from tensorboardX import SummaryWriter
 
 from .model import Model
@@ -22,17 +22,30 @@ class DecomposedModel(nn.Module):
         layer_modules = OrderedDict()
 
         for i, layer in enumerate(layers):
-            layer_name = "Layer_%d" % i
-            layer_modules[layer_name] = nn.Linear(input_shape, layer)
-            layer_modules[layer_name + "relu"] = nn.ReLU()
-            input_shape = layer
+            layer_name = layer["name"] if "name" in layer else "Layer_%d" % i
+            layer_type = layer["type"] if "type" in layer else "FC"
 
-        layer_modules["OutputLayer"] = nn.Linear(input_shape, output_shape)
+            if layer_type == "FC":
+                layer_modules[layer_name] = nn.Linear(int(np.prod(input_shape)), layer["neurons"])
+                input_shape = [layer["neurons"]]
+
+            if layer_type == "CNN":
+                layer_modules[layer_name] = nn.Conv2d(layer["in_channels"], layer["out_channels"], layer["kernel_size"], layer["stride"], layer["padding"])
+                input_shape = [layer["out_channels"]] + input_shape[1:]
+
+            layer_modules[layer_name + "relu"] = nn.ReLU()
+
+        layer_modules["OutputLayer"] = nn.Linear(int(np.prod(input_shape)), output_shape)
         self.layers = nn.Sequential(layer_modules)
         self.layers.apply(weights_initialize)
 
     def forward(self, input):
-        return self.layers(input)
+        x = input
+        for layer in self.layers:
+            if type(layer) == nn.Linear:
+                x = x.view(-1, int(np.prod(x.shape[1:])))
+            x = layer(x)
+        return x
 
 
 class _HRAModel(nn.Module):
@@ -42,8 +55,7 @@ class _HRAModel(nn.Module):
         self.network_config = network_config
         modules = []
         for network_i, network in enumerate(network_config.networks):
-            input_shape = int(np.prod(network_config.input_shape))
-            model = DecomposedModel(network["layers"], input_shape, network_config.output_shape[0])
+            model = DecomposedModel(network["layers"], network_config.input_shape, network_config.output_shape)
             modules.append(model)
         self.reward_models = nn.ModuleList(modules)
 
@@ -79,7 +91,7 @@ class HRAModel(Model):
         if not network_config.restore_network:
             clear_summary_path(summaries_path)
             self.summary = SummaryWriter(log_dir = summaries_path)
-            dummy_input = torch.rand(1, int(np.prod(network_config.input_shape)))
+            dummy_input = torch.rand(network_config.input_shape).unsqueeze(0)
             if use_cuda:
                 dummy_input = dummy_input.cuda()
             self.summary.add_graph(self.model, dummy_input)

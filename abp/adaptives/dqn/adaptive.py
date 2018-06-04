@@ -64,10 +64,10 @@ class DQNAdaptive(object):
 
 
     def should_explore(self):
-        epsilon = max([0.1, self.reinforce_config.starting_epsilon * (self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
-        self.summary.add_scalar(tag='epsilon', scalar_value=epsilon, global_step=self.steps)
+        self.epsilon = max([0.1, self.reinforce_config.starting_epsilon * (self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
+        self.summary.add_scalar(tag='epsilon', scalar_value=self.epsilon, global_step=self.steps)
 
-        return random.random() < epsilon
+        return random.random() < self.epsilon
 
     def predict(self, state):
         self.steps += 1
@@ -113,7 +113,7 @@ class DQNAdaptive(object):
 
         self.reward_history.append(self.total_reward)
 
-        logger.info("End of Episode %d with total reward %d" % (self.episode + 1, self.total_reward))
+        logger.info("End of Episode %d with total reward %.2f, epsilon %.2f" % (self.episode + 1, self.total_reward, self.epsilon))
 
         self.episode += 1
         self.summary.add_scalar(tag = '%s/Episode Reward' % self.name,
@@ -167,7 +167,7 @@ class DQNAdaptive(object):
                 with open(self.network_config.network_path + "/adaptive.info", "wb") as file:
                     pickle.dump(info, file, protocol=pickle.HIGHEST_PROTOCOL)
             else:
-                logger.info("The best reward is still %.2f. Not saving" % current_reward_mean)
+                logger.info("The best reward is still %.2f. Not saving" % self.best_reward_mean)
 
 
     def reward(self, r):

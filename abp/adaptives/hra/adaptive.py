@@ -81,12 +81,12 @@ class HRAAdaptive(object):
 
 
     def should_explore(self):
-        epsilon = max([0.1, self.reinforce_config.starting_epsilon * (
+        self.epsilon = max([0.1, self.reinforce_config.starting_epsilon * (
                          self.reinforce_config.decay_rate ** (self.steps / self.reinforce_config.decay_steps))])
 
-        self.summary.add_scalar(tag='%s/Epsilon' % self.name, scalar_value=epsilon, global_step=self.steps)
+        self.summary.add_scalar(tag='%s/Epsilon' % self.name, scalar_value=self.epsilon, global_step=self.steps)
 
-        return  random.random() < epsilon
+        return  random.random() < self.epsilon
 
 
     def predict(self, state):
@@ -137,7 +137,7 @@ class HRAAdaptive(object):
 
         self.reward_history.append(self.total_reward)
 
-        logger.info("End of Episode %d with total reward %.2f" % (self.episode + 1, self.total_reward))
+        logger.info("End of Episode %d with total reward %.2f, epsilon %.2f" % (self.episode + 1, self.total_reward, self.epsilon))
 
         self.episode += 1
         self.summary.add_scalar(tag = '%s/Episode Reward' % self.name,

@@ -14,7 +14,7 @@ from .env_map import EnvMap
 class FruitCollectionEnv(gym.Env):
     """The agent is looking for fruit without getting hit by lightning"""
 
-    def __init__(self, map_name = "10x10_easy", state_representation="linear"):
+    def __init__(self, map_name = "10x10_easy", state_representation = "linear"):
         self.action_space = 4
         self.current_dir = os.path.dirname(os.path.realpath(__file__))
         self.vis = visdom.Visdom()
@@ -31,7 +31,8 @@ class FruitCollectionEnv(gym.Env):
         self.reset()
 
 
-    def reset(self, agent_location = None, treasure_found = None):
+    def reset(self, agent_location = None, treasure_found = None, state_representation="linear"):
+        self.state_representation = state_representation
         self.agent_location = agent_location if agent_location  else self.map.agent_location()
         self.current_step = 0
         self.treasure_found = treasure_found if treasure_found else [False for i in self.treasure_locations]

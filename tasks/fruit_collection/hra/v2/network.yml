@@ -1,0 +1,79 @@
+# [0, 4, 9, 49, 54, 59, 64, 89, 94, 99]
+networks:
+  - name: "location0"
+    layers:
+      - type: "FC"
+        neurons: 120
+      - type: "FC"
+        neurons: 120
+
+  - name: "location4"
+    layers:
+        - type: "FC"
+          neurons: 120
+        - type: "FC"
+          neurons: 120
+
+  - name: "location9"
+    layers:
+        - type: "FC"
+          neurons: 120
+        - type: "FC"
+          neurons: 120
+
+  - name: "location49"
+    layers:
+        - type: "FC"
+          neurons: 120
+        - type: "FC"
+          neurons: 120
+
+  - name: "location54"
+    layers:
+        - type: "FC"
+          neurons: 120
+        - type: "FC"
+          neurons: 120
+
+  - name: "location59"
+    layers:
+        - type: "FC"
+          neurons: 120
+        - type: "FC"
+          neurons: 120
+
+  - name: "location64"
+    layers:
+        - type: "FC"
+          neurons: 120
+        - type: "FC"
+          neurons: 120
+
+  - name: "location89"
+    layers:
+        - type: "FC"
+          neurons: 120
+        - type: "FC"
+          neurons: 120
+
+  - name: "location94"
+    layers:
+        - type: "FC"
+          neurons: 120
+        - type: "FC"
+          neurons: 120
+
+input_shape:
+    - 296
+
+output_shape: 4
+
+shared_layers: [] #TODO
+aggeregator: "average" #TODO
+
+network_path: "./saved_models/fruit_collection/hra/v2"
+summaries_path: "./tensorflow_summaries/fruit_collection/hra/v2/network_summary"
+summaries_step: 100
+restore_network: False
+save_steps: 200
+learning_rate: 0.00029

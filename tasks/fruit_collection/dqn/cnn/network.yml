@@ -1,0 +1,48 @@
+input_shape:
+    - 3
+    - 12
+    - 12
+
+layers:
+    - type: "CNN"
+      in_channels: 3
+      out_channels: 16
+      kernel_size: 5
+      stride: 1
+      padding: 2
+
+    - type: "BatchNorm2d"
+      size: 16
+
+    - type: "MaxPool2d"
+      kernel_size: 2
+      stride: 2
+
+    - type: "CNN"
+      in_channels: 16
+      out_channels: 32
+      kernel_size: 5
+      stride: 1
+      padding: 2
+
+    - type: "BatchNorm2d"
+      size: 32
+
+    - type: "MaxPool2d"
+      kernel_size: 2
+      stride: 2
+
+
+    - type: "FC"
+      neurons: 256
+
+    - type: "FC"
+      neurons: 64
+
+output_shape: 4
+
+network_path: "./saved_models/fruit_collection/dqn/cnn"
+summaries_path: "./tensorflow_summaries/fruit_collection/dqn/cnn/network_summary"
+summaries_step: 100
+restore_network: False
+learning_rate: 0.0001

@@ -24,21 +24,47 @@ class _DQNModel(nn.Module):
     def __init__(self, network_config):
         super(_DQNModel, self).__init__()
         layers = network_config.layers
-        input_shape = int(np.prod(network_config.input_shape))
+        input_shape = network_config.input_shape
         layer_modules = OrderedDict()
 
         for i, layer in enumerate(layers):
-            layer_name = "Layer_%d" % i
-            layer_modules[layer_name] = nn.Linear(input_shape, layer)
-            layer_modules[layer_name + "relu"] = nn.ReLU()
-            input_shape = layer
+            layer_name = layer["name"] if "name" in layer else "Layer_%d" % i
+            layer_type = layer["type"] if "type" in layer else "FC"
 
-        layer_modules["OutputLayer"] = nn.Linear(input_shape, network_config.output_shape[0])
+            if layer_type == "FC":
+                layer_modules[layer_name] = nn.Linear(int(np.prod(input_shape)), layer["neurons"])
+                input_shape = [layer["neurons"]]
+                layer_modules[layer_name + "relu"] = nn.ReLU()
+
+            elif layer_type == "CNN":
+                F = layer["kernel_size"]
+                P = layer["padding"]
+                S = layer["stride"]
+                layer_modules[layer_name] = nn.Conv2d(layer["in_channels"], layer["out_channels"], F, S, P)
+                input_shape = [layer["out_channels"], (input_shape[1] -  F +2 *P) / S+1,  (input_shape[2] - F +2 *P) / S+1]
+                layer_modules[layer_name + "relu"] = nn.ReLU()
+
+            elif layer_type == "BatchNorm2d":
+                layer_modules[layer_name] = nn.BatchNorm2d(layer["size"])
+                layer_modules[layer_name + "relu"] = nn.ReLU()
+
+            elif layer_type == "MaxPool2d":
+                s = layer["stride"]
+                f = layer["kernel_size"]
+                layer_modules[layer_name] = nn.MaxPool2d(f, s)
+                input_shape = [input_shape[0], (input_shape[1] - f) / s + 1, (input_shape[2] - f) / s + 1]
+
+        layer_modules["OutputLayer"] = nn.Linear(int(np.prod(input_shape)), network_config.output_shape)
         self.layers = nn.Sequential(layer_modules)
         self.layers.apply(weights_initialize)
 
     def forward(self, input):
-        return self.layers(input)
+        x = input
+        for layer in self.layers:
+            if type(layer) == nn.Linear:
+                x = x.view(-1, int(np.prod(x.shape[1:])))
+            x = layer(x)
+        return x
 
 class DQNModel(Model):
 
@@ -59,7 +85,7 @@ class DQNModel(Model):
         if not network_config.restore_network:
             clear_summary_path(summaries_path)
             self.summary = SummaryWriter(log_dir = summaries_path)
-            dummy_input = torch.rand(1, int(np.prod(network_config.input_shape)))
+            dummy_input = torch.rand(network_config.input_shape).unsqueeze(0)
             if use_cuda:
                 dummy_input = dummy_input.cuda()
             self.summary.add_graph(self.model, dummy_input)
@@ -69,10 +95,13 @@ class DQNModel(Model):
         logger.info("Created network for %s " % self.name)
 
     def weights_summary(self, steps):
-        for i in range(len(self.network_config.layers)):
-            layer_name = "Layer_%d" % i
-            weight_name = '{}/layer{}/weights'.format(self.name, i)
-            bias_name = '{}/layer{}/bias'.format(self.name, i)
+        for i, layer in enumerate(self.network_config.layers):
+            if layer["type"] in ["BatchNorm2d", "MaxPool2d"]:
+                continue
+
+            layer_name = layer["name"] if "name" in layer else "Layer_%d" % i
+            weight_name = '{}/{}/weights'.format(self.name, layer_name)
+            bias_name = '{}/{}/bias'.format(self.name, layer_name)
             weight = getattr(self.model.layers, layer_name).weight.clone().data
             bias = getattr(self.model.layers, layer_name).bias.clone().data
             self.summary.add_histogram(tag = weight_name, values = weight, global_step = steps)

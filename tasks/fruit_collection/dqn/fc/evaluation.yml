@@ -1,0 +1,6 @@
+name: "Fruit Collection"
+env: "FruitCollection-v0"
+summaries_path: "./tensorflow_summaries/fruit_collection/dqn/fc/evaluation_summary"
+test_episodes: 200
+training_episodes: 5000
+render: False

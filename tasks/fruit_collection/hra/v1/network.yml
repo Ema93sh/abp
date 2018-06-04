@@ -1,58 +1,119 @@
-# [0, 4, 9, 49, 54, 59, 64, 89, 94, 99]
 networks:
   - name: "location0"
     layers:
-        - 120
-        - 120
+        - type: "CNN"
+          in_channels: 3
+          out_channels: 5
+          kernel_size: 5
+          stride: 1
+          padding: 2
+
+        - type: "FC"
+          neurons: 200
 
   - name: "location4"
     layers:
-        - 120
-        - 120
+        - type: "CNN"
+          in_channels: 3
+          out_channels: 5
+          kernel_size: 5
+          stride: 1
+          padding: 2
+
+        - type: "FC"
+          neurons: 200
 
   - name: "location9"
     layers:
-        - 120
-        - 120
+        - type: "CNN"
+          in_channels: 3
+          out_channels: 5
+          kernel_size: 5
+          stride: 1
+          padding: 2
+
+        - type: "FC"
+          neurons: 200
 
   - name: "location49"
     layers:
-        - 120
-        - 120
+        - type: "CNN"
+          in_channels: 3
+          out_channels: 5
+          kernel_size: 5
+          stride: 1
+          padding: 2
+
+        - type: "FC"
+          neurons: 200
 
   - name: "location54"
     layers:
-        - 120
-        - 120
+        - type: "CNN"
+          in_channels: 3
+          out_channels: 5
+          kernel_size: 5
+          stride: 1
+          padding: 2
+
+        - type: "FC"
+          neurons: 200
 
   - name: "location59"
     layers:
-        - 120
-        - 120
+        - type: "CNN"
+          in_channels: 3
+          out_channels: 5
+          kernel_size: 5
+          stride: 1
+          padding: 2
+
+        - type: "FC"
+          neurons: 200
 
   - name: "location64"
     layers:
-        - 120
-        - 120
+        - type: "CNN"
+          in_channels: 3
+          out_channels: 5
+          kernel_size: 5
+          stride: 1
+          padding: 2
+
+        - type: "FC"
+          neurons: 200
 
   - name: "location89"
     layers:
-        - 120
-        - 120
+        - type: "CNN"
+          in_channels: 3
+          out_channels: 5
+          kernel_size: 5
+          stride: 1
+          padding: 2
+
+        - type: "FC"
+          neurons: 200
 
   - name: "location94"
     layers:
-        - 120
-        - 120
+        - type: "CNN"
+          in_channels: 3
+          out_channels: 5
+          kernel_size: 5
+          stride: 1
+          padding: 2
+
+        - type: "FC"
+          neurons: 200
 
 input_shape:
-    - 296
+    - 3
+    - 12
+    - 12
 
-output_shape:
-     - 4
+output_shape: 4
 
-shared_layers: [] #TODO
-aggeregator: "average" #TODO
 
 network_path: "./saved_models/fruit_collection/hra/v1.ckpt"
 summaries_path: "./tensorflow_summaries/fruit_collection/hra/v1/network_summary"
