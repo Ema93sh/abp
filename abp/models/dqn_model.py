@@ -71,9 +71,12 @@ class DQNModel(Model):
     def __init__(self, name, network_config, use_cuda, restore = True, learning_rate = 0.001):
         self.name = name
         model = _DQNModel(network_config)
+        model = nn.DataParallel(model)
+        
         if use_cuda:
             logger.info("Network %s is using cuda " % self.name)
             model = model.cuda()
+
 
         super(DQNModel, self).__init__(model, name, network_config, restore)
         self.network_config = network_config
@@ -85,16 +88,18 @@ class DQNModel(Model):
         if not network_config.restore_network:
             clear_summary_path(summaries_path)
             self.summary = SummaryWriter(log_dir = summaries_path)
-            dummy_input = torch.rand(network_config.input_shape).unsqueeze(0)
-            if use_cuda:
-                dummy_input = dummy_input.cuda()
-            self.summary.add_graph(self.model, dummy_input)
+        #    dummy_input = torch.rand(network_config.input_shape).unsqueeze(0)
+        #    if use_cuda:
+        #        dummy_input = dummy_input.cuda()
+        #    self.summary.add_graph(self.model, dummy_input)
         else:
             self.summary = SummaryWriter(log_dir = summaries_path)
 
         logger.info("Created network for %s " % self.name)
 
     def weights_summary(self, steps):
+        model = self.model.module
+
         for i, layer in enumerate(self.network_config.layers):
             if layer["type"] in ["BatchNorm2d", "MaxPool2d"]:
                 continue
@@ -102,16 +107,23 @@ class DQNModel(Model):
             layer_name = layer["name"] if "name" in layer else "Layer_%d" % i
             weight_name = '{}/{}/weights'.format(self.name, layer_name)
             bias_name = '{}/{}/bias'.format(self.name, layer_name)
-            weight = getattr(self.model.layers, layer_name).weight.clone().data
-            bias = getattr(self.model.layers, layer_name).bias.clone().data
+
+            module = getattr(model.layers, layer_name)
+
+            if type(module) == nn.DataParallel:
+                module = module.module
+
+            weight = module.weight.clone().data
+            bias = module.bias.clone().data
             self.summary.add_histogram(tag = weight_name, values = weight, global_step = steps)
             self.summary.add_histogram(tag = bias_name, values = bias, global_step = steps)
 
         weight_name = '{}/Output Layer/weights'.format(self.name, i)
         bias_name = '{}/Output Layer/bias'.format(self.name, i)
 
-        weight = getattr(self.model.layers, "OutputLayer").weight.clone().data
-        bias = getattr(self.model.layers, "OutputLayer").bias.clone().data
+        module = getattr(model.layers, "OutputLayer")
+        weight = module.weight.clone().data
+        bias  = module.bias.clone().data
 
         self.summary.add_histogram(tag = weight_name, values = weight, global_step = steps)
         self.summary.add_histogram(tag = bias_name, values = bias, global_step = steps)

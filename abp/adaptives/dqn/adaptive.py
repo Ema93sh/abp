@@ -36,14 +36,13 @@ class DQNAdaptive(object):
         self.replay_memory = PrioritizedReplayBuffer(self.reinforce_config.memory_size, 0.6)
         self.learning = True
 
+        #Global
         self.steps = 0
-        self.previous_state = None
-        self.previous_action = None
-        self.current_reward = 0
-        self.total_reward = 0
         self.reward_history = []
         self.best_reward_mean = 0
         self.episode = 0
+
+        self.reset()
 
         if not self.network_config.restore_network:
             clear_summary_path(self.reinforce_config.summaries_path + "/" + self.name)
@@ -54,7 +53,6 @@ class DQNAdaptive(object):
 
         self.target_model = DQNModel(self.name + "_target", self.network_config, use_cuda)
         self.eval_model = DQNModel(self.name + "_eval", self.network_config, use_cuda)
-
 
         self.beta_schedule = LinearSchedule(self.reinforce_config.beta_timesteps, initial_p = self.reinforce_config.beta_initial, final_p = self.reinforce_config.beta_final)
 
@@ -82,16 +80,20 @@ class DQNAdaptive(object):
             choice = random.choice(self.choices)
             action = self.choices.index(choice)
         else:
+            self.prediction_time -= time.time()
             _state = Tensor(state).unsqueeze(0)
             action, q_values = self.eval_model.predict(_state, self.steps, self.learning)
             choice = self.choices[action]
+            self.prediction_time += time.time()
 
         if self.learning and self.steps % self.reinforce_config.replace_frequency == 0:
             logger.debug("Replacing target model for %s" % self.name)
             self.target_model.replace(self.eval_model)
 
         if self.learning and self.steps % self.reinforce_config.update_steps == 0:
+            self.update_time -= time.time()
             self.update()
+            self.update_time += time.time()
 
         self.current_reward = 0
         self.previous_state = state
@@ -111,9 +113,12 @@ class DQNAdaptive(object):
         if not self.learning:
             return
 
+        episode_time = time.time() - self.episode_time
+
         self.reward_history.append(self.total_reward)
 
         logger.info("End of Episode %d with total reward %.2f, epsilon %.2f" % (self.episode + 1, self.total_reward, self.epsilon))
+        logger.debug("Episode Time: %.2fs Prediction Time: %.2f Update Time %.2f" % (episode_time, self.prediction_time, self.update_time))
 
         self.episode += 1
         self.summary.add_scalar(tag = '%s/Episode Reward' % self.name,
@@ -127,10 +132,13 @@ class DQNAdaptive(object):
 
 
     def reset(self):
+        self.episode_time = time.time()
         self.current_reward = 0
         self.total_reward = 0
         self.previous_state = None
         self.previous_action = None
+        self.prediction_time = 0
+        self.update_time = 0
 
     def restore_state(self):
         restore_path = self.network_config.network_path + "/adaptive.info"
