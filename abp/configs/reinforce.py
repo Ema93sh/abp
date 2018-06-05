@@ -10,6 +10,7 @@ default_reinforce_config = {
     "summaries_path": None, # Path to store reinforcement related summaries
     "replace_frequency": 1000,
     "update_steps": 10, # Will update the model after n steps
+    "update_start": 1000, # Will start update after n steps
     "beta_timesteps": 10000,
     "beta_initial": 0.2,
     "beta_final": 1.0
@@ -41,6 +42,8 @@ class ReinforceConfig(BaseConfig):
     replace_frequency = property(BaseConfig.get_property("replace_frequency"), BaseConfig.set_property("replace_frequency"))
 
     update_steps = property(BaseConfig.get_property("update_steps"), BaseConfig.set_property("update_steps"))
+
+    update_start = property(BaseConfig.get_property("update_start"), BaseConfig.set_property("update_start"))
 
     beta_timesteps = property(BaseConfig.get_property("beta_timesteps"), BaseConfig.set_property("beta_timesteps"))
 

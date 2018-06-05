@@ -33,25 +33,20 @@ class HRAAdaptive(object):
         self.network_config = network_config
         self.reinforce_config = reinforce_config
         self.replace_frequency = reinforce_config.replace_frequency
-
         self.replay_memory = PrioritizedReplayBuffer(self.reinforce_config.memory_size, 0.6)
         self.learning = True
-        self.explanation = False
         self.reward_types = reward_types
-
         self.steps = 0
-        self.previous_state = None
-        self.previous_action = None
-        self.clear_current_rewards()
-
-
-        self.total_reward = 0
-        self.decomposed_total_reward = {}
+        self.episode = 0
         self.reward_history = []
         self.best_reward_mean = 0
-        self.episode = 0
-        self.clear_episode_rewards()
+        self.beta_schedule = LinearSchedule(self.reinforce_config.beta_timesteps,
+                                            initial_p = self.reinforce_config.beta_initial,
+                                            final_p = self.reinforce_config.beta_final)
 
+
+
+        self.reset()
 
         self.eval_model = HRAModel(self.name + "_eval", self.network_config, use_cuda)
         self.target_model = HRAModel(self.name + "_target", self.network_config, use_cuda)
@@ -62,17 +57,6 @@ class HRAAdaptive(object):
             self.restore_state()
 
         self.summary = SummaryWriter(log_dir = self.reinforce_config.summaries_path + "/" + self.name)
-
-
-
-        self.beta_schedule = LinearSchedule(self.reinforce_config.beta_timesteps,
-                                            initial_p = self.reinforce_config.beta_initial,
-                                            final_p = self.reinforce_config.beta_final)
-
-        self.episode_time = time.time()
-        self.update_time = 0
-        self.fit_time = 0
-        self.model_time = 0
 
 
     def __del__(self):
@@ -111,7 +95,7 @@ class HRAAdaptive(object):
             logger.debug("Replacing target model for %s" % self.name)
             self.target_model.replace(self.eval_model)
 
-        if self.learning and self.steps % self.reinforce_config.update_steps == 0:
+        if self.learning and self.steps > self.reinforce_config.update_start and self.steps % self.reinforce_config.update_steps == 0:
             update_start_time = time.time()
             self.update()
             self.update_time += time.time() - update_start_time

@@ -80,15 +80,13 @@ class FruitCollectionEnv(gym.Env):
         for pos in self.lightning_pos:
             lightning_grid[pos] = 1
 
-        if self.state_representation == "grid":
+        if self.state_representation == "rgb":
             treasure_locations = np.zeros(self.map.shape())
             for pos in self.treasure_locations:
                 treasure_locations[pos] = 1
             state = np.stack((agent_grid, treasure_locations, lightning_grid))
         else:
-            agent_grid = agent_grid.reshape(np.prod(agent_grid.shape))
-            lightning_grid = lightning_grid.reshape(np.prod(lightning_grid.shape))
-            state = np.concatenate((agent_grid, treasure_locations, lightning_grid))
+            state = self.__get_obs_image()
 
         return state
 
@@ -169,7 +167,6 @@ class FruitCollectionEnv(gym.Env):
         img[0, row, col] = 224
         img[1, row, col] = 80
         img[2, row, col] = 20
-
         return img
 
 

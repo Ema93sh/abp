@@ -39,6 +39,7 @@ class DQNAdaptive(object):
         #Global
         self.steps = 0
         self.reward_history = []
+        self.episode_time_history = []
         self.best_reward_mean = 0
         self.episode = 0
 
@@ -90,7 +91,7 @@ class DQNAdaptive(object):
             logger.debug("Replacing target model for %s" % self.name)
             self.target_model.replace(self.eval_model)
 
-        if self.learning and self.steps % self.reinforce_config.update_steps == 0:
+        if self.learning and self.steps > self.reinforce_config.update_start and self.steps % self.reinforce_config.update_steps == 0:
             self.update_time -= time.time()
             self.update()
             self.update_time += time.time()
@@ -116,9 +117,11 @@ class DQNAdaptive(object):
         episode_time = time.time() - self.episode_time
 
         self.reward_history.append(self.total_reward)
+        self.episode_time_history.append(episode_time)
+        avg_time = sum(self.episode_time_history) / len(self.episode_time_history)
 
         logger.info("End of Episode %d with total reward %.2f, epsilon %.2f" % (self.episode + 1, self.total_reward, self.epsilon))
-        logger.debug("Episode Time: %.2fs Prediction Time: %.2f Update Time %.2f" % (episode_time, self.prediction_time, self.update_time))
+        logger.debug("Episode Time: %.2fs (%.2fs) Prediction Time: %.2f Update Time %.2f" % (episode_time, avg_time, self.prediction_time, self.update_time))
 
         self.episode += 1
         self.summary.add_scalar(tag = '%s/Episode Reward' % self.name,

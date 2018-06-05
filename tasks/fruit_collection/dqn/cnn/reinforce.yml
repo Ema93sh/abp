@@ -4,5 +4,6 @@ discount_factor: 0.99
 batch_size: 35
 memory_size: 10000
 summaries_path: "./tensorflow_summaries/fruit_collection/dqn/cnn/reinforce_summary"
-replace_frequency: 500
+replace_frequency: 1000
 update_steps: 1
+update_start: 1000
