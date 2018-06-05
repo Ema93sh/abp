@@ -1,20 +1,39 @@
 input_shape:
+    - 17
     - 32
     - 32
 
-output_shape:
-     - 4
+output_shape: 4
 
 layers:
     - type: "CNN"
-      in_channels: 1
-      out_channels: 16
+      in_channels: 17
+      out_channels: 32
       kernel_size: 5
       stride: 1
       padding: 2
 
-    - type: "FC"
-      neurons: 512
+    - type: "BatchNorm2d"
+      size: 32
+
+    - type: "MaxPool2d"
+      kernel_size: 2
+      stride: 2
+
+    - type: "CNN"
+      in_channels: 32
+      out_channels: 64
+      kernel_size: 5
+      stride: 1
+      padding: 2
+
+    - type: "BatchNorm2d"
+      size: 64
+
+    - type: "MaxPool2d"
+      kernel_size: 2
+      stride: 2
+
 
     - type: "FC"
       neurons: 256
@@ -22,7 +41,6 @@ layers:
     - type: "FC"
       neurons: 64
 
-aggeregator: "average" #TODO
 
 network_path: "./saved_models/pysc2/collect_shards/dqn/v1"
 summaries_path: "./tensorflow_summaries/pysc2/collect_shards/dqn/v1/network_summary"
