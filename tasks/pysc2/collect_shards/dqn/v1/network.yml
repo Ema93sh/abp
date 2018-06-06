@@ -17,7 +17,7 @@ layers:
       size: 32
 
     - type: "MaxPool2d"
-      kernel_size: 2
+      kernel_size: 4
       stride: 2
 
     - type: "CNN"
@@ -31,7 +31,7 @@ layers:
       size: 64
 
     - type: "MaxPool2d"
-      kernel_size: 2
+      kernel_size: 4
       stride: 2
 
 
@@ -46,5 +46,5 @@ network_path: "./saved_models/pysc2/collect_shards/dqn/v1"
 summaries_path: "./tensorflow_summaries/pysc2/collect_shards/dqn/v1/network_summary"
 summaries_step: 50000
 restore_network: True
-learning_rate: 0.001
+learning_rate: 0.0002
 save_steps: 100

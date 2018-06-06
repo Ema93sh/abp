@@ -43,6 +43,6 @@ output_shape: 2
 
 network_path: "./saved_models/pong/dqn/cnn/network"
 summaries_path: "./tensorflow_summaries/pong/dqn/cnn/network_summary"
-summaries_step: 100
+summaries_step: 10000
 restore_network: True
-learning_rate: 0.00089
+learning_rate: 0.0001

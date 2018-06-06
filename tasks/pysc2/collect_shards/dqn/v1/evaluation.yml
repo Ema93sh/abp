@@ -2,6 +2,6 @@ name: "Fruit Collection"
 env: "FruitCollection-v0"
 summaries_path: "./tensorflow_summaries/pysc2/collect_shards/dqn/v1/evaluation_summary"
 test_episodes: 100
-training_episodes: 10000
+training_episodes: 50000
 render: False
 sleep: 0.1

@@ -161,12 +161,6 @@ class DQNAdaptive(object):
             "episode": self.episode
         }
 
-        if force:
-            logger.info("Forced to save network")
-            self.eval_model.save_network()
-            self.target_model.save_network()
-            pickle.dump(info, self.network_config.network_path + "adaptive.info")
-
 
         if len(self.reward_history) >= self.network_config.save_steps and self.episode % self.network_config.save_steps == 0:
             current_reward_mean = sum(self.reward_history[-self.network_config.save_steps:]) /  (self.network_config.save_steps * 1.0)

@@ -38,7 +38,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
             total_reward += reward
 
             if done:
-                agent.end_episode(state)
+                agent.end_episode(np.rollaxis(state, 2))
                 train_summary_writer.add_scalar(tag="Episode Reward", scalar_value=total_reward,
                                                     global_step=episode + 1)
                 break
