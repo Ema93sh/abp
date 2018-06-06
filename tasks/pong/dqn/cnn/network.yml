@@ -1,0 +1,40 @@
+input_shape:
+    - 3
+    - 210
+    - 160
+
+
+layers:
+    - type: "CNN"
+      in_channels: 3
+      out_channels: 32
+      kernel_size: 8
+      stride: 1
+      padding: 2
+
+    - type: "BatchNorm2d"
+      size: 32
+
+    - type: "CNN"
+      in_channels: 32
+      out_channels: 64
+      kernel_size: 4
+      stride: 1
+      padding: 2
+
+    - type: "BatchNorm2d"
+      size: 64
+
+    - type: "FC"
+      neurons: 256
+
+    - type: "FC"
+      neurons: 64
+
+output_shape: 2
+
+network_path: "./saved_models/pong/dqn/cnn/network"
+summaries_path: "./tensorflow_summaries/pong/dqn/cnn/network_summary"
+summaries_step: 100
+restore_network: True
+learning_rate: 0.00089

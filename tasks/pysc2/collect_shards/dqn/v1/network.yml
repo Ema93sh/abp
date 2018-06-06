@@ -44,7 +44,7 @@ layers:
 
 network_path: "./saved_models/pysc2/collect_shards/dqn/v1"
 summaries_path: "./tensorflow_summaries/pysc2/collect_shards/dqn/v1/network_summary"
-summaries_step: 1000
+summaries_step: 50000
 restore_network: True
-learning_rate: 0.00029
+learning_rate: 0.001
 save_steps: 100

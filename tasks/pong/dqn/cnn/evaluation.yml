@@ -1,0 +1,6 @@
+name: "Pong"
+env: "Pong-v0"
+summaries_path: "./tensorflow_summaries/pong/dqn/cnn/evaluation_summary"
+test_episodes: 100
+training_episodes: 10000
+render: True

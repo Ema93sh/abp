@@ -4,23 +4,28 @@ input_shape:
 networks:
   - name: "PoleAngle"
     layers:
-        - 50
-        - 50
+      - type: "FC"
+        neurons: 50
+      - type: "FC"
+        neurons: 50
 
   - name: "CartPosition"
     layers:
-        - 50
-        - 50
+        - type: "FC"
+          neurons: 50
+        - type: "FC"
+          neurons: 50
 
   - name: "Terminal"
     layers:
-        - 50
-        - 50
+        - type: "FC"
+          neurons: 50
+        - type: "FC"
+          neurons: 50
 
 
 
-output_shape:
-    - 2
+output_shape: 2
 
 network_path: "./saved_models/cart_pole/hra/v1/network.ckpt"
 summaries_path: "./tensorflow_summaries/cart_pole/hra/v1/network_summary"

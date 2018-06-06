@@ -1,0 +1,8 @@
+decay_steps: 250
+starting_epsilon: 1
+discount_factor: 0.99
+batch_size: 35
+memory_size: 10000
+summaries_path: "./tensorflow_summaries/pong/dqn/cnn/reinforce_summary"
+replace_frequency: 1000
+update_steps: 10

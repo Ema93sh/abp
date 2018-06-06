@@ -2,11 +2,12 @@ input_shape:
     - 4
 
 layers:
-    - 250
-    - 250
+    - type: "FC"
+      neurons: 250
+    - type: "FC"
+      neurons: 250
 
-output_shape:
-    - 2
+output_shape: 2
 
 network_path: "./saved_models/cart_pole/dqn/v1/network"
 summaries_path: "./tensorflow_summaries/cart_pole/dqn/v1/network_summary"
