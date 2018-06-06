@@ -30,6 +30,8 @@ class _DQNModel(nn.Module):
         for i, layer in enumerate(layers):
             layer_name = layer["name"] if "name" in layer else "Layer_%d" % i
             layer_type = layer["type"] if "type" in layer else "FC"
+            print(layer, input_shape)
+
 
             if layer_type == "FC":
                 layer_modules[layer_name] = nn.Linear(int(np.prod(input_shape)), layer["neurons"])
@@ -41,7 +43,7 @@ class _DQNModel(nn.Module):
                 P = layer["padding"]
                 S = layer["stride"]
                 layer_modules[layer_name] = nn.Conv2d(layer["in_channels"], layer["out_channels"], F, S, P)
-                input_shape = [layer["out_channels"], (input_shape[1] -  F +2 *P) / S+1,  (input_shape[2] - F +2 *P) / S+1]
+                input_shape = [layer["out_channels"], ((input_shape[1] -  F +2 *P) / S)+1,  ((input_shape[2] - F +2 *P) / S)+1]
                 layer_modules[layer_name + "relu"] = nn.ReLU()
 
             elif layer_type == "BatchNorm2d":
@@ -52,7 +54,8 @@ class _DQNModel(nn.Module):
                 s = layer["stride"]
                 f = layer["kernel_size"]
                 layer_modules[layer_name] = nn.MaxPool2d(f, s)
-                input_shape = [input_shape[0], (input_shape[1] - f) / s + 1, (input_shape[2] - f) / s + 1]
+                input_shape = [input_shape[0], ((input_shape[1] - f) / s) + 1, ((input_shape[2] - f) / s) + 1]
+            input_shape = np.floor(input_shape)
 
         layer_modules["OutputLayer"] = nn.Linear(int(np.prod(input_shape)), network_config.output_shape)
         self.layers = nn.Sequential(layer_modules)
@@ -72,7 +75,7 @@ class DQNModel(Model):
         self.name = name
         model = _DQNModel(network_config)
         model = nn.DataParallel(model)
-        
+
         if use_cuda:
             logger.info("Network %s is using cuda " % self.name)
             model = model.cuda()

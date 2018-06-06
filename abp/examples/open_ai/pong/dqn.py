@@ -29,7 +29,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
         state = env.reset()
         total_reward = 0
         for steps in range(max_episode_steps):
-            env.render()
             action, q_values = agent.predict(np.rollaxis(state, 2))
 
             state, reward, done, info = env.step(action)
