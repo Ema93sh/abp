@@ -72,6 +72,7 @@ class _HRAModel(nn.Module):
             model = DecomposedModel(network["layers"], network_config.input_shape, network_config.output_shape)
             modules.append(model)
         self.reward_models = nn.ModuleList(modules)
+        self.combined = False # If set to true will always return combined Q values
 
 
     def forward(self, input):
@@ -79,7 +80,10 @@ class _HRAModel(nn.Module):
         for reward_model in self.reward_models:
             q_value = reward_model(input)
             q_values.append(q_value)
-        return torch.stack(q_values)
+        output = torch.stack(q_values)
+        if self.combined:
+            output = output.sum(0)
+        return output
 
 
 class HRAModel(Model):
@@ -111,6 +115,9 @@ class HRAModel(Model):
             self.summary.add_graph(self.model, dummy_input)
         else:
             self.summary = SummaryWriter(log_dir = summaries_path)
+
+    def get_model_for(self, reward_idx):
+        return self.model.reward_models[reward_idx]
 
     def clear_weights(self, reward_idx):
         for network_i, network in enumerate(self.network_config.networks):

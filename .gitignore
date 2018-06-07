@@ -17,3 +17,4 @@ log
 *.synctex.gz
 runs/
 __pycache__/
+saved_saliencies

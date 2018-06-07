@@ -1,11 +1,13 @@
 import copy
+import os
 
 import numpy as np
 import torch
+import torchvision
 
 from abp.models import HRAModel
 
-import excitationbp as eb
+from saliency import SaliencyMethod, MapType, generate_saliency
 
 use_cuda = torch.cuda.is_available()
 FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
@@ -23,34 +25,43 @@ class Saliency(object):
         super(Saliency, self).__init__()
         self.adaptive = adaptive
 
-    def generate_saliencies(self, state, contrastive = False):
-        eb.use_eb(True)
-
+    def generate_saliencies(self, step, state, choice_descriptions, layer_names, file_path_prefix = "saved_saliencies/", reshape = None):
         state = Tensor(state).unsqueeze(0)
 
-        saliencies = {}
-        for idx, choice in enumerate(self.adaptive.choices):
-            choice_saliencies = {}
-            prob_outputs = torch.zeros((len(self.adaptive.choices),))
-            prob_outputs[idx] = 1
+        file_path_prefix = file_path_prefix + "step_" + str(step) + "/"
+        for saliency_method in SaliencyMethod:
+            file_path  = file_path_prefix + str(saliency_method) + "/"
+            for idx, choice in enumerate(self.adaptive.choices):
+                choice_saliency = {}
+                self.adaptive.eval_model.model.combined = True
+                saliencies = self.generate_saliency_for(state, [idx], saliency_method)
+                choice_saliency["all"] = saliencies[MapType.ORIGINAL]
+                self.save_saliencies(saliencies, file_path + "choice_" + str(choice_descriptions[idx]) + "/combined/", reshape, layer_names)
+                self.adaptive.eval_model.model.combined = False
 
-            for reward_idx, reward_type in enumerate(self.adaptive.reward_types):
-                explainable_model = HRAModel(self.adaptive.name + "_explain", self.adaptive.network_config, False, restore = False)
-                explainable_model.replace(self.adaptive.eval_model)
+                for reward_idx, reward_type in enumerate(self.adaptive.reward_types):
+                    saliencies = self.generate_saliency_for(state, [idx], saliency_method, reward_idx)
+                    self.save_saliencies(saliencies, file_path + "choice_" + str(choice_descriptions[idx]) + "/" + "reward_type_" + str(reward_type) + "/", reshape, layer_names)
+                    choice_saliency[reward_type] = saliencies[MapType.ORIGINAL]
+                saliencies[choice] = choice_saliency
 
-                explainable_model.clear_weights(reward_idx)
 
-                layer_top = explainable_model.top_layer(reward_idx)
+    def save_saliencies(self, saliencies, file_path_prefix, reshape, layer_names):
+        for map_type, saliency in saliencies.items():
+            saliency = saliency.view(*reshape)
+            for idx, layer_name in enumerate(layer_names):
+                if not os.path.exists(file_path_prefix + str(map_type)):
+                        os.makedirs(file_path_prefix + str(map_type))
+                torchvision.utils.save_image(saliency[:, :, idx],  file_path_prefix + str(map_type) + "/" + layer_name + ".png", normalize=True)
 
-                saliency = eb.excitation_backprop(explainable_model.model, state, prob_outputs, contrastive = contrastive, layer_top = layer_top, target_layer = 0)
 
-                choice_saliencies[reward_type] = np.squeeze(saliency.view(*state.shape).data.numpy())
+    def generate_saliency_for(self, state, choice, saliency_method, reward_idx = None):
+        model = self.adaptive.eval_model.model
 
-            # for overall reward
-            saliency = eb.excitation_backprop(self.adaptive.eval_model.model, state, prob_outputs, contrastive = contrastive, target_layer = 0)
-            choice_saliencies["all"] = np.squeeze(saliency.view(*state.shape).data.numpy())
+        if reward_idx is not None:
+            model = self.adaptive.eval_model.get_model_for(reward_idx)
 
-            saliencies[choice] = choice_saliencies
+        if type(choice) == int:
+            choice = [choice]
 
-        eb.use_eb(False)
-        return saliencies
+        return generate_saliency(model, state, choice, type = saliency_method)
