@@ -28,12 +28,26 @@ class DecomposedModel(nn.Module):
             if layer_type == "FC":
                 layer_modules[layer_name] = nn.Linear(int(np.prod(input_shape)), layer["neurons"])
                 input_shape = [layer["neurons"]]
+                layer_modules[layer_name + "relu"] = nn.ReLU()
 
-            if layer_type == "CNN":
-                layer_modules[layer_name] = nn.Conv2d(layer["in_channels"], layer["out_channels"], layer["kernel_size"], layer["stride"], layer["padding"])
-                input_shape = [layer["out_channels"]] + input_shape[1:]
+            elif layer_type == "CNN":
+                F = layer["kernel_size"]
+                P = layer["padding"]
+                S = layer["stride"]
+                layer_modules[layer_name] = nn.Conv2d(layer["in_channels"], layer["out_channels"], F, S, P)
+                input_shape = [layer["out_channels"], ((input_shape[1] -  F +2 *P) / S)+1,  ((input_shape[2] - F +2 *P) / S)+1]
+                layer_modules[layer_name + "relu"] = nn.ReLU()
 
-            layer_modules[layer_name + "relu"] = nn.ReLU()
+            elif layer_type == "BatchNorm2d":
+                layer_modules[layer_name] = nn.BatchNorm2d(layer["size"])
+                layer_modules[layer_name + "relu"] = nn.ReLU()
+
+            elif layer_type == "MaxPool2d":
+                s = layer["stride"]
+                f = layer["kernel_size"]
+                layer_modules[layer_name] = nn.MaxPool2d(f, s)
+                input_shape = [input_shape[0], ((input_shape[1] - f) / s) + 1, ((input_shape[2] - f) / s) + 1]
+            input_shape = np.floor(input_shape)
 
         layer_modules["OutputLayer"] = nn.Linear(int(np.prod(input_shape)), output_shape)
         self.layers = nn.Sequential(layer_modules)

@@ -38,7 +38,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
     networks = []
     for reward_type in reward_types:
         name = reward_type
-        layers = [250]
+        layers = [{"type": "FC", "neurons": 50}]
         networks.append({"name": name, "layers": layers})
 
     network_config.networks = networks
@@ -98,6 +98,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
             step += 1
             explanation = SkyExplanation("Tower Capture", (40,40))
             tower_to_kill, q_values, combined_q_values = choose_tower.predict(state.state.flatten())
+            q_values = q_values.data.numpy()
+            combined_q_values = combined_q_values.data.numpy()
             saliencies = saliency_explanation.generate_saliencies(state.state.flatten(), evaluation_config.contrastive)
             charts = []
 

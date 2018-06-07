@@ -1,24 +1,35 @@
 networks:
   - name: "bonus"
     layers:
-        - 50
-        - 50
+      - type: "FC"
+        neurons: 50
+
+      - type: "FC"
+        neurons: 50
 
   - name: "dealt_damage"
     layers:
-        - 50
-        - 50
+        - type: "FC"
+          neurons: 50
+
+        - type: "FC"
+          neurons: 50
 
   - name: "friendly_kill"
     layers:
-        - 50
-        - 50
+        - type: "FC"
+          neurons: 50
+
+        - type: "FC"
+          neurons: 50
 
   - name: "took_damage"
     layers:
-        - 50
-        - 50
+        - type: "FC"
+          neurons: 50
 
+        - type: "FC"
+          neurons: 50
 
 
 input_shape:
@@ -29,11 +40,11 @@ input_shape:
 layers:
     - 100
 
-output_shape:
-    - 4
+output_shape: 4
 
 network_path: "./saved_models/SkyRTS/multi-step/hra/v1/network"
 summaries_path: "./tensorflow_summaries/SkyRTS/multi-step/hra/v1/network_summary"
 summaries_step: 150
-restore_network: True
+restore_network: False
 save_steps: 100
+learning_rate: 0.0001

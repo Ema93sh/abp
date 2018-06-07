@@ -29,12 +29,6 @@ def main():
     )
 
     parser.add_argument(
-        '-j', '--job-dir',
-        help = "Job dir",
-        required = False
-    )
-
-    parser.add_argument(
         '-d', '--debug',
         help="Print lots of debugging statements",
         action="store_const", dest="loglevel", const=logging.DEBUG,
@@ -43,7 +37,7 @@ def main():
 
     parser.add_argument(
         '-v', '--verbose',
-        help="Be verbose",
+        help="Be verbose. Logging level INFO",
         action="store_const", dest="loglevel", const=logging.INFO,
     )
 

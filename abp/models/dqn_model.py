@@ -30,7 +30,7 @@ class _DQNModel(nn.Module):
         for i, layer in enumerate(layers):
             layer_name = layer["name"] if "name" in layer else "Layer_%d" % i
             layer_type = layer["type"] if "type" in layer else "FC"
-            
+
             if layer_type == "FC":
                 layer_modules[layer_name] = nn.Linear(int(np.prod(input_shape)), layer["neurons"])
                 input_shape = [layer["neurons"]]
@@ -73,6 +73,7 @@ class DQNModel(Model):
         self.name = name
         model = _DQNModel(network_config)
         model = nn.DataParallel(model)
+        self.use_cuda = use_cuda
 
         if use_cuda:
             logger.info("Network %s is using cuda " % self.name)
@@ -141,7 +142,8 @@ class DQNModel(Model):
         return action.item(), q_values
 
     def predict_batch(self, input):
-        input = input.cuda()
+        if self.use_cuda:
+            input = input.cuda()
         q_values = self.model(input)
         values, q_actions = q_values.max(1)
         return q_actions, q_values

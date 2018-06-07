@@ -1,7 +1,9 @@
-decay_steps: 5
+decay_steps: 150
 starting_epsilon: 1
 discount_factor: 0.99
 batch_size: 35
 memory_size: 10000
 summaries_path: "./tensorflow_summaries/SkyRTS/multi-step/hra/v1/reinforce_summary"
 replace_frequency: 10
+update_start: 1
+update_steps: 1

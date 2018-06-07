@@ -9,8 +9,8 @@ default_reinforce_config = {
     "memory_size": 10000, # Total Memory size for the batch
     "summaries_path": None, # Path to store reinforcement related summaries
     "replace_frequency": 1000,
-    "update_steps": 10, # Will update the model after n steps
-    "update_start": 1000, # Will start update after n steps
+    "update_steps": 1, # Will update the model after n steps
+    "update_start": 1, # Will start update after n steps
     "beta_timesteps": 10000,
     "beta_initial": 0.2,
     "beta_final": 1.0
