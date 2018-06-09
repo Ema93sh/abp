@@ -1,5 +1,5 @@
-decay_steps: 2000
 starting_epsilon: 1
+epsilon_timesteps: 1000
 discount_factor: 0.99
 batch_size: 35
 memory_size: 40000

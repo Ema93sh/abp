@@ -6,14 +6,15 @@ _PLAYER_SELF = features.PlayerRelative.SELF
 
 class RewardWrapper(object):
     """docstring for RewardWrapper."""
+
     def __init__(self, obs, reward_types):
         super(RewardWrapper, self).__init__()
         self.reward_types = reward_types
         self.obs = obs
 
-
     def reward(self, next_obs):
-        marines = [unit for unit in next_obs[-1].observation.feature_units if unit.alliance == _PLAYER_SELF]
+        marines = [unit for unit in next_obs[-1].observation.feature_units
+                   if unit.alliance == _PLAYER_SELF]
         selected_marines = [marine for marine in marines if marine.is_selected]
         selected_locs = [(marine.x, marine.y) for marine in selected_marines]
 

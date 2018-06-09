@@ -1,6 +1,5 @@
 import gym
 from abp import DQNAdaptive
-from abp.utils import clear_summary_path
 from tensorboardX import SummaryWriter
 
 
@@ -13,7 +12,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
     choices = [LEFT, RIGHT]
 
     agent = DQNAdaptive(name="cartpole",
-                        choices=[LEFT, RIGHT],
+                        choices=choices,
                         network_config=network_config,
                         reinforce_config=reinforce_config)
 

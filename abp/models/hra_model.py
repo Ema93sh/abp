@@ -1,6 +1,5 @@
 import logging
 from collections import OrderedDict
-logger = logging.getLogger('root')
 
 import numpy as np
 import torch
@@ -11,10 +10,14 @@ from tensorboardX import SummaryWriter
 from .model import Model
 from abp.utils import clear_summary_path
 
+logger = logging.getLogger('root')
+
+
 def weights_initialize(module):
     if type(module) == nn.Linear:
         torch.nn.init.xavier_uniform_(module.weight, gain=nn.init.calculate_gain('relu'))
         module.bias.data.fill_(0.01)
+
 
 class DecomposedModel(nn.Module):
     def __init__(self, layers, input_shape, output_shape):
@@ -31,11 +34,17 @@ class DecomposedModel(nn.Module):
                 layer_modules[layer_name + "relu"] = nn.ReLU()
 
             elif layer_type == "CNN":
-                F = layer["kernel_size"]
-                P = layer["padding"]
-                S = layer["stride"]
-                layer_modules[layer_name] = nn.Conv2d(layer["in_channels"], layer["out_channels"], F, S, P)
-                input_shape = [layer["out_channels"], ((input_shape[1] -  F +2 *P) / S)+1,  ((input_shape[2] - F +2 *P) / S)+1]
+                kernel_size = layer["kernel_size"]
+                padding = layer["padding"]
+                stride = layer["stride"]
+                layer_modules[layer_name] = nn.Conv2d(layer["in_channels"],
+                                                      layer["out_channels"],
+                                                      kernel_size,
+                                                      stride,
+                                                      padding)
+                width = ((input_shape[1] - kernel_size + 2 * padding) / stride) + 1
+                height = ((input_shape[2] - kernel_size + 2 * padding) / stride) + 1
+                input_shape = [layer["out_channels"], width, height]
                 layer_modules[layer_name + "relu"] = nn.ReLU()
 
             elif layer_type == "BatchNorm2d":
@@ -43,10 +52,12 @@ class DecomposedModel(nn.Module):
                 layer_modules[layer_name + "relu"] = nn.ReLU()
 
             elif layer_type == "MaxPool2d":
-                s = layer["stride"]
-                f = layer["kernel_size"]
-                layer_modules[layer_name] = nn.MaxPool2d(f, s)
-                input_shape = [input_shape[0], ((input_shape[1] - f) / s) + 1, ((input_shape[2] - f) / s) + 1]
+                stride = layer["stride"]
+                kernel_size = layer["kernel_size"]
+                layer_modules[layer_name] = nn.MaxPool2d(kernel_size, stride)
+                width = ((input_shape[1] - kernel_size) / stride) + 1
+                height = ((input_shape[2] - kernel_size) / stride) + 1
+                input_shape = [input_shape[0], width, height]
             input_shape = np.floor(input_shape)
 
         layer_modules["OutputLayer"] = nn.Linear(int(np.prod(input_shape)), output_shape)
@@ -64,16 +75,17 @@ class DecomposedModel(nn.Module):
 
 class _HRAModel(nn.Module):
     """ HRAModel """
+
     def __init__(self, network_config):
         super(_HRAModel, self).__init__()
         self.network_config = network_config
         modules = []
         for network_i, network in enumerate(network_config.networks):
-            model = DecomposedModel(network["layers"], network_config.input_shape, network_config.output_shape)
+            model = DecomposedModel(
+                network["layers"], network_config.input_shape, network_config.output_shape)
             modules.append(model)
         self.reward_models = nn.ModuleList(modules)
-        self.combined = False # If set to true will always return combined Q values
-
+        self.combined = False  # If set to true will always return combined Q values
 
     def forward(self, input):
         q_values = []
@@ -93,7 +105,7 @@ class HRAModel(Model):
         self.network_config = network_config
         self.name = name
 
-        summaries_path =  self.network_config.summaries_path + "/" + self.name
+        summaries_path = self.network_config.summaries_path + "/" + self.name
 
         model = _HRAModel(network_config)
         if use_cuda:
@@ -108,13 +120,13 @@ class HRAModel(Model):
 
         if not network_config.restore_network:
             clear_summary_path(summaries_path)
-            self.summary = SummaryWriter(log_dir = summaries_path)
+            self.summary = SummaryWriter(log_dir=summaries_path)
             dummy_input = torch.rand(network_config.input_shape).unsqueeze(0)
             if use_cuda:
                 dummy_input = dummy_input.cuda()
             self.summary.add_graph(self.model, dummy_input)
         else:
-            self.summary = SummaryWriter(log_dir = summaries_path)
+            self.summary = SummaryWriter(log_dir=summaries_path)
 
     def get_model_for(self, reward_idx):
         return self.model.reward_models[reward_idx]
@@ -128,10 +140,8 @@ class HRAModel(Model):
 
             getattr(model.layers, 'OutputLayer'.format(layer_id)).apply(self.weights_init)
 
-
     def weights_summary(self, steps):
         for network_i, network in enumerate(self.network_config.networks):
-            out = input
             model = self.model.reward_models[network_i]
             for i in range(len(network['layers'])):
                 layer_name = "Layer_%d" % i
@@ -139,8 +149,8 @@ class HRAModel(Model):
                 bias_name = 'Sub Network Type:{}/layer{}/bias'.format(network_i, i)
                 weight = getattr(model.layers, layer_name).weight.clone().data
                 bias = getattr(model.layers, layer_name).bias.clone().data
-                self.summary.add_histogram(tag = weight_name, values = weight, global_step = steps)
-                self.summary.add_histogram(tag = bias_name, values = bias, global_step = steps)
+                self.summary.add_histogram(tag=weight_name, values=weight, global_step=steps)
+                self.summary.add_histogram(tag=bias_name, values=bias, global_step=steps)
 
             weight_name = 'Sub Network Type:{}/Output Layer/weights'.format(network_i, i)
             bias_name = 'Sub Network Type:{}/Output Layer/bias'.format(network_i, i)
@@ -148,8 +158,8 @@ class HRAModel(Model):
             weight = getattr(model.layers, "OutputLayer").weight.clone().data
             bias = getattr(model.layers, "OutputLayer").bias.clone().data
 
-            self.summary.add_histogram(tag = weight_name, values = weight, global_step = steps)
-            self.summary.add_histogram(tag = bias_name, values = bias, global_step = steps)
+            self.summary.add_histogram(tag=weight_name, values=weight, global_step=steps)
+            self.summary.add_histogram(tag=bias_name, values=bias, global_step=steps)
 
     def top_layer(self, network_idx):
         return getattr(self.model.reward_models[network_idx].layers, 'OutputLayer')
@@ -172,25 +182,28 @@ class HRAModel(Model):
         loss.backward()
         self.optimizer.step()
 
-        self.summary.add_scalar(tag = "%s/Loss" % (self.name),
-                                scalar_value = float(loss),
-                                global_step = steps)
+        self.summary.add_scalar(tag="%s/Loss" % (self.name),
+                                scalar_value=float(loss),
+                                global_step=steps)
 
     def predict(self, input, steps, learning):
         q_values = self.model(input).squeeze(1)
         combined_q_values = torch.sum(q_values, 0)
         values, q_actions = torch.max(combined_q_values, 0)
 
-        if steps % self.network_config.summaries_step == 0 and  learning:
+        if steps % self.network_config.summaries_step == 0 and learning:
             logger.debug("Adding network summaries!")
             self.weights_summary(steps)
-            self.summary.add_histogram(tag = "%s/Q values" % (self.name), values = combined_q_values.clone().cpu().data.numpy(), global_step = steps)
+            self.summary.add_histogram(tag="%s/Q values" % (self.name),
+                                       values=combined_q_values.clone().cpu().data.numpy(),
+                                       global_step=steps)
             for network_i, network in enumerate(self.network_config.networks):
-                 name = 'Sub Network Type:{}/Q_value'.format(network_i)
-                 self.summary.add_histogram(tag = name, values = q_values[network_i].clone().cpu().data.numpy(), global_step = steps)
+                name = 'Sub Network Type:{}/Q_value'.format(network_i)
+                self.summary.add_histogram(tag=name,
+                                           values=q_values[network_i].clone().cpu().data.numpy(),
+                                           global_step=steps)
 
         return q_actions.item(), q_values, combined_q_values
-
 
     def predict_batch(self, input):
         q_values = self.model(input)

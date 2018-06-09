@@ -1,6 +1,5 @@
 import gym
 import time
-import numpy as np
 
 from abp import HRAAdaptive
 from abp.utils import clear_summary_path
@@ -10,20 +9,18 @@ from tensorboardX import SummaryWriter
 
 def run_task(evaluation_config, network_config, reinforce_config):
     env = gym.make(evaluation_config.env)
-    max_episode_steps = 300
-    state = env.reset(state_representation = "linear")
+    state = env.reset(state_representation="linear")
     LEFT, RIGHT, UP, DOWN = [0, 1, 2, 3]
     choices = [LEFT, RIGHT, UP, DOWN]
     pdx_explanation = PDX()
 
     reward_types = env.reward_types
 
-    agent = HRAAdaptive(name = "FruitCollecter",
-                        choices = choices,
-                        reward_types = reward_types,
-                        network_config = network_config,
-                        reinforce_config = reinforce_config)
-
+    agent = HRAAdaptive(name="FruitCollecter",
+                        choices=choices,
+                        reward_types=reward_types,
+                        network_config=network_config,
+                        reinforce_config=reinforce_config)
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
     clear_summary_path(training_summaries_path)
@@ -35,14 +32,14 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     # Training Episodes
     for episode in range(evaluation_config.training_episodes):
-        state = env.reset(state_representation = "linear")
+        state = env.reset(state_representation="linear")
         total_reward = 0
         done = False
         steps = 0
         while not done:
             steps += 1
             action, q_values, combined_q_values = agent.predict(state)
-            state, rewards, done, info = env.step(action, decompose_reward = True)
+            state, rewards, done, info = env.step(action, decompose_reward=True)
 
             for reward_type in rewards.keys():
                 agent.reward(reward_type, rewards[reward_type])
@@ -60,7 +57,7 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     # Test Episodes
     for episode in range(evaluation_config.test_episodes):
-        state = env.reset(state_representation = "linear")
+        state = env.reset(state_representation="linear")
         total_reward = 0
         done = False
         steps = 0
@@ -71,8 +68,19 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
             if evaluation_config.render:
                 env.render()
-                pdx_explanation.render_decomposed_rewards(action, combined_q_values.data.numpy(), q_values.data.numpy(), env.action_names, env.reward_types)
-                pdx_explanation.render_all_pdx(action, env.action_space, q_values.data, env.action_names, env.reward_types)
+                pdx_explanation.render_decomposed_rewards(
+                    action,
+                    combined_q_values.data.numpy(),
+                    q_values.data.numpy(),
+                    env.action_names,
+                    env.reward_types)
+
+                pdx_explanation.render_all_pdx(
+                    action, env.action_space,
+                    q_values.data,
+                    env.action_names,
+                    env.reward_types)
+
                 time.sleep(evaluation_config.sleep)
 
             state, reward, done, info = env.step(action)

@@ -6,6 +6,7 @@ file_path = os.path.dirname(os.path.abspath(__file__))
 filename = "assets/evaluation.yml"
 test_file = os.path.join(file_path, filename)
 
+
 class EvaluationConfigTests(unittest.TestCase):
     """Unit tests for config objects"""
 
@@ -18,7 +19,6 @@ class EvaluationConfigTests(unittest.TestCase):
         self.assertEqual(evaluation_config.training_episodes, 1000)
         self.assertEqual(evaluation_config.test_episodes, 50)
         self.assertEqual(evaluation_config.render, True)
-
 
     def test_should_have_default_values(self):
         evaluation_config = EvaluationConfig()

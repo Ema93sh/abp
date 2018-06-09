@@ -17,7 +17,8 @@ class Model(object):
         self.restore = restore
         self.name = name.replace(" ", "_")
         self.network_config = network_config
-        self.model_path = os.path.join(ensure_directory_exits(self.network_config.network_path), self.name + '.p')
+        file_path = ensure_directory_exits(self.network_config.network_path)
+        self.model_path = os.path.join(file_path, self.name + '.p')
         self.model = model
         self.restore_network()
 
@@ -28,7 +29,9 @@ class Model(object):
             torch.save(self.model.state_dict(), self.model_path)
 
     def restore_network(self):
-        if self.restore and self.network_config.restore_network and self.network_config.network_path:
+        if (self.restore and
+            self.network_config.restore_network and
+                self.network_config.network_path):
             if os.path.exists(self.model_path):
                 logger.info("Restoring network for %s " % self.name)
                 self.model.load_state_dict(torch.load(self.model_path))

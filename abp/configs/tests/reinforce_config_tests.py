@@ -6,6 +6,7 @@ file_path = os.path.dirname(os.path.abspath(__file__))
 filename = "assets/reinforce.yml"
 test_file = os.path.join(file_path, filename)
 
+
 class ReinforceConfigTests(unittest.TestCase):
     """Unit tests for config objects"""
 
@@ -19,7 +20,6 @@ class ReinforceConfigTests(unittest.TestCase):
         self.assertEqual(reinforce_config.batch_size, 10)
         self.assertEqual(reinforce_config.memory_size, 20000)
         self.assertEqual(reinforce_config.summaries_path, "path/to/reinforcement/summaries.ckpt")
-
 
     def test_should_have_default_values(self):
         reinforce_config = ReinforceConfig()

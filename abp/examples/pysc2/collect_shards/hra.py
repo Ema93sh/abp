@@ -1,13 +1,9 @@
 import sys
 import time
 
-import numpy as np
-
-from absl import app
 from absl import flags
 
 from pysc2.env import sc2_env, environment
-from pysc2.lib import actions
 
 
 from abp import HRAAdaptive
@@ -22,27 +18,26 @@ from .utils.reward import RewardWrapper
 
 def run_task(evaluation_config, network_config, reinforce_config):
     flags.DEFINE_bool("use_feature_units", True,
-                  "Whether to include feature units.")
+                      "Whether to include feature units.")
 
-    flags.FLAGS(sys.argv[:1]) #TODO Fix this!
+    flags.FLAGS(sys.argv[:1])  # TODO Fix this!
 
-    env = sc2_env.SC2Env( map_name = "CollectMineralShards",
-                          step_mul = 8,
-                          visualize = False,
-                          save_replay_episodes = 0,
-                          replay_dir = 'replay',
-                          game_steps_per_episode = 10000,
-                          use_feature_units = True,
-                          feature_screen_size = 10,
-                          feature_minimap_size = 10)
+    env = sc2_env.SC2Env(map_name="CollectMineralShards",
+                         step_mul=8,
+                         visualize=False,
+                         save_replay_episodes=0,
+                         replay_dir='replay',
+                         game_steps_per_episode=10000,
+                         use_feature_units=True,
+                         feature_screen_size=10,
+                         feature_minimap_size=10)
 
-    choices =  ["Up", "Down", "Left", "Right"]
+    choices = ["Up", "Down", "Left", "Right"]
 
     pdx_explanation = PDX()
 
-    reward_types = [(x, y)  for x in range(10) for y in range(10)]
-    reward_names = ["loc (%d, %d)" %(x,y) for x, y in reward_types]
-
+    reward_types = [(x, y) for x in range(10) for y in range(10)]
+    reward_names = ["loc (%d, %d)" % (x, y) for x, y in reward_types]
 
     # Configure network for reward type
     networks = []
@@ -53,12 +48,11 @@ def run_task(evaluation_config, network_config, reinforce_config):
 
     network_config.networks = networks
 
-    agent = HRAAdaptive(name = "ShardsCollector",
-                        choices = choices,
-                        reward_types = reward_types,
-                        network_config = network_config,
-                        reinforce_config = reinforce_config)
-
+    agent = HRAAdaptive(name="ShardsCollector",
+                        choices=choices,
+                        reward_types=reward_types,
+                        network_config=network_config,
+                        reinforce_config=reinforce_config)
 
     training_summaries_path = evaluation_config.summaries_path + "/train"
 
@@ -71,7 +65,6 @@ def run_task(evaluation_config, network_config, reinforce_config):
     clear_summary_path(test_summaries_path)
     test_summary_writer = SummaryWriter(test_summaries_path)
 
-
     # Training Episodes
     for episode in range(evaluation_config.training_episodes):
         state = env.reset()
@@ -83,11 +76,11 @@ def run_task(evaluation_config, network_config, reinforce_config):
         steps = 0
         model_time = 0
         env_time = 0
-        episode_start_time = time.time()
         while not done:
             steps += 1
             model_start_time = time.time()
-            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen.player_relative.flatten())
+            action, q_values, combined_q_values = agent.predict(
+                state[0].observation.feature_screen.player_relative.flatten())
 
             model_time += (time.time() - model_start_time)
 
@@ -105,14 +98,14 @@ def run_task(evaluation_config, network_config, reinforce_config):
             total_reward += sum(decomposed_reward.values())
             done = state[0].step_type == environment.StepType.LAST
 
-
-
         agent.end_episode(state[0].observation.feature_screen.player_relative.flatten())
 
-        test_summary_writer.add_scalar(tag="Train/Episode Reward", scalar_value=total_reward,
+        test_summary_writer.add_scalar(tag="Train/Episode Reward",
+                                       scalar_value=total_reward,
                                        global_step=episode + 1)
 
-        train_summary_writer.add_scalar(tag="Train/Steps to collect all shards", scalar_value=steps + 1,
+        train_summary_writer.add_scalar(tag="Train/Steps to collect all shards",
+                                        scalar_value=steps + 1,
                                         global_step=episode + 1)
 
     agent.disable_learning()
@@ -127,20 +120,21 @@ def run_task(evaluation_config, network_config, reinforce_config):
         done = False
         steps = 0
         model_time = 0
-        episode_start_time = time.time()
         while steps < 1000 and not done:
             steps += 1
             model_start_time = time.time()
-            action, q_values, combined_q_values = agent.predict(state[0].observation.feature_screen.player_relative.flatten())
+            action, q_values, combined_q_values = agent.predict(
+                state[0].observation.feature_screen.player_relative.flatten())
 
             if evaluation_config.render:
                 action_index = choices.index(action)
                 combined_q_values = combined_q_values.data.numpy()
                 q_values = q_values.data.numpy()
-                pdx_explanation.render_decomposed_rewards(action_index, combined_q_values, q_values, choices, reward_names)
-                pdx_explanation.render_all_pdx(action_index, len(choices), q_values, choices, reward_names)
+                pdx_explanation.render_decomposed_rewards(
+                    action_index, combined_q_values, q_values, choices, reward_names)
+                pdx_explanation.render_all_pdx(action_index, len(
+                    choices), q_values, choices, reward_names)
                 time.sleep(1)
-
 
             model_time += (time.time() - model_start_time)
 
@@ -153,14 +147,13 @@ def run_task(evaluation_config, network_config, reinforce_config):
             total_reward += sum(decomposed_reward.values())
             done = state[0].step_type == environment.StepType.LAST
 
-
         print("Episode", episode + 1, total_reward)
 
-        test_summary_writer.add_scalar(tag="Test/Episode Reward", scalar_value=total_reward,
+        test_summary_writer.add_scalar(tag="Test/Episode Reward",
+                                       scalar_value=total_reward,
                                        global_step=episode + 1)
-        test_summary_writer.add_scalar(tag="Test/Steps to collect all Fruits", scalar_value=steps + 1,
+        test_summary_writer.add_scalar(tag="Test/Steps to collect all Fruits",
+                                       scalar_value=steps + 1,
                                        global_step=episode + 1)
-
-
 
     env.close()

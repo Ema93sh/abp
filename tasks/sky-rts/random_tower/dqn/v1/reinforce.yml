@@ -1,7 +1,0 @@
-decay_steps: 10
-starting_epsilon: 1
-discount_factor: 0.95
-batch_size: 35
-memory_size: 10000
-summaries_path: "./tensorflow_summaries/SkyRTS/random_towers/dqn/v1/reinforce_summary"
-replace_frequency: 10

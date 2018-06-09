@@ -4,5 +4,4 @@ from .network import NetworkConfig
 from .reinforce import ReinforceConfig
 
 
-
 __all__ = [BaseConfig, EvaluationConfig, NetworkConfig, ReinforceConfig]

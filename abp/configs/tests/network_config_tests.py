@@ -6,6 +6,7 @@ file_path = os.path.dirname(os.path.abspath(__file__))
 filename = "assets/network.yml"
 test_file = os.path.join(file_path, filename)
 
+
 class NetworkConfigTests(unittest.TestCase):
     """Unit tests for config objects"""
 
@@ -24,8 +25,6 @@ class NetworkConfigTests(unittest.TestCase):
 
         self.assertEqual(network_config.shared_layers, [250])
         self.assertEqual(network_config.aggregator, "average")
-
-
 
     def test_should_have_default_values(self):
         network_config = NetworkConfig()
@@ -73,7 +72,6 @@ class NetworkConfigTests(unittest.TestCase):
         self.assertEqual(down_network['input_shape'], [110])
         self.assertEqual(down_network['layers'], [50, 50])
         self.assertEqual(down_network['output_shape'], [4])
-
 
 
 if __name__ == '__main__':

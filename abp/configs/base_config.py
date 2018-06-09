@@ -1,6 +1,5 @@
 import yaml
 
-from functools import partial
 
 class BaseConfig(object):
     """ Extend this object if you want to create config """
@@ -8,16 +7,16 @@ class BaseConfig(object):
     def load_from_yaml(cls, file_path):
         with open(file_path, 'r') as stream:
             config = yaml.load(stream)
-            rslt = cls(config = config)
+            rslt = cls(config=config)
             return rslt
 
-    def __init__(self, config = None, default_config = None):
+    def __init__(self, config=None, default_config=None):
         super(BaseConfig, self).__init__()
         self._config = config
         self._default_config = default_config
 
     def _get_property(self, property_name):
-        if self._config is None or property_name not in self._config.keys(): # we don't want KeyError
+        if self._config is None or property_name not in self._config.keys():
             if self._default_config is None or property_name not in self._default_config.keys():
                 return None  # just return None if not found
             else:
@@ -26,7 +25,7 @@ class BaseConfig(object):
         return self._config[property_name]
 
     def _set_property(self, property_name, value):
-        if self._config is None: # we don't want KeyError
+        if self._config is None:  # we don't want KeyError
             self._config = {}
 
         self._config[property_name] = value

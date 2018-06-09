@@ -12,7 +12,7 @@ if __name__ == '__main__':
             env.render()
             print(obs)
             action = int(input("action:"))
-            obs, rewards, done, info = env.step(action, decompose_reward = True)
+            obs, rewards, done, info = env.step(action, decompose_reward=True)
             print(rewards)
             total_reward += sum(rewards.values())
         env.close()

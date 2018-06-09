@@ -5,15 +5,16 @@ from six import StringIO
 import gym
 from gym import spaces
 
+
 class TicTacToeEnv(gym.Env):
-    metadata = {'render.modes': ['human', 'ansi']} #TODO render to RGB
+    metadata = {'render.modes': ['human', 'ansi']}  # TODO render to RGB
 
     # difficulty
     # 0 - random
     # 1 - medium TODO
     # 2 - impossible TODO
 
-    def __init__(self, difficulty = 0):
+    def __init__(self, difficulty=0):
         self.action_space = spaces.Discrete(9)
         self.difficulty = difficulty
 
@@ -24,8 +25,8 @@ class TicTacToeEnv(gym.Env):
         self.player_2 = -1
         self._seed = 0
 
-        #TODO convert state to different representation
-        self.board = np.array([0]*9)
+        # TODO convert state to different representation
+        self.board = np.array([0] * 9)
         self.generate_state()
 
     def generate_state(self):
@@ -37,13 +38,12 @@ class TicTacToeEnv(gym.Env):
         self.state[p2_idxs] = 1
         return self.state.astype(float)
 
-
     def _step(self, action):
         done = False
         reward = 0
-        info = {'x_won': False, 'o_won':False, 'illegal_move': False}
+        info = {'x_won': False, 'o_won': False, 'illegal_move': False}
 
-        if self.board[action] != 0: # Illegal Move
+        if self.board[action] != 0:  # Illegal Move
             done = True
             reward = -20
             info['illegal_move'] = True
@@ -72,10 +72,10 @@ class TicTacToeEnv(gym.Env):
         reward = 0
         done = False
 
-        reshaped_board = np.reshape(self.board, (3,3))
+        reshaped_board = np.reshape(self.board, (3, 3))
 
-        sum_rows = np.sum(reshaped_board, axis = 1)
-        sum_cols = np.sum(reshaped_board, axis = 0)
+        sum_rows = np.sum(reshaped_board, axis=1)
+        sum_cols = np.sum(reshaped_board, axis=0)
         sum_diagonal = np.trace(reshaped_board)
         sum_rev_diagonal = np.trace(np.flipud(reshaped_board))
 
@@ -103,15 +103,15 @@ class TicTacToeEnv(gym.Env):
         return np.where(self.board == 0)[0]
 
     def _reset(self):
-        self.board = np.array([0]*9)
+        self.board = np.array([0] * 9)
         return self.generate_state()
 
-    def _render(self, mode = 'human', close = False):
+    def _render(self, mode='human', close=False):
         if close:
             # Nothing interesting to close
             return
 
-        reshaped_board = np.reshape(self.board, (3,3))
+        reshaped_board = np.reshape(self.board, (3, 3))
 
         outfile = StringIO() if mode == 'ansi' else sys.stdout
 

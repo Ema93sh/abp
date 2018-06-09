@@ -1,7 +1,6 @@
 import gym
 import numpy as np
 from abp import DQNAdaptive
-from abp.utils import clear_summary_path
 from tensorboardX import SummaryWriter
 
 
@@ -13,8 +12,8 @@ def run_task(evaluation_config, network_config, reinforce_config):
     UP, DOWN = [2, 3]
     choices = [UP, DOWN]
 
-    agent = DQNAdaptive(name = "Pong",
-                        choices = choices,
+    agent = DQNAdaptive(name="Pong",
+                        choices=choices,
                         network_config=network_config,
                         reinforce_config=reinforce_config)
 

@@ -3,15 +3,15 @@ import numpy as np
 import collections
 
 from six import StringIO
-from gym import spaces
 from functools import partial
+
 
 class YahtzeeEnv(gym.Env):
     """ Open AI Env for Yahtzee Game """
 
     metadata = {'render.modes': ['human', 'ansi']}
 
-    #TODO: bonus score if the upper section is above the threshold
+    # TODO: bonus score if the upper section is above the threshold
     # Categories
     # 0 - Ones
     # 1 - Twoe
@@ -28,17 +28,16 @@ class YahtzeeEnv(gym.Env):
     # 12 - Yahtzee
     # 13 - No category (used when its not current turn)
 
-
     def __init__(self):
         super(YahtzeeEnv, self).__init__()
         self.score_registry = {
-             6: partial(self.of_a_kind, 3),
-             7: partial(self.of_a_kind, 4),
-             8: self.full_house,
-             9: self.small_straight,
-             10: self.large_straight,
-             11: self.chance,
-             12: self.yahtzee
+            6: partial(self.of_a_kind, 3),
+            7: partial(self.of_a_kind, 4),
+            8: self.full_house,
+            9: self.small_straight,
+            10: self.large_straight,
+            11: self.chance,
+            12: self.yahtzee
         }
 
         self.category_map = {
@@ -60,7 +59,7 @@ class YahtzeeEnv(gym.Env):
 
         self._reset()
 
-    def roll_dice(self, holds = [0, 0, 0, 0, 0]):
+    def roll_dice(self, holds=[0, 0, 0, 0, 0]):
         dice = []
         for i in range(5):
             if holds[i] == 0:
@@ -70,10 +69,13 @@ class YahtzeeEnv(gym.Env):
         return dice
 
     def generate_state(self):
-        return map(lambda x: x/10.0, self.current_hand) + self.categories + [self.current_turn]
+        return map(lambda x: x / 10.0, self.current_hand) + self.categories + [self.current_turn]
 
     def info(self):
-        return {"current_hand": self.current_hand, "categories": self.categories, "turn": self.current_turn, "category_score": self.category_score}
+        return {"current_hand": self.current_hand,
+                "categories": self.categories,
+                "turn": self.current_turn,
+                "category_score": self.category_score}
 
     def _reset(self):
         self.current_hand = self.roll_dice()
@@ -92,7 +94,7 @@ class YahtzeeEnv(gym.Env):
 
     def of_a_kind(self, count):
         counts = collections.Counter(self.current_hand)
-        return sum(self.current_hand) if any([ i >= count for i in counts.values()]) else 0
+        return sum(self.current_hand) if any([i >= count for i in counts.values()]) else 0
 
     def full_house(self):
         counts = collections.Counter(self.current_hand)
@@ -113,7 +115,7 @@ class YahtzeeEnv(gym.Env):
     def yahtzee(self):
         counts = collections.Counter(self.current_hand)
         [(_, c)] = counts.most_common(1)
-        if c == 5: #TODO: Arrggghh! too many ifssss
+        if c == 5:  # TODO: Arrggghh! too many ifssss
             if self.categories[12] >= 1:
                 return -100 if self.category_score[12] <= 0 else 100
             return 50
@@ -153,28 +155,27 @@ class YahtzeeEnv(gym.Env):
 
     def select_category(self, category):
         if category < 0 or category >= 13:
-            return -100 # Invalid category
+            return -100  # Invalid category
 
         if category != 12 and self.categories[category] > 0:
-            return -100 #Category already choosen and its not yahtzee
-
+            return -100  # Category already choosen and its not yahtzee
 
         if category in range(6):
             return self.score_upper_section(category + 1)
         else:
             return self.score_lower_section(category)
 
-
-    def _step(self, action, decompose_reward = False):
+    def _step(self, action, decompose_reward=False):
         holds, category = action
         reward = 0
         # d_reward = [0] * self.
-        info = {}
         done = False
 
-        if self.current_turn  == 3:
+        if self.current_turn == 3:
             reward = self.select_category(category)
-            self.category_score[category] = reward if category not in self.category_score else reward + self.category_score[category]
+            score = reward if category not in self.category_score else reward + \
+                self.category_score[category]
+            self.category_score[category] = score
             self.categories[category] += 1
             self.current_turn = 0
             self.current_category_turn += 1
@@ -192,11 +193,10 @@ class YahtzeeEnv(gym.Env):
 
         reward += bonus
 
-        if reward < 0: # End when you choose an invalid category
+        if reward < 0:  # End when you choose an invalid category
             done = True
 
         return self.generate_state(), reward, done, self.info()
-
 
     def render_ansi(self):
         outfile = StringIO()
@@ -204,19 +204,19 @@ class YahtzeeEnv(gym.Env):
         outfile.write("-" * 35 + "\n")
 
         for category in range(14):
-            score = str(self.category_score[category]) if category in self.category_score else " -- "
+            score = str(self.category_score[category]
+                        ) if category in self.category_score else " -- "
             outfile.write("%-25s | %-5s \n" % (self.category_map[category], score))
 
         outfile.write("-" * 35 + "\n")
-        outfile.write("Total Score: " + str(sum(self.category_score.values()))+ "\n")
+        outfile.write("Total Score: " + str(sum(self.category_score.values())) + "\n")
         outfile.write("-" * 35 + "\n\n\n")
         outfile.write("Current Hand: " + str(self.current_hand) + "\n")
         outfile.write("Current Turn: " + str(self.current_turn) + "\n")
 
-
         return outfile
 
-    def _render(self, mode = 'human', close = False):
+    def _render(self, mode='human', close=False):
         if close:
             return None
         return self.render_ansi()

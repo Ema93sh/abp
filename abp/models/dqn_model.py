@@ -21,6 +21,7 @@ def weights_initialize(module):
 
 class _DQNModel(nn.Module):
     """ Model for DQN """
+
     def __init__(self, network_config):
         super(_DQNModel, self).__init__()
         layers = network_config.layers
@@ -37,11 +38,17 @@ class _DQNModel(nn.Module):
                 layer_modules[layer_name + "relu"] = nn.ReLU()
 
             elif layer_type == "CNN":
-                F = layer["kernel_size"]
-                P = layer["padding"]
-                S = layer["stride"]
-                layer_modules[layer_name] = nn.Conv2d(layer["in_channels"], layer["out_channels"], F, S, P)
-                input_shape = [layer["out_channels"], ((input_shape[1] -  F +2 *P) / S)+1,  ((input_shape[2] - F +2 *P) / S)+1]
+                kernel_size = layer["kernel_size"]
+                padding = layer["padding"]
+                stride = layer["stride"]
+                layer_modules[layer_name] = nn.Conv2d(layer["in_channels"],
+                                                      layer["out_channels"],
+                                                      kernel_size,
+                                                      stride,
+                                                      padding)
+                width = ((input_shape[1] - kernel_size + 2 * padding) / stride) + 1
+                height = ((input_shape[2] - kernel_size + 2 * padding) / stride) + 1
+                input_shape = [layer["out_channels"], width, height]
                 layer_modules[layer_name + "relu"] = nn.ReLU()
 
             elif layer_type == "BatchNorm2d":
@@ -49,13 +56,16 @@ class _DQNModel(nn.Module):
                 layer_modules[layer_name + "relu"] = nn.ReLU()
 
             elif layer_type == "MaxPool2d":
-                s = layer["stride"]
-                f = layer["kernel_size"]
-                layer_modules[layer_name] = nn.MaxPool2d(f, s)
-                input_shape = [input_shape[0], ((input_shape[1] - f) / s) + 1, ((input_shape[2] - f) / s) + 1]
+                stride = layer["stride"]
+                kernel_size = layer["kernel_size"]
+                layer_modules[layer_name] = nn.MaxPool2d(kernel_size, stride)
+                width = ((input_shape[1] - kernel_size) / stride) + 1
+                height = ((input_shape[2] - kernel_size) / stride) + 1
+                input_shape = [input_shape[0], width, height]
             input_shape = np.floor(input_shape)
 
-        layer_modules["OutputLayer"] = nn.Linear(int(np.prod(input_shape)), network_config.output_shape)
+        layer_modules["OutputLayer"] = nn.Linear(int(np.prod(input_shape)),
+                                                 network_config.output_shape)
         self.layers = nn.Sequential(layer_modules)
         self.layers.apply(weights_initialize)
 
@@ -67,9 +77,10 @@ class _DQNModel(nn.Module):
             x = layer(x)
         return x
 
+
 class DQNModel(Model):
 
-    def __init__(self, name, network_config, use_cuda, restore = True, learning_rate = 0.001):
+    def __init__(self, name, network_config, use_cuda, restore=True, learning_rate=0.001):
         self.name = name
         model = _DQNModel(network_config)
         model = nn.DataParallel(model)
@@ -79,23 +90,18 @@ class DQNModel(Model):
             logger.info("Network %s is using cuda " % self.name)
             model = model.cuda()
 
-
         super(DQNModel, self).__init__(model, name, network_config, restore)
         self.network_config = network_config
-        self.optimizer = Adam(self.model.parameters(), lr = self.network_config.learning_rate)
+        self.optimizer = Adam(self.model.parameters(), lr=self.network_config.learning_rate)
         self.loss_fn = nn.SmoothL1Loss()
 
-        summaries_path =  self.network_config.summaries_path + "/" + self.name
+        summaries_path = self.network_config.summaries_path + "/" + self.name
 
         if not network_config.restore_network:
             clear_summary_path(summaries_path)
-            self.summary = SummaryWriter(log_dir = summaries_path)
-        #    dummy_input = torch.rand(network_config.input_shape).unsqueeze(0)
-        #    if use_cuda:
-        #        dummy_input = dummy_input.cuda()
-        #    self.summary.add_graph(self.model, dummy_input)
+            self.summary = SummaryWriter(log_dir=summaries_path)
         else:
-            self.summary = SummaryWriter(log_dir = summaries_path)
+            self.summary = SummaryWriter(log_dir=summaries_path)
 
         logger.info("Created network for %s " % self.name)
 
@@ -117,18 +123,18 @@ class DQNModel(Model):
 
             weight = module.weight.clone().data
             bias = module.bias.clone().data
-            self.summary.add_histogram(tag = weight_name, values = weight, global_step = steps)
-            self.summary.add_histogram(tag = bias_name, values = bias, global_step = steps)
+            self.summary.add_histogram(tag=weight_name, values=weight, global_step=steps)
+            self.summary.add_histogram(tag=bias_name, values=bias, global_step=steps)
 
         weight_name = '{}/Output Layer/weights'.format(self.name, i)
         bias_name = '{}/Output Layer/bias'.format(self.name, i)
 
         module = getattr(model.layers, "OutputLayer")
         weight = module.weight.clone().data
-        bias  = module.bias.clone().data
+        bias = module.bias.clone().data
 
-        self.summary.add_histogram(tag = weight_name, values = weight, global_step = steps)
-        self.summary.add_histogram(tag = bias_name, values = bias, global_step = steps)
+        self.summary.add_histogram(tag=weight_name, values=weight, global_step=steps)
+        self.summary.add_histogram(tag=bias_name, values=bias, global_step=steps)
 
     def predict(self, input, steps, learning):
         q_values = self.model(input).squeeze(1)
@@ -137,7 +143,9 @@ class DQNModel(Model):
         if steps % self.network_config.summaries_step == 0 and learning:
             logger.debug("Adding network summaries!")
             self.weights_summary(steps)
-            self.summary.add_histogram(tag = "%s/Q values" % (self.name), values = q_values.clone().cpu().data.numpy(), global_step = steps)
+            self.summary.add_histogram(tag="%s/Q values" % (self.name),
+                                       values=q_values.clone().cpu().data.numpy(),
+                                       global_step=steps)
 
         return action.item(), q_values
 
@@ -155,6 +163,6 @@ class DQNModel(Model):
         loss.backward()
         self.optimizer.step()
 
-        self.summary.add_scalar(tag = "%s/Loss" % (self.name),
-                                scalar_value = float(loss),
-                                global_step = steps)
+        self.summary.add_scalar(tag="%s/Loss" % (self.name),
+                                scalar_value=float(loss),
+                                global_step=steps)

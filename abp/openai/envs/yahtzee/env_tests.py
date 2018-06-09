@@ -2,7 +2,7 @@ import unittest
 from mock import Mock
 
 from env import YahtzeeEnv
-from functools import partial
+
 
 class TestYahtzeeEnvScore(unittest.TestCase):
 
@@ -30,33 +30,32 @@ class TestYahtzeeEnvScore(unittest.TestCase):
         self.assertEqual(current_hand[4], next_hand[4])
 
     def test_score_upper_section(self):
-        #ones
+        # ones
         self.env.current_hand = [1, 5, 1, 6, 1]
         score = self.env.score_upper_section(1)
         self.assertEqual(3, score)
 
-        #Twoes
+        # Twoes
         self.env.current_hand = [2, 5, 1, 2, 1]
         score = self.env.score_upper_section(2)
         self.assertEqual(4, score)
 
-        #Threes
+        # Threes
         self.env.current_hand = [3, 3, 1, 2, 3]
         score = self.env.score_upper_section(3)
         self.assertEqual(9, score)
 
-
-        #Fours
+        # Fours
         self.env.current_hand = [4, 4, 1, 4, 4]
         score = self.env.score_upper_section(4)
         self.assertEqual(16, score)
 
-        #Fives
+        # Fives
         self.env.current_hand = [4, 4, 1, 4, 5]
         score = self.env.score_upper_section(5)
         self.assertEqual(5, score)
 
-        #Sixes
+        # Sixes
         self.env.current_hand = [6, 6, 6, 6, 6]
         score = self.env.score_upper_section(6)
         self.assertEqual(30, score)
@@ -175,12 +174,12 @@ class TestYahtzeeEnvScore(unittest.TestCase):
     def test_add_upper_section_bonus(self):
         self.env.categories = [1] * 6 + [0] * 7
         self.env.category_score = {
-             0: 5,
-             1: 10,
-             2: 15,
-             3: 20,
-             4: 25,
-             5: 30
+            0: 5,
+            1: 10,
+            2: 15,
+            3: 20,
+            4: 25,
+            5: 30
         }
 
         score = self.env.add_upper_section_bonus()
@@ -188,7 +187,6 @@ class TestYahtzeeEnvScore(unittest.TestCase):
 
         score = self.env.add_upper_section_bonus()
         self.assertEqual(score, 0)
-
 
     def test_valid_select_category(self):
         for i in range(6):
@@ -210,7 +208,6 @@ class TestYahtzeeEnvScore(unittest.TestCase):
         expected_state = [0.1, 0.2, 0.3, 0.4, 0.5] + self.env.categories + [self.env.current_turn]
         self.assertEqual(expected_state, actual_state)
 
-
     def tearDown(self):
         self.env._reset()
 
@@ -226,11 +223,10 @@ class TestYahtzeeEnvGame(unittest.TestCase):
 
     def skip_step(self, times):
         for i in range(times):
-            _ = self.env._step(([0]* 5, 1))
-
+            self.env._step(([0] * 5, 1))
 
     def test_single_step(self):
-        state, reward, done, info = self.env._step(([0]*5, 1))
+        state, reward, done, info = self.env._step(([0] * 5, 1))
 
         self.assertEqual(reward, 0)
         self.assertEqual(done, False)
@@ -238,35 +234,35 @@ class TestYahtzeeEnvGame(unittest.TestCase):
     def test_three_steps(self):
         self.assertEqual(self.env.current_turn, 0)
 
-        _, reward, done, _ = self.env._step(([0]*5, 1))
+        _, reward, done, _ = self.env._step(([0] * 5, 1))
         self.assertEqual(reward, 0)
         self.assertEqual(self.env.current_turn, 1)
         self.assertEqual(self.env.categories, [0] * 13)
 
         self.assertEqual(done, False)
 
-        _, reward, done, _ = self.env._step(([0]*5, 1))
+        _, reward, done, _ = self.env._step(([0] * 5, 1))
         self.assertEqual(reward, 0)
         self.assertEqual(self.env.current_turn, 2)
         self.assertEqual(self.env.categories, [0] * 13)
         self.assertEqual(self.env.current_hand, [1, 1, 1, 1, 1])
         self.assertEqual(done, False)
 
-        _, reward, done, _ = self.env._step(([0]*5, 1))
+        _, reward, done, _ = self.env._step(([0] * 5, 1))
         self.assertEqual(reward, 0)
         self.assertEqual(self.env.current_turn, 3)
         self.assertEqual(self.env.categories, [0] * 13)
         self.assertEqual(self.env.current_hand, [1, 1, 1, 1, 1])
         self.assertEqual(done, False)
 
-        state, reward, done, info = self.env._step(([0]*5, 0))
+        state, reward, done, info = self.env._step(([0] * 5, 0))
         expected_reward = 5
         self.assertEqual(self.env.current_turn, 0)
         self.assertEqual(expected_reward, reward)
         self.assertEqual(self.env.current_hand, [1, 1, 1, 1, 1])
         self.assertEqual(done, False)
 
-        state, reward, done, info = self.env._step(([0]*5, 0))
+        state, reward, done, info = self.env._step(([0] * 5, 0))
         self.assertEqual(self.env.current_turn, 1)
         self.assertEqual(0, reward)
         self.assertEqual(done, False)
@@ -275,7 +271,7 @@ class TestYahtzeeEnvGame(unittest.TestCase):
         self.skip_step(3)
         self.assertEqual(self.env.current_turn, 3)
 
-        _ = self.env._step(([0]*5, 0))
+        _ = self.env._step(([0] * 5, 0))
 
         self.assertEqual(self.env.categories, [1] + [0] * 12)
 
@@ -285,7 +281,7 @@ class TestYahtzeeEnvGame(unittest.TestCase):
 
         self.assertEqual(self.env.categories, [1] + [0] * 12)
 
-        _, reward, done, _ = self.env._step(([0]*5, 0))
+        _, reward, done, _ = self.env._step(([0] * 5, 0))
 
         self.assertEqual(-100, reward)
         self.assertEqual(done, True)
@@ -308,7 +304,7 @@ class TestYahtzeeEnvGame(unittest.TestCase):
         self.assertEqual(reward, 70)
 
     def test_state_for_a_step(self):
-        state, _, _, _ = self.env._step(([0]*5, 0))
+        state, _, _, _ = self.env._step(([0] * 5, 0))
         self.assertEqual([0.1, 0.1, 0.1, 0.1, 0.1] + [0] * 13 + [1], state)
 
     def test_episode_with_upper_section_bonus_score(self):
@@ -317,7 +313,7 @@ class TestYahtzeeEnvGame(unittest.TestCase):
             self.skip_step(3)
             _, r, done, _ = self.env._step(([0] * 5, i))
             if i != 5:
-                self.assertEqual(r, (i+1) * 5)
+                self.assertEqual(r, (i + 1) * 5)
             else:
                 self.assertEqual(r, 6 * 5 + 35)
 
@@ -327,10 +323,9 @@ class TestYahtzeeEnvGame(unittest.TestCase):
             self.skip_step(3)
             _, r, done, _ = self.env._step(([0] * 5, i))
             if i != 5:
-                self.assertEqual(r, (i+1) * 5)
+                self.assertEqual(r, (i + 1) * 5)
             else:
                 self.assertEqual(r, 6 * 5 + 35)
-
 
     def test_episode_with_yahtzee_bonus_score(self):
         self.roll_dice_mock.return_value = [1] * 5
@@ -360,7 +355,6 @@ class TestYahtzeeEnvGame(unittest.TestCase):
         _, r, done, _ = self.env._step(([0] * 5, 12))
         self.assertEqual(r, -100)
         self.assertEqual(done, True)
-
 
     def tearDown(self):
         self.env._reset()

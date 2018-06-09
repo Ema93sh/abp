@@ -1,2 +1,4 @@
-from .pdx import *
-from .saliency import *
+from .pdx import PDX
+from .saliency import Saliency
+
+__all__ = [PDX, Saliency]

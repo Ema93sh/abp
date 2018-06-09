@@ -1,11 +1,5 @@
 import numpy as np
-import torch
-import time
-import copy
-import threading
 import visdom
-
-from multiprocessing import Queue
 
 
 class PDX(object):
@@ -37,9 +31,8 @@ class PDX(object):
                for r in range(len(q_values))]
         return pdx
 
-
     def get_mse(self, pdx):
-        sorted = all(pdx[i] >= pdx[i+1] for i in range(len(pdx)-1))
+        sorted = all(pdx[i] >= pdx[i + 1] for i in range(len(pdx) - 1))
         if not sorted:
             raise "The pdx should be sorted in decending order!!!!!"
         positive_pdx = [pdx[i] for i in range(len(pdx)) if pdx[i] > 0]
@@ -52,7 +45,6 @@ class PDX(object):
             if sum(positive_pdx[:i]) > abs(sum(negative_pdx)):
                 return positive_pdx[:i]
         return pdx
-
 
     def mse_pdx(self, prediction_x, target_x):
         """Mean Square Error between Predicted and Target explanations
@@ -74,14 +66,18 @@ class PDX(object):
             if a != current_action:
                 self.viz.close(self.min_pdx_box[(a, t)])
 
-
     def render_all_pdx(self, current_action, action_space, q_values, action_names, reward_types):
         self.clear_windows(current_action)
         for target_action in range(action_space):
             if current_action != target_action:
-                self.render_pdx(q_values, current_action, target_action, action_names, reward_types)
+                self.render_pdx(q_values,
+                                current_action,
+                                target_action,
+                                action_names,
+                                reward_types)
 
-    def render_decomposed_rewards(self, action, combined_q_values, q_values, action_names, reward_names):
+    def render_decomposed_rewards(self, action, combined_q_values,
+                                  q_values, action_names, reward_names):
         q_box_opts = dict(
             title='Q Values',
             rownames=[action_name for action_name in action_names]
@@ -98,15 +94,14 @@ class PDX(object):
             action_names[action]) + ')'
 
         if self.q_box is None:
-            self.q_box = self.viz.bar(X = combined_q_values, opts = q_box_opts)
+            self.q_box = self.viz.bar(X=combined_q_values, opts=q_box_opts)
         else:
-            self.viz.bar(X = combined_q_values, opts = q_box_opts, win = self.q_box)
+            self.viz.bar(X=combined_q_values, opts=q_box_opts, win=self.q_box)
 
         if self.decomposed_q_box is None:
-            self.decomposed_q_box = self.viz.bar(X = q_values.T, opts = decomposed_q_box_opts)
+            self.decomposed_q_box = self.viz.bar(X=q_values.T, opts=decomposed_q_box_opts)
         else:
-            self.viz.bar(X = q_values.T, opts = decomposed_q_box_opts, win = self.decomposed_q_box)
-
+            self.viz.bar(X=q_values.T, opts=decomposed_q_box_opts, win=self.decomposed_q_box)
 
     def render_pdx(self, q_values, current_action, target_action, action_names, reward_types):
         action_name = action_names[current_action]
@@ -115,36 +110,33 @@ class PDX(object):
 
         pdx = self.get_pdx(q_values, current_action, [target_action])
         pdx = np.array(pdx).squeeze()
-        sorted_pdx, reward_names = zip(*sorted(zip(pdx, reward_types), key= lambda x: -x[0]))
+        sorted_pdx, reward_names = zip(*sorted(zip(pdx, reward_types), key=lambda x: -x[0]))
 
         pdx_box_opts = dict(
-            title = title,
-            stacked = False,
-            legend = reward_names
+            title=title,
+            stacked=False,
+            legend=reward_names
         )
 
         if (current_action, target_action) not in self.pdx_box:
-            self.pdx_box[(current_action, target_action)] = self.viz.bar(X=sorted_pdx, opts=pdx_box_opts)
+            self.pdx_box[(current_action, target_action)] = self.viz.bar(
+                X=sorted_pdx, opts=pdx_box_opts)
         else:
-            self.viz.bar(X=sorted_pdx, opts=pdx_box_opts, win=self.pdx_box[(current_action, target_action)])
+            self.viz.bar(X=sorted_pdx, opts=pdx_box_opts,
+                         win=self.pdx_box[(current_action, target_action)])
 
         min_pdx = self.get_mse(sorted_pdx)
         min_pdx = list(min_pdx) + [0] * (len(sorted_pdx) - len(min_pdx))
 
         pdx_box_opts = dict(
-            title = "MSE PDX (%s, %s)" % (action_name, target_action_name),
-            stacked = False,
-            legend = reward_names
+            title="MSE PDX (%s, %s)" % (action_name, target_action_name),
+            stacked=False,
+            legend=reward_names
         )
 
         if (current_action, target_action) not in self.min_pdx_box:
-            self.min_pdx_box[(current_action, target_action)] = self.viz.bar(X=min_pdx, opts=pdx_box_opts)
+            self.min_pdx_box[(current_action, target_action)] = self.viz.bar(
+                X=min_pdx, opts=pdx_box_opts)
         else:
-            self.viz.bar(X=min_pdx, opts=pdx_box_opts, win=self.min_pdx_box[(current_action, target_action)])
-
-
-
-if __name__ == '__main__':
-    import doctest
-
-    doctest.testmod(verbose=True)
+            self.viz.bar(X=min_pdx, opts=pdx_box_opts,
+                         win=self.min_pdx_box[(current_action, target_action)])

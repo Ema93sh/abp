@@ -11,10 +11,11 @@ import time
 
 from .env_map import EnvMap
 
+
 class FruitCollectionEnv(gym.Env):
     """The agent is looking for fruit without getting hit by lightning"""
 
-    def __init__(self, map_name = "10x10_easy", state_representation = "linear"):
+    def __init__(self, map_name="10x10_easy", state_representation="linear"):
         self.action_space = 4
         self.current_dir = os.path.dirname(os.path.realpath(__file__))
         self.vis = visdom.Visdom()
@@ -26,28 +27,27 @@ class FruitCollectionEnv(gym.Env):
         self.image_window = None
         self.heatmap_window = None
         self.action_names = ['Up', 'Right', 'Down', 'Left']
-        self.reward_types = [ "(%d, %d)" % (location) for location in self.treasure_locations] + ["Lightning Strike"]
+        self.reward_types = ["(%d, %d)" % (location)
+                             for location in self.treasure_locations] + ["Lightning Strike"]
         self.state_representation = state_representation
         self.reset()
 
-
-    def reset(self, agent_location = None, treasure_found = None, state_representation="linear"):
+    def reset(self, agent_location=None, treasure_found=None, state_representation="linear"):
         self.state_representation = state_representation
-        self.agent_location = agent_location if agent_location  else self.map.agent_location()
+        self.agent_location = agent_location if agent_location else self.map.agent_location()
         self.current_step = 0
-        self.treasure_found = treasure_found if treasure_found else [False for i in self.treasure_locations]
+        self.treasure_found = treasure_found if treasure_found else [
+            False for i in self.treasure_locations]
 
         if len(self.treasure_found) != len(self.treasure_locations):
             print(len(self.treasure_found), len(self.treasure_locations))
             raise Exception("Treasure found dim and treasure location dim should be the same!")
-
 
         self.lightning_pos = []
         self.total_reward = 0
         self.current_reward = []
 
         return self.generate_state()
-
 
     def move(self, action):
         agent_pos = None
@@ -60,21 +60,17 @@ class FruitCollectionEnv(gym.Env):
         elif action == 3:
             agent_pos = (self.agent_location[0], self.agent_location[1] - 1)
 
-
         if self.map.has_wall(agent_pos[0], agent_pos[1]):
             return
 
         self.agent_location = agent_pos
 
-
     def generate_state(self):
-        start_time = time.time()
         agent_grid = np.zeros(self.map.shape())
         agent_grid[self.agent_location[0], self.agent_location[1]] = 1
 
         treasure_locations = np.zeros(self.total_treasure)
         treasure_locations[[not x for x in self.treasure_found]] = 1
-
 
         lightning_grid = np.zeros(self.map.shape())
         for pos in self.lightning_pos:
@@ -113,24 +109,24 @@ class FruitCollectionEnv(gym.Env):
         total_treasure_found = Counter(self.treasure_found)[True]
 
         title = '{}\t\tTreasures Found:{} Overall_Reward:{} Step Reward:{} Steps:{}' \
-                    .format(self.name, total_treasure_found, self.total_reward, self.current_reward, self.current_step)
+            .format(self.name, total_treasure_found, self.total_reward,
+                    self.current_reward,
+                    self.current_step)
 
-        opts = dict(title = title, width = 360, height = 350)
+        opts = dict(title=title, width=360, height=350)
         lightning_probability = np.array(self.map.get_all_lightning_probability()[::-1])
 
-        heatmap_opts = dict(xtick = False, ytick = False, ytickmin = 0, ytickmax = 0)
+        heatmap_opts = dict(xtick=False, ytick=False, ytickmin=0, ytickmax=0)
 
         if self.heatmap_window is None:
-            self.heatmap_window = self.vis.heatmap(lightning_probability, opts = heatmap_opts)
+            self.heatmap_window = self.vis.heatmap(lightning_probability, opts=heatmap_opts)
         else:
-            self.vis.heatmap(lightning_probability, win = self.heatmap_window, opts = heatmap_opts)
-
+            self.vis.heatmap(lightning_probability, win=self.heatmap_window, opts=heatmap_opts)
 
         if self.image_window is None:
-            self.image_window = self.vis.image(obs_image, opts = opts)
+            self.image_window = self.vis.image(obs_image, opts=opts)
         else:
-            self.vis.image(obs_image, opts = opts, win = self.image_window)
-
+            self.vis.image(obs_image, opts=opts, win=self.image_window)
 
     def __get_obs_image(self):
         shape = self.map.shape()
@@ -169,9 +165,7 @@ class FruitCollectionEnv(gym.Env):
         img[2, row, col] = 20
         return img
 
-
-
-    def step(self, action, decompose_reward = False, log_time=False):
+    def step(self, action, decompose_reward=False, log_time=False):
         self.current_step += 1
 
         rewards = {}
@@ -185,7 +179,6 @@ class FruitCollectionEnv(gym.Env):
         self.lightning_pos = self.generate_lightning()
         end_time = time.time()
 
-
         if self.agent_location in self.treasure_locations:
             index = self.treasure_locations.index(self.agent_location)
             if index != -1 and not self.treasure_found[index]:
@@ -193,29 +186,26 @@ class FruitCollectionEnv(gym.Env):
                 rewards[reward_type] = 2
                 self.treasure_found[index] = True
 
-
         struck_by_lightning = self.agent_location in self.lightning_pos
 
         if struck_by_lightning:
             rewards["Lightning Strike"] = -1
 
-
         all_treasure_collected = all(self.treasure_found)
-        done = (self.current_step >= self.max_step) or all_treasure_collected or struck_by_lightning
+        done = ((self.current_step >= self.max_step) or
+                all_treasure_collected or
+                struck_by_lightning)
 
         self.total_reward += sum(rewards.values())
         self.current_reward = rewards
 
-
         rewards = rewards if decompose_reward else sum(rewards.values())
-
 
         state = self.generate_state()
 
-
         if log_time:
-            print("Generate state time %.2f" %(end_time - start_time))
-        info =  {"state_gen_time": end_time - start_time, "lightning_pos": self.lightning_pos}
+            print("Generate state time %.2f" % (end_time - start_time))
+        info = {"state_gen_time": end_time - start_time, "lightning_pos": self.lightning_pos}
 
         return state, rewards, done, info
 
@@ -234,7 +224,7 @@ if __name__ == '__main__':
             env.render()
             print(obs)
             action = int(input("action:"))
-            obs, rewards, done, info = env.step(action, decompose_reward = True)
+            obs, rewards, done, info = env.step(action, decompose_reward=True)
             print(rewards)
             total_reward += sum(rewards.values())
         env.close()
