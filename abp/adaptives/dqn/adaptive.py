@@ -3,6 +3,7 @@ import time
 import random
 import pickle
 import os
+from sys import maxsize
 
 import torch
 from tensorboardX import SummaryWriter
@@ -31,15 +32,14 @@ class DQNAdaptive(object):
         self.network_config = network_config
         self.reinforce_config = reinforce_config
 
-        self.memory = PrioritizedReplayBuffer(
-            self.reinforce_config.memory_size, 0.6)
+        self.memory = PrioritizedReplayBuffer(self.reinforce_config.memory_size, 0.6)
         self.learning = True
 
         # Global
         self.steps = 0
         self.reward_history = []
         self.episode_time_history = []
-        self.best_reward_mean = 0
+        self.best_reward_mean = -maxsize
         self.episode = 0
 
         self.reset()
