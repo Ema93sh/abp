@@ -188,7 +188,6 @@ class HRAAdaptive(object):
             self.steps = info["steps"]
             self.best_reward_mean = info["best_reward_mean"]
             self.episode = info["episode"]
-            self.replay_memory = info["replay_memory"]
             logger.info("Continuing from %d episode (%d steps) with best reward mean %.2f" % (self.episode, self.steps, self.best_reward_mean))
 
 
@@ -196,8 +195,7 @@ class HRAAdaptive(object):
         info = {
             "steps": self.steps,
             "best_reward_mean": self.best_reward_mean,
-            "episode": self.episode,
-            "replay_memory": self.replay_memory
+            "episode": self.episode
         }
 
         if force:
